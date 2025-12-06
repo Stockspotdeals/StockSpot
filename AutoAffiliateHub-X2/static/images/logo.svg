@@ -1,0 +1,20 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="60" rx="8" fill="#3B82F6"/>
+  
+  <!-- Icon -->
+  <g transform="translate(12, 12)">
+    <!-- Link symbol -->
+    <path d="M12 9.5c0-1.38 1.12-2.5 2.5-2.5h3c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5h-3c-1.38 0-2.5-1.12-2.5-2.5z" fill="white" opacity="0.9"/>
+    <path d="M24 14.5c0 1.38-1.12 2.5-2.5 2.5h-3c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5h3c1.38 0 2.5 1.12 2.5 2.5z" fill="white" opacity="0.9"/>
+    <path d="M14.5 12h7v1h-7v-1z" fill="white"/>
+    
+    <!-- Arrow -->
+    <path d="M28 8l4 4-4 4M28 12h8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="52" y="20" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="white">AutoAffiliate</text>
+  <text x="52" y="36" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="white" opacity="0.9">Hub X2</text>
+  <text x="52" y="48" font-family="Inter, sans-serif" font-size="8" font-weight="400" fill="white" opacity="0.7">AUTONOMOUS SYSTEM</text>
+</svg>

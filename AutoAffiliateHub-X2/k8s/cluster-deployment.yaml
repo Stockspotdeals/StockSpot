@@ -1,0 +1,686 @@
+# AutoAffiliateHub-X2 Kubernetes Deployment
+# 
+# This Kubernetes configuration deploys the complete cluster with:
+# - Redis for distributed queuing and coordination
+# - Coordinator for cluster management and leader election
+# - HorizontalPodAutoscaler (HPA) for worker auto-scaling
+# - KEDA for queue-depth based scaling
+# - ConfigMaps and Secrets for configuration management
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: affilly-cluster
+  labels:
+    app: autocluster-hub-x2
+---
+# =============================================================================
+# CONFIGURATION AND SECRETS
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: affilly-config
+  namespace: affilly-cluster
+data:
+  config_cluster.yaml: |
+    redis:
+      host: "redis-service"
+      port: 6379
+      db: 0
+      socket_timeout: 5.0
+      socket_connect_timeout: 5.0
+      health_check_interval: 30.0
+      max_connections: 50
+    
+    queue:
+      stream_names:
+        - "posting_tasks"
+        - "scraping_tasks" 
+        - "enrichment_tasks"
+        - "analytics_tasks"
+      consumer_group: "affilly_workers"
+      consumer_prefix: "worker"
+      max_len: 10000
+      block_time: 1000
+      count: 10
+      max_retries: 3
+      retry_delay: 300
+      stale_timeout: 1800
+      cleanup_interval: 600
+    
+    worker:
+      min_workers: 2
+      max_workers: 20
+      initial_workers: 3
+      auto_scaling_enabled: true
+      scale_up_threshold: 15
+      scale_down_threshold: 3
+      management_interval: 30.0
+      leader_only_management: true
+    
+    leader:
+      election_key: "affilly:leader"
+      ttl_seconds: 30
+      renewal_interval: 10.0
+    
+    rate_limiting:
+      redis_key_prefix: "affilly:ratelimit"
+      default_limits:
+        requests_per_minute: 60
+        requests_per_hour: 1000
+      platform_limits:
+        twitter:
+          requests_per_hour: 300
+        reddit:
+          requests_per_hour: 600
+    
+    health:
+      check_interval: 60.0
+      component_timeout: 10.0
+    
+    logging:
+      level: "INFO"
+      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: affilly-secrets
+  namespace: affilly-cluster
+type: Opaque
+data:
+  # Base64 encoded secrets (replace with your actual values)
+  redis-password: ""  # echo -n "your-redis-password" | base64
+  api-keys: ""        # echo -n "your-api-keys" | base64
+
+---
+# =============================================================================
+# REDIS DEPLOYMENT
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: affilly-cluster
+  labels:
+    app: redis
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7.2-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command: ["redis-server"]
+        args: ["--appendonly", "yes", "--maxmemory", "1gb", "--maxmemory-policy", "allkeys-lru"]
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: affilly-cluster
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard  # Adjust based on your cluster
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: affilly-cluster
+  labels:
+    app: redis
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+    name: redis
+  selector:
+    app: redis
+  type: ClusterIP
+
+---
+# =============================================================================
+# COORDINATOR DEPLOYMENT
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coordinator
+  namespace: affilly-cluster
+  labels:
+    app: coordinator
+    component: management
+spec:
+  replicas: 1  # Single coordinator with leader election
+  selector:
+    matchLabels:
+      app: coordinator
+  template:
+    metadata:
+      labels:
+        app: coordinator
+    spec:
+      containers:
+      - name: coordinator
+        image: affilly/cluster:latest  # Build from Dockerfile.cluster
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: health
+        env:
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: CLUSTER_NODE_TYPE
+          value: "coordinator"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: CLUSTER_MAX_WORKERS
+          value: "20"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config_cluster.yaml
+          subPath: config_cluster.yaml
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: config-volume
+        configMap:
+          name: affilly-config
+      - name: logs-volume
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coordinator-service
+  namespace: affilly-cluster
+  labels:
+    app: coordinator
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: health
+  selector:
+    app: coordinator
+  type: ClusterIP
+
+---
+# =============================================================================
+# WORKER DEPLOYMENT WITH HPA
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: affilly-cluster
+  labels:
+    app: worker
+    component: processing
+spec:
+  replicas: 3  # Initial worker count
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: affilly/cluster:latest  # Same image, different target
+        imagePullPolicy: IfNotPresent
+        command: ["/app/start_worker.sh"]
+        env:
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: CLUSTER_NODE_TYPE
+          value: "worker"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: WORKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command: ["python", "/app/health_check.py"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command: ["python", "/app/health_check.py"]
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config_cluster.yaml
+          subPath: config_cluster.yaml
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: config-volume
+        configMap:
+          name: affilly-config
+      - name: logs-volume
+        emptyDir: {}
+
+---
+# =============================================================================
+# HORIZONTAL POD AUTOSCALER (HPA)
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-hpa
+  namespace: affilly-cluster
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      selectPolicy: Min
+
+---
+# =============================================================================
+# KEDA SCALEDOBJECT FOR QUEUE-BASED AUTOSCALING
+# =============================================================================
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-queue-scaler
+  namespace: affilly-cluster
+spec:
+  scaleTargetRef:
+    name: worker
+  minReplicateCount: 2
+  maxReplicateCount: 20
+  triggers:
+  - type: redis-streams
+    metadata:
+      address: redis-service:6379
+      stream: posting_tasks
+      consumerGroup: affilly_workers
+      pendingEntriesCount: "5"  # Scale up when >5 pending messages
+      streamLength: "10"        # Scale up when stream length >10
+  - type: redis-streams
+    metadata:
+      address: redis-service:6379
+      stream: scraping_tasks
+      consumerGroup: affilly_workers
+      pendingEntriesCount: "5"
+      streamLength: "10"
+  - type: redis-streams
+    metadata:
+      address: redis-service:6379
+      stream: enrichment_tasks
+      consumerGroup: affilly_workers
+      pendingEntriesCount: "5"
+      streamLength: "10"
+
+---
+# =============================================================================
+# SCHEDULER DEPLOYMENT
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler
+  namespace: affilly-cluster
+  labels:
+    app: scheduler
+    component: automation
+spec:
+  replicas: 2  # Multiple replicas with leader election
+  selector:
+    matchLabels:
+      app: scheduler
+  template:
+    metadata:
+      labels:
+        app: scheduler
+    spec:
+      containers:
+      - name: scheduler
+        image: affilly/cluster:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/app/start_scheduler.sh"]
+        env:
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: CLUSTER_NODE_TYPE
+          value: "scheduler"
+        - name: SCHEDULER_INTERVAL
+          value: "300"  # 5 minutes
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["python", "/app/health_check.py"]
+          initialDelaySeconds: 60
+          periodSeconds: 60
+        readinessProbe:
+          exec:
+            command: ["python", "/app/health_check.py"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config_cluster.yaml
+          subPath: config_cluster.yaml
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: config-volume
+        configMap:
+          name: affilly-config
+      - name: logs-volume
+        emptyDir: {}
+
+---
+# =============================================================================
+# DASHBOARD DEPLOYMENT AND SERVICE
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: affilly-cluster
+  labels:
+    app: dashboard
+    component: interface
+spec:
+  replicas: 2  # Multiple replicas for availability
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+      - name: dashboard
+        image: affilly/cluster:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/app/start_dashboard.sh"]
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: CLUSTER_NODE_TYPE
+          value: "dashboard"
+        - name: FLASK_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config_cluster.yaml
+          subPath: config_cluster.yaml
+      volumes:
+      - name: config-volume
+        configMap:
+          name: affilly-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-service
+  namespace: affilly-cluster
+  labels:
+    app: dashboard
+spec:
+  ports:
+  - port: 80
+    targetPort: 5000
+    name: http
+  selector:
+    app: dashboard
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dashboard-ingress
+  namespace: affilly-cluster
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # If using cert-manager
+spec:
+  tls:
+  - hosts:
+    - affilly.yourdomain.com
+    secretName: dashboard-tls
+  rules:
+  - host: affilly.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dashboard-service
+            port:
+              number: 80
+
+---
+# =============================================================================
+# RBAC FOR KEDA AND MONITORING
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: affilly-service-account
+  namespace: affilly-cluster
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: affilly-cluster
+  name: affilly-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: affilly-role-binding
+  namespace: affilly-cluster
+subjects:
+- kind: ServiceAccount
+  name: affilly-service-account
+  namespace: affilly-cluster
+roleRef:
+  kind: Role
+  name: affilly-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# =============================================================================
+# NETWORK POLICIES (OPTIONAL SECURITY)
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: affilly-network-policy
+  namespace: affilly-cluster
+spec:
+  podSelector: {}  # Apply to all pods in namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: affilly-cluster
+    - podSelector: {}
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: affilly-cluster
+    - podSelector: {}
+  - to: []  # Allow external egress
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443

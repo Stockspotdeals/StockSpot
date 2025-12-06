@@ -1,0 +1,392 @@
+{% extends "layout.html" %}
+
+{% block title %}Queue Management - StockSpot{% endblock %}
+
+{% block page_title %}Queue Management{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Queue Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                Posting Queue 
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm ml-2">
+                    {{ queue_size }} items
+                </span>
+            </h3>
+            <p class="text-sm text-gray-600">Manage and schedule your upcoming social media posts</p>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
+            {% if queue_size > 0 and not system_paused %}
+            <a href="{{ url_for('process_queue') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
+                <i class="fas fa-play mr-2"></i>
+                Process Queue ({{ queue_size }})
+            </a>
+            {% endif %}
+            
+            <button onclick="toggleAddForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                <i class="fas fa-plus mr-2"></i>
+                Add to Queue
+            </button>
+        </div>
+    </div>
+    
+    <!-- System Status Alert -->
+    {% if system_paused %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center">
+            <i class="fas fa-pause-circle text-yellow-600 mr-3"></i>
+            <div>
+                <h4 class="font-medium text-yellow-800">System Paused</h4>
+                <p class="text-sm text-yellow-700 mt-1">
+                    The system is currently paused. Resume in 
+                    <a href="{{ url_for('settings') }}" class="underline hover:no-underline">Settings</a> 
+                    to process the queue.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Add to Queue Form (Initially Hidden) -->
+    <div id="add-form" class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-plus-circle mr-2 text-green-500"></i>
+                Add Deal to Queue
+            </h4>
+        </div>
+        
+        <form action="{{ url_for('add_to_queue') }}" method="POST" class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Deal Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Select Deal</label>
+                    <div class="space-y-3 max-h-64 overflow-y-auto">
+                        {% for deal in available_deals %}
+                        <label class="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="deal_index" value="{{ loop.index0 }}" class="mt-1 mr-3" required>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h5 class="font-medium text-gray-900 truncate">{{ deal.title }}</h5>
+                                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full ml-2">
+                                        {{ deal.hype_score }}/100
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-green-600 font-semibold">${{ "%.2f"|format(deal.price) }}</span>
+                                    <span class="text-gray-500">{{ deal.url[:30] }}...</span>
+                                </div>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Platform Selection & Options -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Target Platforms</label>
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" name="platforms" value="twitter" class="mr-3" checked>
+                            <i class="fab fa-twitter text-blue-500 mr-2"></i>
+                            <span class="text-sm font-medium">Twitter</span>
+                        </label>
+                        
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" name="platforms" value="facebook" class="mr-3" checked>
+                            <i class="fab fa-facebook text-blue-600 mr-2"></i>
+                            <span class="text-sm font-medium">Facebook</span>
+                        </label>
+                        
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" name="platforms" value="instagram" class="mr-3" checked>
+                            <i class="fab fa-instagram text-pink-500 mr-2"></i>
+                            <span class="text-sm font-medium">Instagram</span>
+                        </label>
+                        
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" name="platforms" value="pinterest" class="mr-3">
+                            <i class="fab fa-pinterest text-red-500 mr-2"></i>
+                            <span class="text-sm font-medium">Pinterest</span>
+                        </label>
+                        
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" name="platforms" value="tiktok" class="mr-3">
+                            <i class="fab fa-tiktok text-black mr-2"></i>
+                            <span class="text-sm font-medium">TikTok</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Schedule Time (Optional) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Schedule Time (Optional)</label>
+                        <input type="datetime-local" name="schedule_time" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <p class="text-xs text-gray-500 mt-1">Leave empty to post immediately when queue is processed</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <button type="button" onclick="toggleAddForm()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add to Queue
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Queue Items -->
+    {% if queue_items %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-list mr-2 text-blue-500"></i>
+                Queued Posts
+            </h4>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platforms</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Queued At</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in queue_items %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-start">
+                                <div class="flex-1 min-w-0">
+                                    <h5 class="font-medium text-gray-900 truncate">{{ item.product.title }}</h5>
+                                    <div class="flex items-center mt-1">
+                                        <span class="text-lg font-semibold text-green-600 mr-3">
+                                            ${{ "%.2f"|format(item.product.price) }}
+                                        </span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                            Hype: {{ item.product.hype_score }}
+                                        </span>
+                                    </div>
+                                    {% if item.product.caption %}
+                                    <p class="text-sm text-gray-600 mt-2 truncate">{{ item.product.caption[:100] }}...</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% if item.platforms %}
+                                    {% for platform in item.platforms %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {% if platform == 'twitter' %}
+                                            <i class="fab fa-twitter mr-1"></i>
+                                        {% elif platform == 'facebook' %}
+                                            <i class="fab fa-facebook mr-1"></i>
+                                        {% elif platform == 'instagram' %}
+                                            <i class="fab fa-instagram mr-1"></i>
+                                        {% elif platform == 'pinterest' %}
+                                            <i class="fab fa-pinterest mr-1"></i>
+                                        {% elif platform == 'tiktok' %}
+                                            <i class="fab fa-tiktok mr-1"></i>
+                                        {% endif %}
+                                        {{ platform.title() }}
+                                    </span>
+                                    {% endfor %}
+                                {% else %}
+                                <span class="text-sm text-gray-500">All platforms</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            {% if item.schedule_time %}
+                            <div class="text-sm">
+                                <div class="text-gray-900 font-medium">Scheduled</div>
+                                <div class="text-gray-500">{{ item.schedule_time[:16] }}</div>
+                            </div>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-bolt mr-1"></i>
+                                Immediate
+                            </span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ item.queued_at[:16] }}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end space-x-2">
+                                <button onclick="previewPost({{ loop.index0 }})" class="text-blue-600 hover:text-blue-800 p-1" title="Preview">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
+                                <a href="{{ url_for('remove_from_queue', index=loop.index0) }}" 
+                                   onclick="return confirm('Remove this item from queue?')"
+                                   class="text-red-600 hover:text-red-800 p-1" title="Remove">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Queue Actions Footer -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                {{ queue_size }} item{{ 's' if queue_size != 1 else '' }} in queue
+            </div>
+            
+            {% if queue_size > 0 %}
+            <div class="flex space-x-3">
+                {% if not system_paused %}
+                <a href="{{ url_for('process_queue') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                    <i class="fas fa-play mr-1"></i>
+                    Process All
+                </a>
+                {% endif %}
+                
+                <button onclick="clearQueue()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    <i class="fas fa-trash mr-1"></i>
+                    Clear Queue
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <!-- Empty Queue State -->
+    <div class="text-center py-12">
+        <div class="w-16 h-16 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+            <i class="fas fa-inbox text-gray-400 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Queue is Empty</h3>
+        <p class="text-gray-500 mb-6">Add some trending deals to get started with automated posting</p>
+        
+        <button onclick="toggleAddForm()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+            <i class="fas fa-plus mr-2"></i>
+            Add Your First Deal
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-md w-full max-h-96 overflow-y-auto">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h4 class="text-lg font-semibold text-gray-900">Post Preview</h4>
+            <button onclick="closePreview()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="preview-content" class="p-6">
+            <!-- Preview content will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle add form visibility
+    function toggleAddForm() {
+        const form = document.getElementById('add-form');
+        form.classList.toggle('hidden');
+        
+        if (!form.classList.contains('hidden')) {
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+    
+    // Preview post function
+    function previewPost(index) {
+        // This would typically fetch preview data via API
+        const modal = document.getElementById('preview-modal');
+        const content = document.getElementById('preview-content');
+        
+        // Mock preview content for demonstration
+        content.innerHTML = `
+            <div class="space-y-4">
+                <div>
+                    <h5 class="font-medium text-gray-900 mb-2">Caption Preview</h5>
+                    <div class="bg-gray-50 p-3 rounded-lg text-sm">
+                        🔥 TRENDING NOW: Sample Product at $29.99! Don't miss out! 🎯
+                        
+                        #Deal #Shopping #Trending #MustHave
+                        
+                        Link in bio! 🔗
+                    </div>
+                </div>
+                <div>
+                    <h5 class="font-medium text-gray-900 mb-2">Platforms</h5>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Twitter</span>
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Facebook</span>
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Instagram</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+    }
+    
+    // Close preview modal
+    function closePreview() {
+        document.getElementById('preview-modal').classList.add('hidden');
+    }
+    
+    // Clear entire queue
+    function clearQueue() {
+        if (confirm('Are you sure you want to clear the entire queue? This action cannot be undone.')) {
+            // This would typically make an API call to clear the queue
+            window.location.href = '{{ url_for("queue") }}?clear=true';
+        }
+    }
+    
+    // Close modal on outside click
+    document.getElementById('preview-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePreview();
+        }
+    });
+    
+    // Auto-refresh queue every 30 seconds
+    setInterval(function() {
+        // Only refresh if no forms are open
+        const addForm = document.getElementById('add-form');
+        if (addForm.classList.contains('hidden')) {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    // Update queue count in header
+                    const parser = new DOMParser();
+                    const newDoc = parser.parseFromString(html, 'text/html');
+                    const newCount = newDoc.querySelector('.queue-badge');
+                    const currentCount = document.querySelector('.queue-badge');
+                    if (newCount && currentCount) {
+                        currentCount.textContent = newCount.textContent;
+                    }
+                })
+                .catch(error => console.log('Queue refresh error:', error));
+        }
+    }, 30000);
+</script>
+{% endblock %}

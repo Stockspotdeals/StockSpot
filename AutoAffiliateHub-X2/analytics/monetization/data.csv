@@ -1,0 +1,12 @@
+post_id,deal_title,platform,post_url,total_clicks,total_conversions,total_revenue,total_likes,total_shares,total_comments,first_seen,last_updated,update_count
+post_001,Apple AirPods Pro 2nd Gen - 25% Off,amazon,https://example.com/posts/post_001,481,19,159.93409080262916,15,15,10,2025-10-28T00:27:13.345140,2025-10-28T00:27:13.345140,1
+post_002,"Samsung 4K Smart TV 55"" - $200 Off",walmart,https://example.com/posts/post_002,100,4,183.10513101696796,26,5,12,2025-10-29T00:27:13.345140,2025-10-29T00:27:13.345140,1
+post_003,Nike Air Force 1 - Limited Edition,target,https://example.com/posts/post_003,67,6,286.7330207148651,90,8,6,2025-11-03T00:27:13.345140,2025-11-03T00:27:13.345140,1
+post_004,PlayStation 5 Console Bundle,bestbuy,https://example.com/posts/post_004,199,3,22.196201279725997,97,2,3,2025-11-03T00:27:13.345140,2025-11-03T00:27:13.345140,1
+post_005,MacBook Air M2 - Student Discount,amazon,https://example.com/posts/post_005,360,15,312.05273186643666,11,13,4,2025-10-18T00:27:13.345140,2025-10-18T00:27:13.345140,1
+post_006,Instant Pot Duo 7-in-1 - 40% Off,walmart,https://example.com/posts/post_006,176,10,124.28752876398445,76,18,13,2025-11-05T00:27:13.345140,2025-11-05T00:27:13.345140,1
+post_007,Levi's Jeans - Buy 2 Get 1 Free,target,https://example.com/posts/post_007,432,23,1020.4933355995132,63,10,5,2025-11-08T00:27:13.345140,2025-11-08T00:27:13.345140,1
+post_008,Xbox Series X with Game Pass,bestbuy,https://example.com/posts/post_008,109,8,266.78316778473425,63,14,1,2025-11-13T00:27:13.345140,2025-11-13T00:27:13.345140,1
+post_009,Dyson V15 Vacuum - Flash Sale,amazon,https://example.com/posts/post_009,386,3,100.68625086782004,45,6,0,2025-10-31T00:27:13.345140,2025-10-31T00:27:13.345140,1
+post_010,KitchenAid Stand Mixer - Prime Day,amazon,https://example.com/posts/post_010,189,8,267.28931187733565,27,7,13,2025-11-08T00:27:13.345140,2025-11-08T00:27:13.345140,1
+test_post_001,Test Product - Special Offer,amazon,https://example.com/test,150,8,95.5,45,12,6,2025-11-13T00:29:40.001712,2025-11-13T00:29:40.001712,1

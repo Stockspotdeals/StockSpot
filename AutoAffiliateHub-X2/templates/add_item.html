@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Add Item - StockSpot{% endblock %}
+
+{% block content %}
+<div class="add-item">
+    <div class="page-header">
+        <h1>Add New Item</h1>
+        <p>Add a product for AI-powered posting to Twitter/X with Amazon affiliate links.</p>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" class="add-item-form">
+            <div class="form-group">
+                <label for="item_name" class="form-label">Item Name</label>
+                <input 
+                    type="text" 
+                    id="item_name" 
+                    name="item_name" 
+                    class="form-input" 
+                    placeholder="Enter the product name..."
+                    required
+                    maxlength="100"
+                >
+                <small class="form-help">Give your product a catchy, descriptive name.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="product_url" class="form-label">Amazon Product URL</label>
+                <input 
+                    type="url" 
+                    id="product_url" 
+                    name="product_url" 
+                    class="form-input" 
+                    placeholder="https://www.amazon.com/dp/PRODUCT_ID"
+                    required
+                >
+                <small class="form-help">Paste the Amazon product page URL. We'll generate the affiliate link automatically.</small>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    Add Item & Post
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-section">
+        <div class="info-card">
+            <h3>How it works:</h3>
+            <ol>
+                <li>Enter the product name and Amazon URL</li>
+                <li>We generate an affiliate link with your Associate ID</li>
+                <li>AI creates and posts a Twitter/X tweet automatically</li>
+                <li>Track performance from the dashboard</li>
+            </ol>
+        </div>
+        
+        <div class="info-card">
+            <h3>Tips for better posts:</h3>
+            <ul>
+                <li>Use descriptive, engaging product names</li>
+                <li>Ensure the Amazon URL is for the main product page</li>
+                <li>Check that your Twitter/X credentials are configured</li>
+                <li>Verify your Amazon Associate ID is set up</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// URL validation
+document.getElementById('product_url').addEventListener('blur', function() {
+    const url = this.value.toLowerCase();
+    const isValidAmazon = url.includes('amazon.') && (url.includes('/dp/') || url.includes('/product/') || url.includes('asin='));
+    
+    if (url && !isValidAmazon) {
+        this.setCustomValidity('Please enter a valid Amazon product URL (should contain amazon.com/dp/ or similar)');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+
+// Real-time character count for item name
+document.getElementById('item_name').addEventListener('input', function() {
+    const length = this.value.length;
+    const maxLength = 100;
+    
+    let helpText = this.nextElementSibling;
+    if (length > 80) {
+        helpText.textContent = `${length}/${maxLength} characters used.`;
+        helpText.style.color = length >= maxLength ? '#dc3545' : '#ffc107';
+    } else {
+        helpText.textContent = 'Give your product a catchy, descriptive name.';
+        helpText.style.color = '';
+    }
+});
+</script>
+{% endblock %}

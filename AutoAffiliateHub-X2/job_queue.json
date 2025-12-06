@@ -1,0 +1,154 @@
+[
+  {
+    "id": "302bb9d4-a9b7-44ea-8a7a-92a1e6da7f74",
+    "type": "twitter_post",
+    "data": {
+      "item_name": "Test Product",
+      "product_url": "https://amazon.com/dp/test",
+      "affiliate_url": "https://amazon.com/dp/test?tag=test"
+    },
+    "priority": 1,
+    "status": "failed",
+    "created_at": "2025-12-04T01:15:55.960354",
+    "execute_at": "2025-12-04T01:19:01.266191",
+    "attempts": 3,
+    "max_attempts": 3,
+    "last_error": "Tweet posting failed",
+    "completed_at": null,
+    "started_at": "2025-12-05T23:45:39.423719",
+    "last_attempt": "2025-12-05T23:45:40.002346"
+  },
+  {
+    "id": "b1f57dbb-caac-439b-b2cf-464882f43b09",
+    "type": "amazon_link",
+    "data": {
+      "product_url": "https://amazon.com/dp/test2"
+    },
+    "priority": 2,
+    "status": "completed",
+    "created_at": "2025-12-04T01:15:55.961848",
+    "execute_at": "2025-12-04T01:15:55.961845",
+    "attempts": 0,
+    "max_attempts": 3,
+    "last_error": null,
+    "completed_at": "2025-12-04T01:15:55.966975",
+    "started_at": "2025-12-04T01:15:55.965012",
+    "result": {
+      "status": "success"
+    }
+  },
+  {
+    "id": "87afc0bc-7aa4-4786-97f1-1b6dbcd0873a",
+    "type": "metrics_update",
+    "data": {},
+    "priority": 0,
+    "status": "completed",
+    "created_at": "2025-12-04T01:15:55.963236",
+    "execute_at": "2025-12-04T01:16:55.963227",
+    "attempts": 0,
+    "max_attempts": 3,
+    "last_error": null,
+    "completed_at": "2025-12-04T01:17:31.255456",
+    "started_at": "2025-12-04T01:17:31.252435",
+    "result": {
+      "status": "success",
+      "updated_at": "2025-12-04T01:17:31.255424"
+    }
+  },
+  {
+    "id": "a352d9da-3440-4fb4-abac-81aaf5a637e3",
+    "type": "metrics_update",
+    "data": {},
+    "priority": 0,
+    "status": "pending",
+    "created_at": "2025-12-04T03:19:23.020977",
+    "execute_at": "2025-12-05T23:46:10.014545",
+    "attempts": 1,
+    "max_attempts": 3,
+    "last_error": "fromisoformat: argument must be str",
+    "completed_at": null,
+    "started_at": "2025-12-05T23:45:40.011368",
+    "last_attempt": "2025-12-05T23:45:40.014515"
+  },
+  {
+    "id": "7e8edad6-30e1-4bf1-9d14-0b8f0965307d",
+    "type": "metrics_update",
+    "data": {},
+    "priority": 0,
+    "status": "pending",
+    "created_at": "2025-12-04T13:28:19.991982",
+    "execute_at": "2025-12-05T23:46:10.021108",
+    "attempts": 1,
+    "max_attempts": 3,
+    "last_error": "fromisoformat: argument must be str",
+    "completed_at": null,
+    "started_at": "2025-12-05T23:45:40.018039",
+    "last_attempt": "2025-12-05T23:45:40.021096"
+  },
+  {
+    "id": "bc779a54-038f-4aa5-8991-dbfaaa9add18",
+    "type": "metrics_update",
+    "data": {},
+    "priority": 0,
+    "status": "pending",
+    "created_at": "2025-12-05T23:40:39.937506",
+    "execute_at": "2025-12-05T23:46:10.025938",
+    "attempts": 1,
+    "max_attempts": 3,
+    "last_error": "fromisoformat: argument must be str",
+    "completed_at": null,
+    "started_at": "2025-12-05T23:45:40.023465",
+    "last_attempt": "2025-12-05T23:45:40.025926"
+  },
+  {
+    "id": "3a61eea6-8bfd-4046-af82-ce6c1ce581f7",
+    "type": "twitter_post",
+    "data": {
+      "item_name": "Test Product",
+      "product_url": "https://amazon.com/test",
+      "affiliate_url": "https://amazon.com/test?tag=test"
+    },
+    "priority": 1,
+    "status": "pending",
+    "created_at": "2025-12-05T23:44:58.265791",
+    "execute_at": "2025-12-05T23:46:10.009195",
+    "attempts": 1,
+    "max_attempts": 3,
+    "last_error": "Tweet posting failed",
+    "completed_at": null,
+    "started_at": "2025-12-05T23:45:40.006265",
+    "last_attempt": "2025-12-05T23:45:40.009169"
+  },
+  {
+    "id": "220449c3-a966-4cab-89bf-084d06f2a232",
+    "type": "amazon_link",
+    "data": {
+      "product_url": "https://amazon.com/test2"
+    },
+    "priority": 2,
+    "status": "completed",
+    "created_at": "2025-12-05T23:44:58.269121",
+    "execute_at": "2025-12-05T23:44:58.269117",
+    "attempts": 0,
+    "max_attempts": 3,
+    "last_error": null,
+    "completed_at": "2025-12-05T23:44:58.272553",
+    "started_at": "2025-12-05T23:44:58.271534",
+    "result": {
+      "status": "test_success"
+    }
+  },
+  {
+    "id": "ad7a3cd0-e10e-4c77-811a-5f3ed7c4faef",
+    "type": "metrics_update",
+    "data": {},
+    "priority": 0,
+    "status": "pending",
+    "created_at": "2025-12-05T23:45:51.153220",
+    "execute_at": "2025-12-05T23:45:51.153218",
+    "attempts": 0,
+    "max_attempts": 3,
+    "last_error": null,
+    "completed_at": null
+  }
+]

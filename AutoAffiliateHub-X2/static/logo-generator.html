@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AutoAffiliateHub-X2 Logo Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+        }
+        .logo-container {
+            display: inline-block;
+            background: #3B82F6;
+            border-radius: 12px;
+            width: 200px;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        .logo-icon {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: 60px;
+            height: 60px;
+        }
+        .logo-text {
+            position: absolute;
+            bottom: 40px;
+            left: 30px;
+            right: 30px;
+        }
+        .logo-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1;
+        }
+        .logo-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            font-weight: 500;
+            margin: 4px 0 0 0;
+            line-height: 1;
+        }
+        .logo-tagline {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 8px;
+            font-weight: 400;
+            margin: 8px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
+        }
+        .instructions {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .instructions h3 {
+            margin: 0 0 10px 0;
+            color: #111827;
+        }
+        .instructions p {
+            color: #6b7280;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .download-btn {
+            background: #3B82F6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        .download-btn:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container" id="logo">
+        <!-- Logo Icon (Link Chain + Arrow) -->
+        <svg class="logo-icon" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Chain links -->
+            <path d="M15 20c0-2.76 2.24-5 5-5h10c2.76 0 5 2.24 5 2.24s-2.24 5-5 5H20c-2.76 0-5-2.24-5-5z" 
+                  fill="white" opacity="0.9"/>
+            <path d="M35 40c0 2.76-2.24 5-5 5H20c-2.76 0-5-2.24-5-2.24s2.24-5 5-5h10c2.76 0 5 2.24 5 5z" 
+                  fill="white" opacity="0.9"/>
+            <rect x="22" y="27" width="6" height="6" rx="1" fill="white"/>
+            
+            <!-- Arrow pointing right -->
+            <path d="M42 25l8 8-8 8M42 33h16" stroke="white" stroke-width="3" 
+                  fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+        </svg>
+        
+        <!-- Logo Text -->
+        <div class="logo-text">
+            <h1 class="logo-title">AutoAffiliate</h1>
+            <p class="logo-subtitle">Hub X2</p>
+            <p class="logo-tagline">Autonomous System</p>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <h3>Logo Generation Instructions</h3>
+        <p>1. Right-click on the logo above and select "Save Image As..." or "Copy Image"</p>
+        <p>2. Save as "logo.png" in the /static/ folder</p>
+        <p>3. Alternatively, use browser developer tools to capture a 200x200px screenshot</p>
+        <p>4. Or use an online tool to convert this HTML to PNG:</p>
+        <p>&nbsp;&nbsp;&nbsp;• htmlcsstoimage.com</p>
+        <p>&nbsp;&nbsp;&nbsp;• html2canvas.com</p>
+        <p>&nbsp;&nbsp;&nbsp;• screenshot.guru</p>
+        
+        <button class="download-btn" onclick="generateLogo()">Generate PNG (Canvas)</button>
+    </div>
+
+    <canvas id="logoCanvas" width="200" height="200" style="display: none;"></canvas>
+
+    <script>
+        function generateLogo() {
+            const canvas = document.getElementById('logoCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Blue background with rounded corners
+            ctx.fillStyle = '#3B82F6';
+            ctx.fillRect(0, 0, 200, 200);
+            
+            // Logo icon (simplified)
+            ctx.fillStyle = 'white';
+            ctx.globalAlpha = 0.9;
+            
+            // Chain link 1
+            ctx.fillRect(25, 35, 40, 15);
+            ctx.fillRect(30, 30, 30, 25);
+            
+            // Chain link 2  
+            ctx.fillRect(25, 65, 40, 15);
+            ctx.fillRect(30, 60, 30, 25);
+            
+            // Connection
+            ctx.fillRect(40, 50, 10, 10);
+            
+            // Arrow
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            
+            // Arrow shaft
+            ctx.beginPath();
+            ctx.moveTo(75, 57);
+            ctx.lineTo(95, 57);
+            ctx.stroke();
+            
+            // Arrow head
+            ctx.beginPath();
+            ctx.moveTo(88, 50);
+            ctx.lineTo(95, 57);
+            ctx.lineTo(88, 64);
+            ctx.stroke();
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 18px Inter, sans-serif';
+            ctx.fillText('AutoAffiliate', 25, 140);
+            
+            ctx.font = '500 12px Inter, sans-serif';
+            ctx.globalAlpha = 0.9;
+            ctx.fillText('Hub X2', 25, 155);
+            
+            ctx.font = '400 8px Inter, sans-serif';
+            ctx.globalAlpha = 0.7;
+            ctx.fillText('AUTONOMOUS SYSTEM', 25, 175);
+            
+            // Download
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'logo.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+    </script>
+</body>
+</html>

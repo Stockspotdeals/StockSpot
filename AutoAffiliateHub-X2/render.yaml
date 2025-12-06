@@ -1,0 +1,25 @@
+# StockSpot - Autonomous Cloud Deployment
+services:
+  - type: web
+    name: stockspot-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python api.py
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: FLASK_ENV
+        value: production
+        
+  - type: worker
+    name: stockspot-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python worker.py
+    
+  - type: cron
+    name: stockspot-scheduler
+    env: python
+    buildCommand: pip install -r requirements.txt
+    schedule: "*/5 * * * *"  # Run every 5 minutes
+    startCommand: python scheduler.py

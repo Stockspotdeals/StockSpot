@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - StockSpot{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>StockSpot Dashboard</h1>
+        <div class="status-indicators">
+            <div class="status-item {{ 'status-online' if twitter_available else 'status-offline' }}">
+                <span class="status-dot"></span>
+                Twitter/X {{ 'Online' if twitter_available else 'Offline' }}
+            </div>
+            <div class="status-item {{ 'status-online' if amazon_available else 'status-offline' }}">
+                <span class="status-dot"></span>
+                Amazon {{ 'Online' if amazon_available else 'Offline' }}
+            </div>
+            <div class="status-item {{ 'status-online' if queue_available else 'status-offline' }}">
+                <span class="status-dot"></span>
+                Queue {{ 'Online' if queue_available else 'Offline' }}
+            </div>
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-value">{{ metrics.total_posts }}</div>
+            <div class="metric-label">Total Posts</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ metrics.successful_posts }}</div>
+            <div class="metric-label">Successful</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ metrics.pending_posts }}</div>
+            <div class="metric-label">Pending</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ metrics.success_rate }}%</div>
+            <div class="metric-label">Success Rate</div>
+        </div>
+        {% if metrics.queue_stats %}
+        <div class="metric-card">
+            <div class="metric-value">{{ metrics.queue_stats.get('pending', 0) }}</div>
+            <div class="metric-label">Jobs Queued</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ metrics.queue_stats.get('completed', 0) }}</div>
+            <div class="metric-label">Jobs Completed</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="content-section">
+        <div class="section-header">
+            <h2>Recent Posts</h2>
+            <a href="{{ url_for('add_item') }}" class="btn btn-primary">Add New Item</a>
+        </div>
+
+        {% if posts %}
+            <div class="posts-table">
+                <div class="table-header">
+                    <div class="table-cell">Title</div>
+                    <div class="table-cell">Amazon Link</div>
+                    <div class="table-cell">Twitter Status</div>
+                    <div class="table-cell">Created</div>
+                </div>
+                
+                {% for post in posts %}
+                <div class="table-row">
+                    <div class="table-cell">
+                        <div class="post-title">{{ post.title }}</div>
+                    </div>
+                    <div class="table-cell">
+                        <a href="{{ post.affiliate_url }}" target="_blank" class="amazon-link">
+                            View Product
+                            <svg class="external-link" width="12" height="12" viewBox="0 0 24 24">
+                                <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" fill="none"/>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="table-cell">
+                        <span class="status-badge status-{{ post.twitter_status }}">
+                            {{ post.twitter_status.title() }}
+                        </span>
+                    </div>
+                    <div class="table-cell">
+                        <time class="post-time">
+                            {{ post.created_at[:19].replace('T', ' ') if post.created_at else 'Unknown' }}
+                        </time>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <h3>No items yet</h3>
+                <p>Start by adding your first item to StockSpot.</p>
+                <a href="{{ url_for('add_item') }}" class="btn btn-primary">Add Your First Item</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
