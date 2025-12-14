@@ -1,5 +1,5 @@
 """
-AutoAffiliateHub-X2 Scheduler Controller
+StockSpot Scheduler Controller
 Remote control interface for the autonomous scheduler.
 
 Usage:
@@ -41,7 +41,7 @@ def show_status():
     """Display current scheduler status"""
     config = load_config()
     
-    print("📊 AutoAffiliateHub-X2 Scheduler Status")
+    print("📊 StockSpot Scheduler Status")
     print("=" * 40)
     
     # System status
@@ -155,7 +155,7 @@ def show_logs(log_type='scheduler'):
         print(f"❌ Error reading log file: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(description='AutoAffiliateHub-X2 Scheduler Controller')
+    parser = argparse.ArgumentParser(description='StockSpot Scheduler Controller')
     parser.add_argument('command', choices=['status', 'pause', 'resume', 'toggle-mode', 'config', 'logs'],
                        help='Control command')
     parser.add_argument('--log-type', choices=['scheduler', 'error', 'system'], default='scheduler',
@@ -163,7 +163,7 @@ def main():
     
     args = parser.parse_args()
     
-    print(f"🎛️ AutoAffiliateHub-X2 Scheduler Controller")
+    print(f"🎛️ StockSpot Scheduler Controller")
     print("-" * 40)
     
     if args.command == 'status':

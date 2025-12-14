@@ -1,5 +1,5 @@
 @echo off
-REM AutoAffiliateHub-X2 Autonomous Scheduler Startup Script
+REM StockSpot Autonomous Scheduler Startup Script
 REM 
 REM This script launches the autonomous scheduler with proper configuration.
 REM The scheduler will continuously discover deals, generate affiliate links,
@@ -7,7 +7,7 @@ REM create captions, and schedule social media posts.
 
 echo.
 echo ========================================
-echo   AutoAffiliateHub-X2 Scheduler
+echo   StockSpot Scheduler
 echo ========================================
 echo.
 

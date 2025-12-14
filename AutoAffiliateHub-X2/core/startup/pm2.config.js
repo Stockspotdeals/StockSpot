@@ -1,5 +1,5 @@
 /**
- * PM2 Configuration for AutoAffiliateHub-X2
+ * PM2 Configuration for StockSpot
  * Production-ready process management configuration
  */
 
@@ -215,7 +215,7 @@ module.exports = {
       user: "affilly",
       host: ["your-server.com"],
       ref: "origin/main",
-      repo: "git@github.com:your-username/AutoAffiliateHub-X2.git",
+      repo: "https://github.com/Stockspotdeals/StockSpot.git",
       path: "/var/www/affilly",
       "pre-deploy-local": "",
       "post-deploy": "npm install && pm2 reload ecosystem.config.js --env production",

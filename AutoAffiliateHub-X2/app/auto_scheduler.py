@@ -1,5 +1,5 @@
 """
-AutoAffiliateHub-X2 Autonomous Scheduler
+StockSpot Autonomous Scheduler
 Fully automated deal discovery, processing, and posting system.
 
 This is the main automation engine that orchestrates all modules:
@@ -57,7 +57,7 @@ except ImportError:
 
 
 class AutoScheduler:
-    """Main autonomous scheduler for AutoAffiliateHub-X2"""
+    """Main autonomous scheduler for StockSpot"""
     
     def __init__(self, config_path='config.yaml'):
         self.config_path = config_path
@@ -466,9 +466,9 @@ class AutoScheduler:
         """Main automation loop - runs continuously every 2 hours"""
         # Display startup banner as specified
         test_mode = self.config.get('test_mode', True)
-        print("🚀 AutoAffiliateHub-X2 Autonomous Scheduler started (mock mode: {})".format(test_mode))
+        print("🚀 StockSpot Autonomous Scheduler started (mock mode: {})".format(test_mode))
         
-        self.logger.info(f"🚀 AutoAffiliateHub-X2 Autonomous Scheduler started (mock mode: {test_mode})")
+        self.logger.info(f"🚀 StockSpot Autonomous Scheduler started (mock mode: {test_mode})")
         
         total_cycles = 0
         total_deals = 0
@@ -523,8 +523,8 @@ class AutoScheduler:
             self.logger.info(f"   - Cycles completed: {total_cycles}")
             self.logger.info(f"   - Deals processed: {total_deals}")
             self.logger.info(f"   - Posts created: {total_posts}")
-            self.logger.info("✅ AutoAffiliateHub-X2 Autonomous Scheduler stopped")
-            print("✅ AutoAffiliateHub-X2 Autonomous Scheduler stopped gracefully")
+            self.logger.info("✅ StockSpot Autonomous Scheduler stopped")
+            print("✅ StockSpot Autonomous Scheduler stopped gracefully")
 
 
 def main():

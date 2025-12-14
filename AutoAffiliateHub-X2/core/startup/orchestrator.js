@@ -220,7 +220,7 @@ class AfillyOrchestrator {
     }
     
     async startAllModules() {
-        this.log('🚀 Starting AutoAffiliateHub-X2 orchestration...');
+        this.log('🚀 Starting StockSpot orchestration...');
         
         const environment = await this.detectEnvironment();
         this.log(`Environment detected: ${environment}`);
@@ -357,7 +357,7 @@ async function main() {
     
     if (args.includes('--help')) {
         console.log(`
-AutoAffiliateHub-X2 Orchestrator
+StockSpot Orchestrator
 
 Usage:
   node orchestrator.js           Start all modules

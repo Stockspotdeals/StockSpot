@@ -1,5 +1,5 @@
 """
-AutoAffiliateHub-X2 Autonomous Scheduler
+StockSpot Autonomous Scheduler
 Fully automated deal discovery, processing, and posting system.
 
 This is the main automation engine that orchestrates all modules:

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-AutoAffiliateHub-X2 Cluster Management CLI
+StockSpot Cluster Management CLI
 
-Command-line interface for managing the AutoAffiliateHub-X2 cluster.
+Command-line interface for managing the StockSpot cluster.
 Provides tools for deployment, scaling, monitoring, and troubleshooting.
 """
 
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
 @click.option('--config', '-c', help='Path to cluster configuration file')
 def cli(verbose, config):
-    """AutoAffiliateHub-X2 Cluster Management CLI"""
+    """StockSpot Cluster Management CLI"""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
@@ -60,7 +60,7 @@ def cli(verbose, config):
 @click.option('--worker-function', default='default', help='Worker function to use')
 def start(max_workers, worker_function):
     """Start the cluster coordinator"""
-    click.echo("🚀 Starting AutoAffiliateHub-X2 cluster coordinator...")
+    click.echo("🚀 Starting StockSpot cluster coordinator...")
     
     try:
         # Define worker function
@@ -130,7 +130,7 @@ def start(max_workers, worker_function):
 @cli.command()
 def status():
     """Show cluster status"""
-    click.echo("📊 AutoAffiliateHub-X2 Cluster Status")
+    click.echo("📊 StockSpot Cluster Status")
     click.echo("=" * 37)
     
     try:
@@ -216,7 +216,7 @@ def health(components, json_output):
             
             click.echo(json.dumps(health_dict, indent=2))
         else:
-            click.echo("🏥 AutoAffiliateHub-X2 Health Report")
+            click.echo("🏥 StockSpot Health Report")
             click.echo("=" * 36)
             
             status_emoji = {
@@ -408,7 +408,7 @@ def config(format):
 @cli.command()
 def test():
     """Run cluster component tests"""
-    click.echo("🧪 Running AutoAffiliateHub-X2 cluster tests...")
+    click.echo("🧪 Running StockSpot cluster tests...")
     
     try:
         import subprocess
@@ -465,7 +465,7 @@ def logs(follow, lines):
 @click.confirmation_option(prompt='Are you sure you want to stop the cluster?')
 def stop():
     """Stop the cluster (if running via systemd/docker)"""
-    click.echo("🛑 Stopping AutoAffiliateHub-X2 cluster...")
+    click.echo("🛑 Stopping StockSpot cluster...")
     
     # This would typically interact with systemd, docker, or k8s
     # For now, just provide instructions
