@@ -1,0 +1,106 @@
+affiliate_programs:
+  amazon: ${AMAZON_ASSOCIATE_ID}
+  walmart: ${WALMART_PUBLISHER_ID}
+  target: ${TARGET_PARTNER_TOKEN}
+  bestbuy: ${BESTBUY_PARTNER_ID}
+
+url_shortener:
+  urlgenius_key: ${URLGENIUS_API_KEY}
+
+social:
+  buffer_token: ${BUFFER_ACCESS_TOKEN}
+
+dashboard:
+  owner_password: ${OWNER_DASHBOARD_PASSWORD}
+
+# Autonomous Scheduler Configuration
+test_mode: true
+system_paused: false
+
+scheduler:
+  cycle_interval_hours: 2
+  max_deals_per_cycle: 5
+  min_deal_score: 75
+
+posting:
+  platforms:
+    - twitter
+    - facebook
+    - instagram
+  max_posts_per_day: 20
+  respect_platform_limits: true
+
+logging:
+  level: INFO
+  max_log_size_mb: 10
+  rotate_logs: true
+
+# Release State Management Configuration
+release_states:
+  # Enable dual-phase posting for limited edition items
+  enable_dual_phase_posting: true
+  
+  # Allow upcoming → live transitions for limited editions
+  allow_state_transitions: true
+  
+  # Retention periods for deduplication
+  standard_retention_days: 7      # Regular items
+  limited_edition_retention_days: 14  # Limited edition items (longer)
+  
+  # Scoring bonuses for state transitions
+  state_transition_bonus_points: 10  # Bonus for upcoming → live
+  
+  # Keywords for state detection
+  upcoming_keywords:
+    - "preorder"
+    - "pre-order" 
+    - "pre order"
+    - "coming soon"
+    - "drops on"
+    - "releases on"
+    - "launching"
+    - "available on"
+    - "drops"
+    - "releasing"
+    - "pre-sale"
+    - "presale"
+    - "early access"
+    - "notify me"
+    - "sign up"
+    - "raffle"
+    - "draw"
+    - "lottery"
+    - "reserve"
+    - "waitlist"
+    
+  live_keywords:
+    - "available now"
+    - "in stock"
+    - "live now"
+    - "buy now"
+    - "shop now"
+    - "restocked"
+    - "restock"
+    - "back in stock"
+    - "get yours"
+    - "order now"
+    - "limited quantities"
+    - "few left"
+    - "last chance"
+    - "hurry"
+    - "sold out"
+    - "out of stock"
+    
+  # Stock status mappings
+  upcoming_stock_statuses:
+    - "pre_order"
+    - "preorder"
+    - "coming_soon"
+    - "notify_me"
+    
+  live_stock_statuses:
+    - "in_stock"
+    - "low_stock"
+    - "limited_stock"
+    - "out_of_stock"
+    - "sold_out"

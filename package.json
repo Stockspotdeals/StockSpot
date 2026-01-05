@@ -1,0 +1,76 @@
+{
+  "name": "stockspot-reddit-bot",
+  "version": "1.0.0",
+  "description": "StockSpot - Autonomous Reddit Deal Bot for Amazon Affiliate Marketing",
+  "main": "dist/backend/start_autonomous.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/backend/start_autonomous.js",
+    "dev": "ts-node backend/start_autonomous.js",
+    "test": "node test_reddit_bot.js",
+    "validate": "node production.js",
+    "deploy": "node production.js --start",
+    "health": "curl http://localhost:3000/health",
+    "lint": "eslint backend/",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean"
+  },
+  "keywords": [
+    "stockspot",
+    "reddit", 
+    "deals",
+    "affiliate",
+    "autonomous",
+    "amazon",
+    "bot"
+  ],
+  "author": "StockSpot Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cheerio": "^1.1.2",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.1.1",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/express": "^4.17.21",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.11",
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.1",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Stockspotdeals/StockSpot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Stockspotdeals/StockSpot/issues"
+  },
+  "homepage": "https://github.com/Stockspotdeals/StockSpot#readme"
+}
