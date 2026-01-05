@@ -1,53 +1,47 @@
-# StockSpot Dockerfile
-FROM python:3.9-slim
+# StockSpot Docker Image
+# Node.js 20 LTS Alpine - Optimized for Reddit autonomous deal bot
+FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV FLASK_ENV=production
+# Set environment variables for production
+ENV NODE_ENV=production \
+    NPM_CONFIG_LOGLEVEL=error \
+    DRY_RUN=true \
+    OBSERVER_MODE=true
 
-# Install system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        gcc \
-        curl \
-        gnupg \
-    && rm -rf /var/lib/apt/lists/*
+# Install curl for health checks
+RUN apk add --no-cache curl
 
-# Install Node.js for TailwindCSS
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
-    && apt-get install -y nodejs
+# Copy package files for layer caching
+COPY package*.json ./
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Install production dependencies only
+RUN npm ci --only=production && \
+    npm cache clean --force
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install TailwindCSS
-RUN npm install -g tailwindcss @tailwindcss/forms
-
-# Copy application code
+# Copy all source files
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p data/deals data/posts data/logs static/dist
+# Build TypeScript if needed
+RUN npm run build || true
 
-# Build TailwindCSS
-RUN tailwindcss -i static/style.css -o static/dist/style.css --minify
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
+USER nodejs
 
-# Create non-root user
-RUN adduser --disabled-password --gecos '' appuser \
-    && chown -R appuser:appuser /app
-USER appuser
-
-# Expose port
-EXPOSE 5000
+# Expose application port
+EXPOSE 3000
 
 # Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Start StockSpot in observer + dry-run mode (safe startup)
+CMD ["npm", "start"]
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
