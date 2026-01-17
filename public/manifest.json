@@ -1,0 +1,98 @@
+{
+  "name": "StockSpot - Deal & Restock Alerts",
+  "short_name": "StockSpot",
+  "description": "Real-time deals and restocks from Amazon, Walmart, Target, Best Buy, TCG, and Sports Cards",
+  "scope": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea",
+  "categories": ["shopping", "productivity"],
+  
+  "icons": [
+    {
+      "src": "/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/images/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+
+  "screenshots": [
+    {
+      "src": "/images/screenshot-540x720.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/images/screenshot-1280x720.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Amazon Deals",
+      "short_name": "Amazon",
+      "description": "View latest Amazon deals",
+      "url": "/?category=amazon",
+      "icons": [{ "src": "/images/icon-amazon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Pokemon TCG",
+      "short_name": "Pokemon",
+      "description": "View Pokemon card drops",
+      "url": "/?category=pokemon",
+      "icons": [{ "src": "/images/icon-pokemon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Sports Cards",
+      "short_name": "Sports",
+      "description": "View sports card releases",
+      "url": "/?category=sports",
+      "icons": [{ "src": "/images/icon-sports-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+
+  "prefer_related_applications": false,
+
+  "protocol_handlers": [
+    {
+      "protocol": "web+stockspot",
+      "url": "/handle?url=%s"
+    }
+  ]
+}
