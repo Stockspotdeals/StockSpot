@@ -275,7 +275,6 @@ class ProductMonitor {
    */
   async createChangeEvents(productId, changes, productData, trackedProduct) {
     const { ProductEvent } = require('../models/TrackedProduct');
-    const RedditPoster = require('./RedditPoster');
     
     const events = changes.map(change => ({
       productId,
@@ -291,9 +290,6 @@ class ProductMonitor {
     }));
     
     await ProductEvent.insertMany(events);
-    
-    // Send Reddit notifications for significant events
-    const redditPoster = new RedditPoster();
     
     for (const change of changes) {
       try {
@@ -332,11 +328,9 @@ class ProductMonitor {
             break;
         }
         
-        if (eventType) {
-          await redditPoster.postDeal(trackedProduct, eventType);
-        }
+        // Note: Event notifications (email, RSS) can be implemented here
       } catch (error) {
-        console.error(`Failed to send Telegram notification for change ${change.type}:`, error);
+        console.error(`Failed to send notification for change ${change.type}:`, error);
       }
     }
     

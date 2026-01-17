@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-17T03:46:00.263Z",
+  "timestamp": "2026-01-17T05:09:52.054Z",
   "tiers": {
     "FREE": {
       "totalItems": 7,
@@ -20,7 +20,7 @@
           "isRestock": true,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:44:00.271Z",
+          "detectedAt": "2026-01-17T05:07:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Pokemon+Booster+Box",
           "description": "Authentic Pokémon TCG booster box - just restocked",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -29,7 +29,7 @@
           "reviewCount": 245,
           "rating": 4.8,
           "delayApplied": 0,
-          "visibleAt": "2026-01-17T03:46:00.274Z",
+          "visibleAt": "2026-01-17T05:09:52.059Z",
           "isVisible": true,
           "tier": "FREE"
         },
@@ -47,7 +47,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": false,
-          "detectedAt": "2026-01-17T03:34:00.271Z",
+          "detectedAt": "2026-01-17T04:57:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=TCG+Book",
           "description": "Official Pokémon TCG art book with behind-the-scenes content",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -56,7 +56,7 @@
           "reviewCount": 312,
           "rating": 4.6,
           "delayApplied": 0,
-          "visibleAt": "2026-01-17T03:46:00.274Z",
+          "visibleAt": "2026-01-17T05:09:52.059Z",
           "isVisible": true,
           "tier": "FREE"
         }
@@ -76,7 +76,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:41:00.271Z",
+          "detectedAt": "2026-01-17T05:04:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Sports+Cards",
           "description": "Limited edition football card collection with exclusive cards",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Walmart",
@@ -85,7 +85,7 @@
           "reviewCount": 89,
           "rating": 4.5,
           "delayApplied": 10,
-          "visibleAt": "2026-01-17T03:56:00.274Z",
+          "visibleAt": "2026-01-17T05:19:52.059Z",
           "isVisible": false,
           "tier": "FREE"
         },
@@ -103,7 +103,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:38:00.271Z",
+          "detectedAt": "2026-01-17T05:01:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=One+Piece+TCG",
           "description": "Official One Piece Card Game tournament legal deck set",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Target",
@@ -112,7 +112,7 @@
           "reviewCount": 156,
           "rating": 4.9,
           "delayApplied": 10,
-          "visibleAt": "2026-01-17T03:56:00.274Z",
+          "visibleAt": "2026-01-17T05:19:52.059Z",
           "isVisible": false,
           "tier": "FREE"
         },
@@ -130,7 +130,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:43:00.271Z",
+          "detectedAt": "2026-01-17T05:06:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=PS5+Bundle",
           "description": "PlayStation 5 with Marvel Spider-Man 2 game included",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Best+Buy",
@@ -139,7 +139,7 @@
           "reviewCount": 512,
           "rating": 4.7,
           "delayApplied": 10,
-          "visibleAt": "2026-01-17T03:56:00.274Z",
+          "visibleAt": "2026-01-17T05:19:52.059Z",
           "isVisible": false,
           "tier": "FREE"
         },
@@ -157,7 +157,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:36:00.271Z",
+          "detectedAt": "2026-01-17T04:59:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Collectible+Statue",
           "description": "Highly collectible statue - limited to 500 units worldwide",
           "retailerLogo": "https://via.placeholder.com/50x50?text=GameStop",
@@ -166,7 +166,7 @@
           "reviewCount": 78,
           "rating": 5,
           "delayApplied": 10,
-          "visibleAt": "2026-01-17T03:56:00.274Z",
+          "visibleAt": "2026-01-17T05:19:52.059Z",
           "isVisible": false,
           "tier": "FREE"
         },
@@ -184,7 +184,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:31:00.271Z",
+          "detectedAt": "2026-01-17T04:54:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Switch+OLED",
           "description": "Nintendo Switch OLED model - currently out of stock",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Target",
@@ -193,7 +193,7 @@
           "reviewCount": 689,
           "rating": 4.9,
           "delayApplied": 10,
-          "visibleAt": "2026-01-17T03:56:00.274Z",
+          "visibleAt": "2026-01-17T05:19:52.059Z",
           "isVisible": false,
           "tier": "FREE"
         }
@@ -217,7 +217,7 @@
           "isRestock": true,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:44:00.271Z",
+          "detectedAt": "2026-01-17T05:07:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Pokemon+Booster+Box",
           "description": "Authentic Pokémon TCG booster box - just restocked",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -227,7 +227,7 @@
           "rating": 4.8,
           "delayApplied": 0,
           "tier": "PAID",
-          "visibleAt": "2026-01-17T03:46:00.276Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-walmart-sports-1",
@@ -243,7 +243,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:41:00.271Z",
+          "detectedAt": "2026-01-17T05:04:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Sports+Cards",
           "description": "Limited edition football card collection with exclusive cards",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Walmart",
@@ -253,7 +253,7 @@
           "rating": 4.5,
           "delayApplied": 0,
           "tier": "PAID",
-          "visibleAt": "2026-01-17T03:46:00.276Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-target-one-piece-1",
@@ -269,7 +269,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:38:00.271Z",
+          "detectedAt": "2026-01-17T05:01:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=One+Piece+TCG",
           "description": "Official One Piece Card Game tournament legal deck set",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Target",
@@ -279,7 +279,7 @@
           "rating": 4.9,
           "delayApplied": 0,
           "tier": "PAID",
-          "visibleAt": "2026-01-17T03:46:00.276Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-bestbuy-gaming-1",
@@ -295,7 +295,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:43:00.271Z",
+          "detectedAt": "2026-01-17T05:06:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=PS5+Bundle",
           "description": "PlayStation 5 with Marvel Spider-Man 2 game included",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Best+Buy",
@@ -305,7 +305,7 @@
           "rating": 4.7,
           "delayApplied": 0,
           "tier": "PAID",
-          "visibleAt": "2026-01-17T03:46:00.276Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-gamestop-collectible-1",
@@ -321,7 +321,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:36:00.271Z",
+          "detectedAt": "2026-01-17T04:59:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Collectible+Statue",
           "description": "Highly collectible statue - limited to 500 units worldwide",
           "retailerLogo": "https://via.placeholder.com/50x50?text=GameStop",
@@ -331,7 +331,7 @@
           "rating": 5,
           "delayApplied": 0,
           "tier": "PAID",
-          "visibleAt": "2026-01-17T03:46:00.276Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-amazon-books-1",
@@ -347,7 +347,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": false,
-          "detectedAt": "2026-01-17T03:34:00.271Z",
+          "detectedAt": "2026-01-17T04:57:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=TCG+Book",
           "description": "Official Pokémon TCG art book with behind-the-scenes content",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -357,7 +357,7 @@
           "rating": 4.6,
           "delayApplied": 0,
           "tier": "PAID",
-          "visibleAt": "2026-01-17T03:46:00.276Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-target-outofstock-1",
@@ -373,7 +373,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:31:00.271Z",
+          "detectedAt": "2026-01-17T04:54:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Switch+OLED",
           "description": "Nintendo Switch OLED model - currently out of stock",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Target",
@@ -383,7 +383,7 @@
           "rating": 4.9,
           "delayApplied": 0,
           "tier": "PAID",
-          "visibleAt": "2026-01-17T03:46:00.277Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         }
       ]
     },
@@ -406,7 +406,7 @@
           "isRestock": true,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:44:00.271Z",
+          "detectedAt": "2026-01-17T05:07:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Pokemon+Booster+Box",
           "description": "Authentic Pokémon TCG booster box - just restocked",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -416,7 +416,7 @@
           "rating": 4.8,
           "delayApplied": 0,
           "tier": "YEARLY",
-          "visibleAt": "2026-01-17T03:46:00.278Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-walmart-sports-1",
@@ -432,7 +432,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:41:00.271Z",
+          "detectedAt": "2026-01-17T05:04:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Sports+Cards",
           "description": "Limited edition football card collection with exclusive cards",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Walmart",
@@ -442,7 +442,7 @@
           "rating": 4.5,
           "delayApplied": 0,
           "tier": "YEARLY",
-          "visibleAt": "2026-01-17T03:46:00.278Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-target-one-piece-1",
@@ -458,7 +458,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:38:00.271Z",
+          "detectedAt": "2026-01-17T05:01:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=One+Piece+TCG",
           "description": "Official One Piece Card Game tournament legal deck set",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Target",
@@ -468,7 +468,7 @@
           "rating": 4.9,
           "delayApplied": 0,
           "tier": "YEARLY",
-          "visibleAt": "2026-01-17T03:46:00.278Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-bestbuy-gaming-1",
@@ -484,7 +484,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:43:00.271Z",
+          "detectedAt": "2026-01-17T05:06:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=PS5+Bundle",
           "description": "PlayStation 5 with Marvel Spider-Man 2 game included",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Best+Buy",
@@ -494,7 +494,7 @@
           "rating": 4.7,
           "delayApplied": 0,
           "tier": "YEARLY",
-          "visibleAt": "2026-01-17T03:46:00.278Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-gamestop-collectible-1",
@@ -510,7 +510,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:36:00.271Z",
+          "detectedAt": "2026-01-17T04:59:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Collectible+Statue",
           "description": "Highly collectible statue - limited to 500 units worldwide",
           "retailerLogo": "https://via.placeholder.com/50x50?text=GameStop",
@@ -520,7 +520,7 @@
           "rating": 5,
           "delayApplied": 0,
           "tier": "YEARLY",
-          "visibleAt": "2026-01-17T03:46:00.278Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-amazon-books-1",
@@ -536,7 +536,7 @@
           "isRestock": false,
           "isLimitedEdition": true,
           "isHypeItem": false,
-          "detectedAt": "2026-01-17T03:34:00.271Z",
+          "detectedAt": "2026-01-17T04:57:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=TCG+Book",
           "description": "Official Pokémon TCG art book with behind-the-scenes content",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -546,7 +546,7 @@
           "rating": 4.6,
           "delayApplied": 0,
           "tier": "YEARLY",
-          "visibleAt": "2026-01-17T03:46:00.278Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "mock-target-outofstock-1",
@@ -562,7 +562,7 @@
           "isRestock": false,
           "isLimitedEdition": false,
           "isHypeItem": true,
-          "detectedAt": "2026-01-17T03:31:00.271Z",
+          "detectedAt": "2026-01-17T04:54:52.058Z",
           "image": "https://via.placeholder.com/300x300?text=Switch+OLED",
           "description": "Nintendo Switch OLED model - currently out of stock",
           "retailerLogo": "https://via.placeholder.com/50x50?text=Target",
@@ -572,7 +572,7 @@
           "rating": 4.9,
           "delayApplied": 0,
           "tier": "YEARLY",
-          "visibleAt": "2026-01-17T03:46:00.278Z"
+          "visibleAt": "2026-01-17T05:09:52.060Z"
         },
         {
           "id": "manual-1",
@@ -581,7 +581,7 @@
           "url": "https://ebay.com/custom-pokemon",
           "targetPrice": 50,
           "currentPrice": 75,
-          "addedAt": "2026-01-17T03:46:00.278Z",
+          "addedAt": "2026-01-17T05:09:52.060Z",
           "isManual": true
         },
         {
@@ -591,7 +591,7 @@
           "url": "https://bestbuy.com/ps5",
           "targetPrice": 500,
           "currentPrice": 550,
-          "addedAt": "2026-01-17T03:46:00.278Z",
+          "addedAt": "2026-01-17T05:09:52.060Z",
           "isManual": true
         },
         {
@@ -601,7 +601,7 @@
           "url": "https://amazon.com/gaming-keyboard",
           "targetPrice": 100,
           "currentPrice": 150,
-          "addedAt": "2026-01-17T03:46:00.278Z",
+          "addedAt": "2026-01-17T05:09:52.060Z",
           "isManual": true
         }
       ]
@@ -617,7 +617,7 @@
         "url": "https://ebay.com/custom-pokemon",
         "targetPrice": 50,
         "currentPrice": 75,
-        "addedAt": "2026-01-17T03:46:00.278Z",
+        "addedAt": "2026-01-17T05:09:52.060Z",
         "isManual": true
       },
       {
@@ -627,7 +627,7 @@
         "url": "https://bestbuy.com/ps5",
         "targetPrice": 500,
         "currentPrice": 550,
-        "addedAt": "2026-01-17T03:46:00.278Z",
+        "addedAt": "2026-01-17T05:09:52.060Z",
         "isManual": true
       },
       {
@@ -637,7 +637,7 @@
         "url": "https://amazon.com/gaming-keyboard",
         "targetPrice": 100,
         "currentPrice": 150,
-        "addedAt": "2026-01-17T03:46:00.278Z",
+        "addedAt": "2026-01-17T05:09:52.060Z",
         "isManual": true
       }
     ],
@@ -716,7 +716,7 @@
         "isRestock": true,
         "isLimitedEdition": false,
         "isHypeItem": true,
-        "detectedAt": "2026-01-17T03:44:00.271Z",
+        "detectedAt": "2026-01-17T05:07:52.058Z",
         "image": "https://via.placeholder.com/300x300?text=Pokemon+Booster+Box",
         "description": "Authentic Pokémon TCG booster box - just restocked",
         "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -739,7 +739,7 @@
         "isRestock": false,
         "isLimitedEdition": true,
         "isHypeItem": true,
-        "detectedAt": "2026-01-17T03:41:00.271Z",
+        "detectedAt": "2026-01-17T05:04:52.058Z",
         "image": "https://via.placeholder.com/300x300?text=Sports+Cards",
         "description": "Limited edition football card collection with exclusive cards",
         "retailerLogo": "https://via.placeholder.com/50x50?text=Walmart",
@@ -762,7 +762,7 @@
         "isRestock": false,
         "isLimitedEdition": false,
         "isHypeItem": true,
-        "detectedAt": "2026-01-17T03:38:00.271Z",
+        "detectedAt": "2026-01-17T05:01:52.058Z",
         "image": "https://via.placeholder.com/300x300?text=One+Piece+TCG",
         "description": "Official One Piece Card Game tournament legal deck set",
         "retailerLogo": "https://via.placeholder.com/50x50?text=Target",
@@ -785,7 +785,7 @@
         "isRestock": false,
         "isLimitedEdition": false,
         "isHypeItem": true,
-        "detectedAt": "2026-01-17T03:43:00.271Z",
+        "detectedAt": "2026-01-17T05:06:52.058Z",
         "image": "https://via.placeholder.com/300x300?text=PS5+Bundle",
         "description": "PlayStation 5 with Marvel Spider-Man 2 game included",
         "retailerLogo": "https://via.placeholder.com/50x50?text=Best+Buy",
@@ -808,7 +808,7 @@
         "isRestock": false,
         "isLimitedEdition": true,
         "isHypeItem": true,
-        "detectedAt": "2026-01-17T03:36:00.271Z",
+        "detectedAt": "2026-01-17T04:59:52.058Z",
         "image": "https://via.placeholder.com/300x300?text=Collectible+Statue",
         "description": "Highly collectible statue - limited to 500 units worldwide",
         "retailerLogo": "https://via.placeholder.com/50x50?text=GameStop",
@@ -831,7 +831,7 @@
         "isRestock": false,
         "isLimitedEdition": true,
         "isHypeItem": false,
-        "detectedAt": "2026-01-17T03:34:00.271Z",
+        "detectedAt": "2026-01-17T04:57:52.058Z",
         "image": "https://via.placeholder.com/300x300?text=TCG+Book",
         "description": "Official Pokémon TCG art book with behind-the-scenes content",
         "retailerLogo": "https://via.placeholder.com/50x50?text=Amazon",
@@ -854,7 +854,7 @@
         "isRestock": false,
         "isLimitedEdition": false,
         "isHypeItem": true,
-        "detectedAt": "2026-01-17T03:31:00.271Z",
+        "detectedAt": "2026-01-17T04:54:52.058Z",
         "image": "https://via.placeholder.com/300x300?text=Switch+OLED",
         "description": "Nintendo Switch OLED model - currently out of stock",
         "retailerLogo": "https://via.placeholder.com/50x50?text=Target",

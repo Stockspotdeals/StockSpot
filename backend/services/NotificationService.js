@@ -1,4 +1,3 @@
-const { RedditProvider } = require('./providers/RedditProvider');
 const { MessageBuilder } = require('./MessageBuilder');
 const { NotificationEvent, NotificationChannel, CHANNEL_TYPES, DELIVERY_STATUS, EVENT_TYPES } = require('../models/Notification');
 
@@ -11,11 +10,11 @@ class NotificationService {
   }
 
   initializeProviders() {
-    // Skip provider initialization in dry-run mode
+    // Provider initialization - currently supports email and RSS
+    // Skip in dry-run mode
     if (this.isDryRun) {
       return;
     }
-    this.providers.set(CHANNEL_TYPES.REDDIT, new RedditProvider());
   }
 
   async createNotificationEvent(userId, productId, eventType, eventData = {}) {
