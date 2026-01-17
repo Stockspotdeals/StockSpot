@@ -1,0 +1,72 @@
+/* Tier Indicator Styles */
+
+.tier-indicator {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border-left: 5px solid #667eea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tier-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.tier-icon {
+  font-size: 32px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.tier-info h3 {
+  font-size: 20px;
+  color: #333;
+  margin: 0;
+}
+
+.tier-price {
+  font-size: 14px;
+  color: #999;
+  margin: 5px 0 0 0;
+}
+
+.tier-benefits {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 8px;
+}
+
+.tier-benefits li {
+  font-size: 14px;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tier-benefits li:before {
+  content: '';
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .tier-benefits {
+    grid-template-columns: 1fr;
+  }
+}

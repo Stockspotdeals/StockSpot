@@ -5,11 +5,16 @@ const { NotificationEvent, NotificationChannel, CHANNEL_TYPES, DELIVERY_STATUS, 
 class NotificationService {
   constructor() {
     this.providers = new Map();
+    this.isDryRun = process.env.DRY_RUN === 'true';
     this.initializeProviders();
     this.rateLimits = new Map();
   }
 
   initializeProviders() {
+    // Skip provider initialization in dry-run mode
+    if (this.isDryRun) {
+      return;
+    }
     this.providers.set(CHANNEL_TYPES.REDDIT, new RedditProvider());
   }
 

@@ -6,7 +6,8 @@ const { AffiliateEngine } = require('./AffiliateEngine');
 
 class ProductMonitor {
   constructor() {
-    this.axiosInstance = axios.create({
+    this.isDryRun = process.env.DRY_RUN === 'true';
+    this.axiosInstance = this.isDryRun ? null : axios.create({
       timeout: 30000,
       maxRedirects: 3,
       validateStatus: (status) => status < 500 // Accept 4xx errors but not 5xx
@@ -62,6 +63,18 @@ class ProductMonitor {
    */
   async scrapeProduct(url, config) {
     try {
+      // Return mock data in dry-run mode
+      if (this.isDryRun) {
+        return {
+          title: 'Mock Product (Dry-Run)',
+          price: 49.99,
+          availability: 'In Stock',
+          isAvailable: true,
+          category: 'Electronics',
+          affiliateLink: url
+        };
+      }
+
       const response = await this.axiosInstance.get(url, {
         timeout: config.timeout,
         headers: {

@@ -26,11 +26,29 @@ class ObserverMode {
    */
   loadState() {
     try {
+      // Skip file I/O in dry-run mode
+      if (process.env.DRY_RUN === 'true') {
+        this.startTime = Date.now();
+        this.endTime = this.startTime + (this.observerDays * 24 * 60 * 60 * 1000);
+        this.activityLog = [];
+        return;
+      }
+
       if (fs.existsSync(this.stateFile)) {
-        const state = JSON.parse(fs.readFileSync(this.stateFile, 'utf8'));
-        this.startTime = state.startTime;
-        this.endTime = state.endTime;
-        this.activityLog = state.activityLog || [];
+        const stateData = fs.readFileSync(this.stateFile, 'utf8');
+        if (!stateData || stateData.trim() === '') {
+          this.resetState();
+          return;
+        }
+        try {
+          const state = JSON.parse(stateData);
+          this.startTime = state.startTime;
+          this.endTime = state.endTime;
+          this.activityLog = state.activityLog || [];
+        } catch (parseErr) {
+          console.warn('Failed to parse observer state, resetting...', parseErr);
+          this.resetState();
+        }
       } else {
         // First time running - set up observer period
         this.startTime = Date.now();

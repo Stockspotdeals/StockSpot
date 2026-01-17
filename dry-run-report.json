@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-01-17T03:44:06.782Z",
+  "tests": [
+    {
+      "name": "Feed Generation - Free Tier",
+      "status": "PASS",
+      "details": "7 items processed"
+    },
+    {
+      "name": "Feed Generation - Paid Tier",
+      "status": "PASS",
+      "details": "7 items, all visible instantly"
+    },
+    {
+      "name": "Feed Generation - Yearly Tier",
+      "status": "PASS",
+      "details": "7 items, manual input enabled"
+    },
+    {
+      "name": "Affiliate Link Conversion",
+      "status": "PASS",
+      "details": "Affiliate link created and ASIN extracted"
+    },
+    {
+      "name": "Tier Feature Access Control",
+      "status": "PASS",
+      "details": "All tiers have correct feature access"
+    },
+    {
+      "name": "Item Deduplication",
+      "status": "PASS",
+      "details": "2 duplicates removed"
+    },
+    {
+      "name": "RSS Feed Generation",
+      "status": "PASS",
+      "details": "RSS feed generated (2.09 KB)"
+    }
+  ],
+  "passed": 7,
+  "failed": 0
+}

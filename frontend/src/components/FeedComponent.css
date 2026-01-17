@@ -1,0 +1,86 @@
+/* Feed Component Styles */
+
+.feed {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.feed-header {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+}
+
+.feed-header h2 {
+  font-size: 22px;
+  color: #333;
+  margin: 0 0 5px 0;
+}
+
+.feed-count {
+  font-size: 14px;
+  color: #999;
+  margin: 0;
+}
+
+.feed-list {
+  display: grid;
+  gap: 0;
+}
+
+.item-card {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.item-card:last-child {
+  border-bottom: none;
+}
+
+.item-card:hover {
+  background: #fafafa;
+}
+
+.feed-empty {
+  padding: 40px 20px;
+  text-align: center;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.feed-empty p {
+  font-size: 16px;
+  color: #999;
+  margin: 10px 0;
+}
+
+@media (max-width: 768px) {
+  .item-card {
+    grid-template-columns: 80px 1fr;
+    gap: 15px;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .item-card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .feed-header {
+    padding: 15px;
+  }
+
+  .feed-header h2 {
+    font-size: 18px;
+  }
+}
