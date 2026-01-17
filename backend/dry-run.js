@@ -4,7 +4,7 @@
  * StockSpot Dry-Run Entry Point
  * 
  * Simulates all StockSpot functionality without requiring credentials.
- * Tests all three tiers (Free, Paid, Yearly) with proper delay logic,
+ * Tests multi-retailer feeds, all three tiers (Free, Paid, Yearly) with proper delay logic,
  * priority ranking, and affiliate tag simulation.
  * 
  * Usage: npm run dry-run
@@ -16,6 +16,7 @@ const FeedGenerator = require('./feeds/FeedGenerator');
 const TierManager = require('./tiers/TierManager');
 const RetailerMonitor = require('./monitors/RetailerMonitor');
 const AffiliateConverter = require('./affiliate/AffiliateConverter');
+const { MultiRetailerFeed } = require('./services/MultiRetailerFeed');
 const fs = require('fs');
 const path = require('path');
 
@@ -414,12 +415,16 @@ class DryRunSimulator {
   async run() {
     console.clear();
     this.printSection('🚀 StockSpot Dry-Run Simulator');
-    console.log(`${colors.cyan}Testing all tiers without credentials${colors.reset}`);
+    console.log(`${colors.cyan}Testing multi-retailer feeds without credentials${colors.reset}`);
     console.log(`${colors.cyan}Mock data only - No real APIs called${colors.reset}\n`);
 
     try {
       // Generate mock data
       this.generateMockData();
+
+      // Simulate multi-retailer feeds
+      const multiRetailerFeed = new MultiRetailerFeed();
+      await multiRetailerFeed.simulateDryRun();
 
       // Simulate each tier
       await this.simulateFreeTier();

@@ -1,7 +1,7 @@
 /**
  * Dry-Run Server
  * Express server for dry-run mode testing
- * No real credentials required
+ * No real credentials required - uses multi-retailer feeds
  */
 
 const express = require('express');
@@ -9,8 +9,13 @@ const cors = require('cors');
 const FeedGenerator = require('./feeds/FeedGenerator');
 const MockDataGenerator = require('./tests/MockDataGenerator');
 const TierManager = require('./tiers/TierManager');
+const { MultiRetailerFeed } = require('./services/MultiRetailerFeed');
 
 const app = express();
+
+// Initialize multi-retailer feed system
+const multiRetailerFeed = new MultiRetailerFeed();
+
 
 // Middleware
 app.use(cors());
