@@ -81,5 +81,9 @@
   "bugs": {
     "url": "https://github.com/Stockspotdeals/StockSpot/issues"
   },
-  "homepage": "https://github.com/Stockspotdeals/StockSpot#readme"
+  "homepage": "https://github.com/Stockspotdeals/StockSpot#readme",
+  "overrides": {
+    "inflight": false,
+    "whatwg-encoding": false
+  }
 }
