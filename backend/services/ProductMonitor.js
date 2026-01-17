@@ -1,8 +1,21 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 const { RetailerDetector, RETAILER_TYPES } = require('./RetailerDetector');
 const { CategoryDetector } = require('./CategoryDetector');
 const { AffiliateEngine } = require('./AffiliateEngine');
+
+// Lazy load cheerio - only loaded when actually needed
+let cheerio = null;
+function getCheerio() {
+  if (!cheerio) {
+    try {
+      cheerio = require('cheerio');
+    } catch (e) {
+      console.warn('cheerio not available - HTML parsing disabled');
+      return null;
+    }
+  }
+  return cheerio;
+}
 
 class ProductMonitor {
   constructor() {
@@ -97,7 +110,12 @@ class ProductMonitor {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const $ = cheerio.load(response.data);
+      const cheerioLib = getCheerio();
+      if (!cheerioLib) {
+        throw new Error('cheerio HTML parser is not available');
+      }
+      
+      const $ = cheerioLib.load(response.data);
       
       // Extract product data using selectors
       const title = this.extractText($, config.selectors.title);
