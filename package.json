@@ -6,14 +6,12 @@
   "scripts": {
     "build": "npm install",
     "start": "node backend/server-dry-run.js",
-    "server": "node backend/server-dry-run.js",
+    "start:production": "node backend/app.js",
     "dev": "node backend/server-dry-run.js",
-    "test": "cross-env DRY_RUN=true node backend/dry-run-test.js",
+    "server": "node backend/server-dry-run.js",
+    "dry-run": "cross-env DRY_RUN=true node backend/server-dry-run.js",
+    "validate": "cross-env DRY_RUN=true node backend/validate.js",
     "test:notifications": "cross-env DRY_RUN=true node tests/notification-test.js",
-    "dry-run": "cross-env DRY_RUN=true node backend/dry-run.js",
-    "dry-run:full": "cross-env DRY_RUN=true node backend/dry-run.js && cross-env DRY_RUN=true node backend/dry-run-test.js && cross-env DRY_RUN=true node backend/server-dry-run.js",
-    "validate": "cross-env DRY_RUN=true node backend/dry-run-test.js",
-    "simulate": "cross-env DRY_RUN=true node backend/dry-run.js",
     "health": "curl http://localhost:3000/health",
     "lint": "eslint backend/ frontend/",
     "clean": "rimraf dist node_modules",
@@ -53,6 +51,8 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.12",
+    "node-cron": "^3.0.3",
+    "stripe": "^14.15.0",
     "xml": "^1.0.1"
   },
   "devDependencies": {

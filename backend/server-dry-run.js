@@ -1,53 +1,64 @@
+#!/usr/bin/env node
+
 /**
- * Dry-Run Server
- * Express server for dry-run mode testing
- * No real credentials required - uses multi-retailer feeds
+ * server-dry-run.js - Safe testing mode without credentials
+ * 
+ * Runs StockSpot in dry-run mode:
+ * - Logs all feed operations without making API calls
+ * - No Stripe/SendGrid/Amazon API calls
+ * - No database writes (uses in-memory storage)
+ * - Perfect for validating feeds and business logic
+ * 
+ * Usage: npm run dry-run
+ * Or: node backend/server-dry-run.js
  */
+
+process.env.DRY_RUN = 'true';
+process.env.DRY_RUN_MOCK_DATA = 'true';
+process.env.NODE_ENV = 'development';
 
 const express = require('express');
 const cors = require('cors');
-const FeedGenerator = require('./feeds/FeedGenerator');
-const MockDataGenerator = require('./tests/MockDataGenerator');
-const TierManager = require('./tiers/TierManager');
-const { MultiRetailerFeed } = require('./services/MultiRetailerFeed');
+const { FeedObserver } = require('./services/FeedObserver');
 
 const app = express();
-
-// Initialize multi-retailer feed system
-const multiRetailerFeed = new MultiRetailerFeed();
-
+const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
-// Request logging
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
+// Initialize observer
+const observer = new FeedObserver();
 
-// ============================================================================
-// HEALTH & STATUS ENDPOINTS
-// ============================================================================
+console.log('\n' + '='.repeat(70));
+console.log('🚀 StockSpot DRY-RUN Server');
+console.log('='.repeat(70));
+console.log(`📝 Mode: DRY-RUN (No API calls, no credentials needed)`);
+console.log(`⏰ Started: ${new Date().toISOString()}`);
+console.log(`🔗 Frontend: http://localhost:${port}`);
+console.log(`📊 Observer will check feeds every 5 minutes`);
+console.log('='.repeat(70) + '\n');
 
+/**
+ * Health check endpoint
+ */
 app.get('/health', (req, res) => {
   res.json({
-    status: 'healthy',
+    status: 'ok',
     mode: 'dry-run',
+    uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    environment: 'test',
   });
 });
 
 app.get('/status', (req, res) => {
   res.json({
+    status: 'ok',
+    mode: 'dry-run',
     app: 'StockSpot',
-    version: '2.0.0',
-    mode: 'DRY_RUN',
-    tiers: ['free', 'paid', 'yearly'],
-    retailers: ['amazon', 'walmart', 'target', 'bestbuy', 'gamestop', 'ebay'],
-    categories: [
+    version: '3.0.0',
       'pokemon-tcg',
       'one-piece-tcg',
       'sports-cards',
