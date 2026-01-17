@@ -9,6 +9,7 @@
     "server": "node backend/server-dry-run.js",
     "dev": "node backend/server-dry-run.js",
     "test": "cross-env DRY_RUN=true node backend/dry-run-test.js",
+    "test:notifications": "cross-env DRY_RUN=true node tests/notification-test.js",
     "dry-run": "cross-env DRY_RUN=true node backend/dry-run.js",
     "dry-run:full": "cross-env DRY_RUN=true node backend/dry-run.js && cross-env DRY_RUN=true node backend/dry-run-test.js && cross-env DRY_RUN=true node backend/server-dry-run.js",
     "validate": "cross-env DRY_RUN=true node backend/dry-run-test.js",
@@ -35,6 +36,7 @@
     "@eslint/config-array": "^0.23.0",
     "@eslint/object-schema": "^3.0.0",
     "@exodus/bytes": "^1.8.0",
+    "@sendgrid/mail": "^8.1.6",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
@@ -49,7 +51,9 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.1.1",
     "morgan": "^1.10.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.12",
+    "xml": "^1.0.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
