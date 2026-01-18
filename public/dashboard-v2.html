@@ -226,7 +226,18 @@
     }
 
     function loadCategories() {
-      const categories = ['All', 'Amazon', 'Walmart', 'Target', 'Best Buy', 'TCG Cards', 'Sports Cards'];
+      const categories = [
+        'All',
+        // Major Retailers
+        'Amazon', 'eBay', 'Walmart', 'Target', 'Costco',
+        // Electronics
+        'Best Buy', 'Newegg', 'Micro Center', 'Apple',
+        // Gaming & Collectibles
+        'GameStop', 'TCG Cards', 'StockX', 'Sports Cards',
+        // Specialty
+        'Adorama', 'B&H Photo', 'REI', 'Backcountry', 
+        'Foot Locker', "Dick's Sports", "Powell's Books", "Barnes & Noble"
+      ];
       let html = '';
 
       categories.forEach(cat => {
@@ -237,12 +248,42 @@
     }
 
     async function loadDeals() {
-      // Simulate loading deals in dry-run mode
+      // Simulate loading deals in dry-run mode with 21+ retailers
       deals = [
-        { title: 'Pokemon Booster Box', price: '89.99', originalPrice: '99.99', retailer: 'TCG Cards', category: 'TCG Cards', discount: 10, itemType: 'Limited Stock', link: '#' },
-        { title: '65" QLED TV', price: '599.99', retailer: 'Best Buy', category: 'Electronics', discount: 20, itemType: 'Restock Alert', link: '#' },
-        { title: 'Gaming Laptop', price: '899.99', retailer: 'Amazon', category: 'Electronics', discount: 15, itemType: 'Limited Deal', link: '#' },
-        { title: 'Graded Sports Card', price: '149.99', retailer: 'Sports Cards', category: 'Sports Cards', discount: 5, itemType: 'Hype Item', link: '#' },
+        // Electronics & Tech
+        { title: 'Gaming Laptop RTX 4080', price: '1299.99', originalPrice: '1999.99', retailer: 'Best Buy', category: 'Best Buy', discount: 35, itemType: 'Limited Stock', link: '#' },
+        { title: 'RTX 4090 Graphics Card', price: '1899.99', originalPrice: '2599.99', retailer: 'Newegg', category: 'Newegg', discount: 27, itemType: 'Restock Alert', link: '#' },
+        { title: 'Intel Core i9-14900K', price: '599.99', originalPrice: '699.99', retailer: 'Micro Center', category: 'Micro Center', discount: 14, itemType: 'Flash Sale', link: '#' },
+        { title: 'MacBook Pro 14" M3 Max', price: '1899.99', originalPrice: '2499.99', retailer: 'Apple', category: 'Apple', discount: 24, itemType: 'Refurbished', link: '#' },
+        
+        // General Retail & Marketplaces
+        { title: '65" QLED Smart TV', price: '599.99', originalPrice: '1299.99', retailer: 'Walmart', category: 'Walmart', discount: 54, itemType: 'Hype Release', link: '#' },
+        { title: 'Designer Handbag Collection', price: '89.99', originalPrice: '249.99', retailer: 'Target', category: 'Target', discount: 64, itemType: 'Flash Sale', link: '#' },
+        { title: 'Vintage Camera Set', price: '149.99', originalPrice: '300.00', retailer: 'eBay', category: 'eBay', discount: 50, itemType: 'Limited Time', link: '#' },
+        { title: 'Bulk Premium Snack Bundle', price: '34.99', originalPrice: '59.99', retailer: 'Costco', category: 'Costco', discount: 42, itemType: 'Member Only', link: '#' },
+        
+        // Gaming & Collectibles
+        { title: 'Pokemon Scarlet & Violet Booster Box', price: '89.99', originalPrice: '120.00', retailer: 'TCG Cards', category: 'TCG Cards', discount: 25, itemType: 'Limited Stock', link: '#' },
+        { title: 'Air Jordan 1 OG Travis Scott', price: '2499.99', originalPrice: '4000.00', retailer: 'StockX', category: 'StockX', discount: 37, itemType: 'Limited Release', link: '#' },
+        { title: 'NBA 2024-25 Rookie Card Blaster', price: '149.99', originalPrice: '200.00', retailer: 'Sports Cards', category: 'Sports Cards', discount: 25, itemType: 'New Drop', link: '#' },
+        { title: 'PS5 Exclusive Bundle Pre-Order', price: '649.99', originalPrice: '899.99', retailer: 'GameStop', category: 'GameStop', discount: 28, itemType: 'Pre-Order', link: '#' },
+        
+        // Photography & Outdoor
+        { title: 'Sony A7IV Camera Body (Open Box)', price: '1799.99', originalPrice: '2498.00', retailer: 'Adorama', category: 'Adorama', discount: 28, itemType: 'Open Box Deal', link: '#' },
+        { title: 'Canon EF 24-70mm f/2.8L II Lens', price: '1299.99', originalPrice: '1799.99', retailer: 'B&H Photo', category: 'B&H Photo', discount: 28, itemType: 'Clearance', link: '#' },
+        { title: 'The North Face Backpacking Tent', price: '249.99', originalPrice: '399.99', retailer: 'REI', category: 'REI', discount: 37, itemType: 'Seasonal Sale', link: '#' },
+        { title: "Arc'teryx Ski Jacket Closeout", price: '399.99', originalPrice: '899.99', retailer: 'Backcountry', category: 'Backcountry', discount: 55, itemType: 'Closeout', link: '#' },
+        
+        // Footwear & Sports
+        { title: 'Nike Dunk Low Retro Release', price: '119.99', originalPrice: '119.99', retailer: 'Foot Locker', category: 'Foot Locker', discount: 0, itemType: 'New Release', link: '#' },
+        { title: 'Spalding Basketball Pro Edition', price: '59.99', originalPrice: '99.99', retailer: "Dick's Sports", category: "Dick's Sports", discount: 40, itemType: 'Sale', link: '#' },
+        
+        // Books
+        { title: 'Rare First Edition Limited', price: '149.99', originalPrice: '350.00', retailer: "Powell's Books", category: "Powell's Books", discount: 57, itemType: 'Rare Find', link: '#' },
+        { title: 'Latest Bestseller Hardcover Bundle', price: '39.99', originalPrice: '89.99', retailer: "Barnes & Noble", category: "Barnes & Noble", discount: 55, itemType: 'Flash Sale', link: '#' },
+        
+        // Amazon
+        { title: 'Premium Wireless Headphones', price: '79.99', originalPrice: '199.99', retailer: 'Amazon', category: 'Amazon', discount: 60, itemType: 'Limited Deal', link: '#' },
       ];
 
       displayDeals(deals);
