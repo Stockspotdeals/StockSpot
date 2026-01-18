@@ -11,11 +11,13 @@
     "server": "node backend/server-dry-run.js",
     "dry-run": "cross-env DRY_RUN=true node backend/server-dry-run.js",
     "validate": "cross-env DRY_RUN=true node backend/validate.js",
+    "validate:step3": "node backend/validate-step3.js",
     "test:notifications": "cross-env DRY_RUN=true node tests/notification-test.js",
     "health": "curl http://localhost:3000/health",
     "lint": "eslint backend/ frontend/",
     "clean": "rimraf dist node_modules",
-    "prebuild": "npm run clean"
+    "prebuild": "npm run clean",
+    "audit:fix": "npm audit fix"
   },
   "keywords": [
     "stockspot",
