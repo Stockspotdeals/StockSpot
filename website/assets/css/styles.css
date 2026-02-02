@@ -154,6 +154,20 @@ header {
   text-decoration: none;
 }
 
+/* Logo image + text helpers */
+.logo-img {
+  height: 40px;
+  width: auto;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.logo-text {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
 nav ul {
   display: none;
   list-style: none;
