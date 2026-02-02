@@ -1,0 +1,36 @@
+{
+  "name": "StockSpot - Deal & Restock Alerts",
+  "short_name": "StockSpot",
+  "description": "Get real-time alerts for product restocks and price drops across major retailers",
+  "start_url": "/website/index.html",
+  "scope": "/website/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%232563eb'/><text x='50%' y='50%' font-size='120' dominant-baseline='middle' text-anchor='middle' y='96'>🎯</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%232563eb'/><text x='50%' y='50%' font-size='320' dominant-baseline='middle' text-anchor='middle' y='256'>🎯</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "shopping",
+    "productivity"
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect width='540' height='720' fill='%23f9fafb'/><rect width='540' height='100' fill='%232563eb'/><text x='270' y='50' font-size='32' text-anchor='middle' dominant-baseline='middle' fill='white'>StockSpot</text></svg>",
+      "sizes": "540x720",
+      "form_factor": "narrow"
+    }
+  ]
+}

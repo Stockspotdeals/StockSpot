@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="StockSpot - Get real-time alerts for product restocks and price drops across major retailers. Never miss a deal again.">
+  <meta name="keywords" content="restock alerts, price drop notifications, deals, Amazon, Best Buy, Walmart, Target">
+  <meta name="author" content="StockSpot">
+  <meta name="theme-color" content="#2563eb">
+  <title>StockSpot - Never Miss a Restock or Deal Again</title>
+  <link rel="canonical" href="https://stockspot.example.com/">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- ========================================================================
+       HEADER & NAVIGATION
+       ======================================================================== -->
+  <header>
+    <div class="header-container">
+      <a href="index.html" class="logo">🎯 StockSpot</a>
+      <nav>
+        <ul>
+          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="affiliates.html">Affiliates</a></li>
+          <li><a href="#signup">Get Started</a></li>
+        </ul>
+      </nav>
+      <button class="hamburger" aria-label="Toggle navigation menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="nav-mobile">
+      <a href="#how-it-works">How It Works</a>
+      <a href="about.html">About</a>
+      <a href="affiliates.html">Affiliates</a>
+      <a href="#signup">Get Started</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </nav>
+  </header>
+
+  <!-- ========================================================================
+       HERO SECTION
+       ======================================================================== -->
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <h1>Never Miss a Restock or Deal Again</h1>
+        <p>Get real-time alerts for product restocks and price drops across Amazon, Best Buy, Walmart, Target, and more.</p>
+        <div class="hero-buttons">
+          <button class="btn btn-primary" onclick="document.getElementById('signup').scrollIntoView({behavior: 'smooth'})">Join the Alert List</button>
+          <a href="#how-it-works" class="btn btn-secondary">How It Works</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         HOW IT WORKS
+         ======================================================================== -->
+    <section class="how-it-works" id="how-it-works">
+      <div class="container">
+        <h2>How StockSpot Works</h2>
+        <p class="text-muted text-center">Three simple steps to never miss a deal</p>
+        
+        <div class="steps">
+          <div class="step fade-in">
+            <div class="step-number">1</div>
+            <h3>Join the List</h3>
+            <p>Sign up with your email to start receiving real-time deal alerts from your favorite retailers.</p>
+          </div>
+
+          <div class="step fade-in">
+            <div class="step-number">2</div>
+            <h3>Choose Categories</h3>
+            <p>Get alerts for products in categories you care about—electronics, sports cards, sneakers, books, and more.</p>
+          </div>
+
+          <div class="step fade-in">
+            <div class="step-number">3</div>
+            <h3>Act Fast</h3>
+            <p>Receive instant notifications when items are back in stock or prices drop. Limited deals move quickly.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         EXAMPLE DEALS
+         ======================================================================== -->
+    <section class="example-deals">
+      <div class="container">
+        <h2>Example Deals You Won't Miss</h2>
+        <p class="text-muted text-center">Real examples of alerts our users receive every day</p>
+        
+        <div class="deals-grid">
+          <!-- Example Deal 1 -->
+          <div class="deal-card fade-in">
+            <span class="deal-retailer">AMAZON</span>
+            <h4>PlayStation 5 Console</h4>
+            <div class="deal-price">$499</div>
+            <div class="deal-original">Usually $499+</div>
+            <p class="deal-description">Gaming console back in stock for limited time. Users reported success ordering this morning.</p>
+          </div>
+
+          <!-- Example Deal 2 -->
+          <div class="deal-card fade-in">
+            <span class="deal-retailer">BEST BUY</span>
+            <h4>NVIDIA RTX 4090</h4>
+            <div class="deal-price">$1,599</div>
+            <div class="deal-original">Usually $1,999</div>
+            <p class="deal-description">Graphics card in stock. This is a popular restock that typically sells out within hours.</p>
+          </div>
+
+          <!-- Example Deal 3 -->
+          <div class="deal-card fade-in">
+            <span class="deal-retailer">WALMART</span>
+            <h4>Samsung 65" 4K TV</h4>
+            <div class="deal-price">$598</div>
+            <div class="deal-original">Was $899</div>
+            <p class="deal-description">33% off. Great mid-range TV for gaming and streaming. Limited quantities available.</p>
+          </div>
+
+          <!-- Example Deal 4 -->
+          <div class="deal-card fade-in">
+            <span class="deal-retailer">POKÉMON TCG</span>
+            <h4>Scarlet & Violet Booster Box</h4>
+            <div class="deal-price">$119</div>
+            <div class="deal-original">MSRP $120</div>
+            <p class="deal-description">Sealed booster box restock. Popular set for collectors. Quantities limited to 1 per customer.</p>
+          </div>
+
+          <!-- Example Deal 5 -->
+          <div class="deal-card fade-in">
+            <span class="deal-retailer">REI</span>
+            <h4>The North Face Backpack</h4>
+            <div class="deal-price">$99</div>
+            <div class="deal-original">$179</div>
+            <p class="deal-description">45% off during seasonal clearance. Highly rated for hiking and travel. Free shipping included.</p>
+          </div>
+
+          <!-- Example Deal 6 -->
+          <div class="deal-card fade-in">
+            <span class="deal-retailer">TARGET</span>
+            <h4>Apple AirPods Pro</h4>
+            <div class="deal-price">$189</div>
+            <div class="deal-original">$249</div>
+            <p class="deal-description">Latest generation in stock. 24% discount with Circle member pricing. Ships same-day in many areas.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         EMAIL SIGNUP FORM
+         ======================================================================== -->
+    <section class="signup-section" id="signup">
+      <div class="container-sm">
+        <h2 class="text-center">Get Real-Time Deal Alerts</h2>
+        <p class="text-center text-muted mb-4">Join thousands of savvy shoppers who never miss a restock or sale</p>
+
+        <form data-form="email-signup">
+          <div class="form-group">
+            <label for="email-main">Email Address</label>
+            <input
+              type="email"
+              id="email-main"
+              name="email"
+              placeholder="you@example.com"
+              required
+              aria-label="Email address for deal alerts"
+            >
+          </div>
+
+          <button type="submit" class="btn btn-primary form-submit">Join Alert List</button>
+          <div class="form-message"></div>
+        </form>
+
+        <p class="text-center text-muted" style="font-size: 0.875rem; margin-top: 1rem;">
+          ✓ No spam. Unsubscribe anytime. <a href="privacy.html">Privacy policy</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         TRUST SECTION
+         ======================================================================== -->
+    <section class="trust-section">
+      <div class="container">
+        <div class="trust-content">
+          <h2>Why StockSpot?</h2>
+          <p class="text-muted">We built StockSpot because finding hard-to-get items and deals shouldn't require checking dozens of websites multiple times a day.</p>
+        </div>
+
+        <div class="trust-grid">
+          <div class="trust-item fade-in">
+            <div class="trust-icon">⚡</div>
+            <h4>Instant Alerts</h4>
+            <p>Be notified instantly when items restock or prices drop.</p>
+          </div>
+
+          <div class="trust-item fade-in">
+            <div class="trust-icon">🛍️</div>
+            <h4>Multiple Retailers</h4>
+            <p>Track deals across Amazon, Best Buy, Walmart, Target, and more.</p>
+          </div>
+
+          <div class="trust-item fade-in">
+            <div class="trust-icon">🎯</div>
+            <h4>Smart Categories</h4>
+            <p>Get alerts only for products you care about.</p>
+          </div>
+
+          <div class="trust-item fade-in">
+            <div class="trust-icon">🔒</div>
+            <h4>Your Privacy</h4>
+            <p>We never sell your data. You control your preferences.</p>
+          </div>
+
+          <div class="trust-item fade-in">
+            <div class="trust-icon">📱</div>
+            <h4>Any Device</h4>
+            <p>Email notifications work on any device, any time.</p>
+          </div>
+
+          <div class="trust-item fade-in">
+            <div class="trust-icon">💯</div>
+            <h4>100% Free</h4>
+            <p>No credit card required. Completely free to use.</p>
+          </div>
+        </div>
+
+        <!-- Affiliate Disclosure -->
+        <div class="affiliate-notice">
+          <h3>Transparency</h3>
+          <p><strong>StockSpot is a participant in affiliate advertising programs.</strong> When you click on a deal link and make a purchase, StockSpot may earn a small commission at no additional cost to you. This helps us keep the service free. <a href="affiliates.html">Learn more about how we work with retailers</a>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       FOOTER
+       ======================================================================== -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h4>About</h4>
+          <ul>
+            <li><a href="about.html">About StockSpot</a></li>
+            <li><a href="affiliates.html">Affiliate Program</a></li>
+            <li><a href="#signup">Get Started</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Use</a></li>
+            <li><a href="affiliates.html">Affiliate Disclosure</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Contact</h4>
+          <ul>
+            <li><a href="mailto:support@stockspotdeals.com">support@stockspotdeals.com</a></li>
+            <li>Questions? Reach out anytime</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 StockSpot. All rights reserved. | Made for deal hunters, by deal hunters.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
