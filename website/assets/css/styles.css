@@ -178,13 +178,13 @@ header {
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .brand-name {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--primary-color);
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
 
 nav ul {
