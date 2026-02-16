@@ -169,9 +169,22 @@ header {
 }
 
 .site-logo {
-  height: 40px;
+  height: 36px;
   width: auto;
+  vertical-align: middle;
   display: block;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-name {
+  font-weight: 700;
+  color: var(--primary-color);
+  font-size: 1.25rem;
 }
 
 nav ul {
