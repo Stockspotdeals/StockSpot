@@ -2,24 +2,217 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>StockSpot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="StockSpot - Find the best products. Track the best deals across major retailers.">
+  <meta name="theme-color" content="#2563eb">
+  <title>StockSpot - Best Products & Deals</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: auto; }
-    h1 { color: #1e3a8a; }
-    p { line-height: 1.6; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #ffffff;
+    }
+
+    header {
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .site-logo {
+      height: 40px;
+      width: auto;
+      display: block;
+    }
+
+    .brand-name {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #2563eb;
+    }
+
+    nav {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #1f2937;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    nav a:hover {
+      color: #2563eb;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    .hero {
+      padding: 6rem 1rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      color: #111827;
+    }
+
+    .hero p {
+      font-size: 1.125rem;
+      color: #4b5563;
+      margin-bottom: 2rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-button {
+      display: inline-block;
+      padding: 12px 32px;
+      background: #2563eb;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: background 0.3s ease;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .cta-button:hover {
+      background: #1e40af;
+    }
+
+    .content-section {
+      padding: 3rem 1rem;
+      text-align: center;
+    }
+
+    .content-section h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #111827;
+    }
+
+    .content-section p {
+      color: #4b5563;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.8;
+    }
+
+    footer {
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      padding: 2rem 1rem;
+      text-align: center;
+      color: #6b7280;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      nav {
+        gap: 1rem;
+        font-size: 0.9rem;
+      }
+
+      .header-container {
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      nav {
+        width: 100%;
+        order: 3;
+      }
+
+      .hero {
+        padding: 3rem 1rem;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Welcome to StockSpot</h1>
-  <p>
-    StockSpot monitors limited edition and high-demand collectible items, including Pokémon TCG, One Piece TCG, and sports cards. We post timely deals and restock notifications to help collectors find the items they want.
-  </p>
-  <p>
-    Some links may be affiliate links to Amazon. This helps support the development of StockSpot at no extra cost to you.
-  </p>
-  <p>
-    <a href="/public/index.html">View Dashboard →</a>
-  </p>
+  <header>
+    <div class="header-container">
+      <a href="/" class="brand">
+        <img src="./assets/images/stockspot-logo.png" alt="StockSpot Logo" class="site-logo">
+        <span class="brand-name">StockSpot</span>
+      </a>
+      <nav>
+        <a href="#home">Home</a>
+        <a href="#deals">Deals</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <h1>Find the Best Products. Track the Best Deals.</h1>
+      <p>Real-time alerts for restocks, price drops, and exclusive deals across your favorite retailers. Never miss an opportunity again.</p>
+      <a href="#deals" class="cta-button">Browse Deals</a>
+    </section>
+
+    <section class="content-section" id="deals">
+      <h2>Smart Deal Discovery</h2>
+      <p>StockSpot monitors thousands of products across major retailers including Amazon, Best Buy, Walmart, Target, and more. We track everything from electronics and gaming to collectibles and exclusive items. Get notified instantly when prices drop or items come back in stock.</p>
+    </section>
+
+    <section class="content-section" id="about">
+      <h2>About StockSpot</h2>
+      <p>StockSpot is your personal shopping assistant. We focus on finding the best deals so you don't have to spend hours checking retailer websites. Our mission is simple: help you save time and money on the products you love. StockSpot is a participant in affiliate programs with major retailers, which helps us keep our service free.</p>
+    </section>
+
+    <section class="content-section" id="contact">
+      <h2>Get In Touch</h2>
+      <p>Questions? Ideas? We'd love to hear from you. Contact us at <strong>support@stockspotdeals.com</strong> or visit our website for more information.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 StockSpot. All rights reserved. | Made for deal hunters, by deal hunters.</p>
+  </footer>
 </body>
 </html>
