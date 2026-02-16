@@ -168,6 +168,12 @@ header {
   color: var(--primary-color);
 }
 
+.site-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
 nav ul {
   display: none;
   list-style: none;
