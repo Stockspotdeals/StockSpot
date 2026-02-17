@@ -169,7 +169,7 @@ header {
 }
 
 .site-logo {
-  height: 36px;
+  height: 54px;
   width: auto;
   vertical-align: middle;
   display: block;
@@ -585,6 +585,218 @@ section p {
 .form-message.error {
   background: #fee2e2;
   color: #991b1b;
+}
+
+/* ============================================================================
+   APP SECTION
+   ============================================================================ */
+
+.app-section {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  padding: 3rem 1rem;
+}
+
+.app-content {
+  text-align: center;
+  color: white;
+}
+
+.app-section h2 {
+  color: white;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.app-subtitle {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.app-download-btn {
+  background: white;
+  color: var(--primary-color);
+  padding: 0.875rem 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.app-download-btn:hover {
+  background: var(--gray-100);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-secondary-text {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.95rem;
+}
+
+/* ============================================================================
+   PRICING SECTION
+   ============================================================================ */
+
+.pricing-section {
+  background: white;
+  padding: 3rem 1rem;
+}
+
+.pricing-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.pricing-subtitle {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.pricing-card {
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  text-align: center;
+  transition: var(--transition);
+  position: relative;
+}
+
+.pricing-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.pricing-card.featured {
+  border-color: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  color: white;
+  transform: scale(1.05);
+}
+
+.pricing-card.featured:hover {
+  transform: scale(1.05) translateY(-4px);
+}
+
+.featured-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-color);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.plan-name {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: inherit;
+}
+
+.pricing-card.featured .plan-name {
+  color: white;
+}
+
+.plan-pricing {
+  margin-bottom: 1.5rem;
+}
+
+.price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.pricing-card.featured .price {
+  color: white;
+}
+
+.period {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-left: 0.25rem;
+}
+
+.pricing-card.featured .period {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.plan-features {
+  list-style: none;
+  text-align: left;
+  margin: 2rem 0;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.plan-features li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--gray-200);
+  color: var(--text-secondary);
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.plan-features li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+.pricing-card.featured .plan-features li {
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.pricing-card.featured .plan-features li:before {
+  color: var(--accent-color);
+}
+
+.plan-btn {
+  width: 100%;
+  padding: 0.875rem;
+  margin-top: 1.5rem;
+  font-weight: 600;
+}
+
+.pricing-card .plan-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.pricing-card .plan-btn:hover {
+  background: var(--primary-dark);
+}
+
+.pricing-card.featured .plan-btn {
+  background: white;
+  color: var(--primary-color);
+}
+
+.pricing-card.featured .plan-btn:hover {
+  background: var(--gray-100);
 }
 
 /* ============================================================================
