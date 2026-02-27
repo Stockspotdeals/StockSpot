@@ -37,7 +37,27 @@ function App() {
       if (!response.ok) throw new Error('Failed to fetch feed');
 
       const data = await response.json();
-      setFeed(data.items || []);
+      // support new structured response: { meta: {...}, products: [...] }
+      let items = [];
+      if (data && Array.isArray(data.products)) {
+        items = data.products;
+      } else if (data && Array.isArray(data.items)) {
+        items = data.items;
+      } else if (Array.isArray(data)) {
+        // legacy root-array response
+        items = data;
+      }
+
+      // sort newest first by timestamps.createdAt, fallback to createdAt or leave as-is
+      if (Array.isArray(items)) {
+        items.sort((a, b) => {
+          const aDate = new Date(a?.timestamps?.createdAt || a?.createdAt || 0).getTime();
+          const bDate = new Date(b?.timestamps?.createdAt || b?.createdAt || 0).getTime();
+          return bDate - aDate;
+        });
+      }
+
+      setFeed(items);
     } catch (err) {
       console.error('Feed error:', err);
       setError(err.message);

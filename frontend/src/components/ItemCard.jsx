@@ -3,8 +3,11 @@ import './ItemCard.css';
 
 function ItemCard({ item, tier }) {
   const formatPrice = (price) => {
-    if (!price) return 'Price TBD';
-    return `$${price.toFixed(2)}`;
+    if (price === undefined || price === null) return 'Price TBD';
+    // price may be a string or number
+    const num = typeof price === 'number' ? price : parseFloat(price);
+    if (isNaN(num)) return 'Price TBD';
+    return `$${num.toFixed(2)}`;
   };
 
   const getStockLabel = (inStock) => {
@@ -22,16 +25,22 @@ function ItemCard({ item, tier }) {
   };
 
   const handleBuyNow = () => {
-    if (item.link) {
-      window.open(item.link, '_blank');
+    const url = item.link?.affiliate || item.link?.raw || item.affiliateLink;
+    if (url) {
+      window.open(url, '_blank');
     }
   };
 
   return (
     <div className="item-card">
       <div className="item-image">
-        <img src={item.image || 'https://via.placeholder.com/150x150?text=No+Image'} alt={item.name} />
-        {item.affiliateLink && <span className="affiliate-badge">🤝 Affiliate</span>}
+        <img
+          src={item.media?.image || item.image || 'https://via.placeholder.com/150x150?text=No+Image'}
+          alt={item.name || 'Unnamed product'}
+        />
+        {((item.link?.affiliate || item.link?.raw) || item.affiliateLink) && (
+          <span className="affiliate-badge">🤝 Affiliate</span>
+        )}
       </div>
 
       <div className="item-content">
@@ -39,21 +48,38 @@ function ItemCard({ item, tier }) {
           <h3>{item.name}</h3>
           <p className="retailer">
             <img src={item.retailerLogo} alt={item.retailer} className="retailer-logo" />
-            {item.retailer.toUpperCase()}
+            {(item.retailer || '').toUpperCase()}
           </p>
         </div>
 
-        <div className="item-badges">{getClassificationBadge(item.classification)}</div>
+        <div className="item-badges">
+          {getClassificationBadge(item.classification)}
+          {/* additional conditional badges */}
+          {item.flags?.adminPick && (
+            <span className="badge badge-admin">Admin Pick</span>
+          )}
+          {item.flags?.restock && (
+            <span className="badge badge-restock">Restocked</span>
+          )}
+          {((item.discount?.percentage ?? item.discountPercent) >= 40) && (
+            <span className="badge badge-hot">Hot Deal</span>
+          )}
+        </div>
 
         <div className="item-details">
           <div className="detail-group">
             <span className="detail-label">Price:</span>
-            <span className={`detail-value ${item.discountPercent > 0 ? 'discounted' : ''}`}>
-              {formatPrice(item.price)}
-              {item.discountPercent > 0 && <span className="discount">-{item.discountPercent}%</span>}
+            <span className={`detail-value ${(item.discount?.percentage ?? item.discountPercent) > 0 ? 'discounted' : ''}`}>
+              {formatPrice(item.price?.current ?? item.price)}
+              {(item.discount?.percentage ?? item.discountPercent) > 0 && (
+                <span className="discount">-{(item.discount?.percentage ?? item.discountPercent)}%</span>
+              )}
             </span>
-            {item.originalPrice && item.originalPrice !== item.price && (
-              <span className="original-price">${item.originalPrice.toFixed(2)}</span>
+            {(item.price?.original || item.originalPrice) &&
+              (item.price?.original || item.originalPrice) !== (item.price?.current || item.price) && (
+              <span className="original-price">
+                ${formatPrice(item.price?.original ?? item.originalPrice)}
+              </span>
             )}
           </div>
 
@@ -84,7 +110,9 @@ function ItemCard({ item, tier }) {
         {item.description && <p className="item-description">{item.description}</p>}
 
         <button className="btn-view-item" onClick={handleBuyNow}>
-          {item.affiliateLink ? '🛒 View on ' + item.retailer.toUpperCase() : '🔗 View Item'}
+          {(item.link?.affiliate || item.link?.raw || item.affiliateLink)
+            ? '🛒 View on ' + (item.retailer || '').toUpperCase()
+            : '🔗 View Item'}
         </button>
 
         {tier === 'free' && !item.visible && (
