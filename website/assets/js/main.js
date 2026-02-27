@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeNavigation();
   initializeEmailForm();
   initializeScrollAnimations();
+  initializeDownloadButton();
 });
 
 function initializeNavigation() {
@@ -189,8 +190,20 @@ if ('serviceWorker' in navigator) {
 }
 
 // ============================================================================
-// DEVELOPER TOOLS (for testing)
+// DOWNLOAD BUTTON
 // ============================================================================
+
+function initializeDownloadButton() {
+  const downloadBtn = document.querySelector('.app-download-btn');
+  if (downloadBtn && downloadBtn.tagName === 'A') {
+    // If it's an anchor tag, let it handle naturally (download attribute will work)
+    downloadBtn.addEventListener('click', (e) => {
+      // Just let the browser handle the download
+      // The 'download' attribute on the link will trigger the download
+    });
+  }
+}
+
 
 // Expose email list in console for testing
 window.getSignupEmails = () => {

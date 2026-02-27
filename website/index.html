@@ -9,6 +9,9 @@
   <meta name="theme-color" content="#2563eb">
   <title>StockSpot - Never Miss a Restock or Deal Again</title>
   <link rel="canonical" href="https://stockspot.example.com/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/styles.css">
   <link rel="icon" href="assets/images/stockspot-logo.png">
   <link rel="manifest" href="manifest.json">
@@ -22,7 +25,7 @@
       <a href="index.html" class="logo">
         <div class="brand">
           <img src="./assets/images/stockspot-logo.svg" alt="StockSpot Logo" class="site-logo" />
-          <span class="brand-name">StockSpot</span>
+          <span class="brand-name gradient-text">StockSpot</span>
         </div>
       </a>
       <nav>
@@ -199,12 +202,54 @@
     <section class="app-section" id="app">
       <div class="container-sm">
         <div class="app-content">
-          <h2>Download the StockSpot App</h2>
-          <p class="app-subtitle">Access StockSpot instantly on your device. No app store required.</p>
+          <h2>Download StockSpot</h2>
+          <p class="app-subtitle">Get instant alerts on your device. Install StockSpot today.</p>
           
-          <button class="btn btn-primary app-download-btn">Download App Now</button>
+          <a href="/downloads/stockspot-pwa.zip" class="btn btn-primary app-download-btn" download>Download StockSpot</a>
           
-          <p class="app-secondary-text">Direct secure download. Always up to date.</p>
+          <p class="app-secondary-text">Direct download. Always up to date.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         PRIVACY SECTION
+         ======================================================================== -->
+    <section class="privacy-section" id="privacy-intro">
+      <div class="container">
+        <h2 class="text-center">Your Privacy Matters</h2>
+        <p class="text-center text-muted" style="font-size: 1.1rem; max-width: 700px; margin: 0 auto 2rem;">We're transparent about how we protect your data.</p>
+        
+        <div class="privacy-grid">
+          <div class="privacy-item fade-in">
+            <div class="privacy-icon">🔒</div>
+            <h4>No Personal Data Collection</h4>
+            <p>StockSpot doesn't collect personal information. No account required. No tracking.</p>
+          </div>
+
+          <div class="privacy-item fade-in">
+            <div class="privacy-icon">🚫</div>
+            <h4>Never Sold</h4>
+            <p>We never sell your email or data to third parties. Period.</p>
+          </div>
+
+          <div class="privacy-item fade-in">
+            <div class="privacy-icon">🔔</div>
+            <h4>Optional Notifications</h4>
+            <p>Push notifications are optional and completely user-controlled.</p>
+          </div>
+
+          <div class="privacy-item fade-in">
+            <div class="privacy-icon">⚖️</div>
+            <h4>Affiliate Transparency</h4>
+            <p>Third-party affiliate links may use cookies (standard practice). Full disclosure <a href="affiliates.html">here</a>.</p>
+          </div>
+        </div>
+        
+        <div class="privacy-cta" style="text-align: center; margin-top: 2rem;">
+          <p style="color: var(--text-secondary);">
+            <a href="privacy.html" style="font-weight: 600; color: var(--primary-color);">Read our full Privacy Policy →</a>
+          </p>
         </div>
       </div>
     </section>
@@ -351,6 +396,7 @@
             <li><a href="privacy.html">Privacy Policy</a></li>
             <li><a href="terms.html">Terms of Use</a></li>
             <li><a href="affiliates.html">Affiliate Disclosure</a></li>
+            <li><a href="index.html#privacy-intro">Privacy Notice</a></li>
           </ul>
         </div>
 
