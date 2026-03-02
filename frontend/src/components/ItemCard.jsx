@@ -31,6 +31,46 @@ function ItemCard({ item, tier }) {
     }
   };
 
+  const generateFlip = async () => {
+    // Only attempt if essential fields exist
+    const title = item.name || item.title;
+    const currentPrice = item.price?.current ?? item.price;
+    const avgMarketPrice = item.price?.avgMarket ?? item.avgMarketPrice;
+
+    if (!title || !currentPrice || !avgMarketPrice) {
+      alert('Insufficient product pricing data for flip template (needs title, currentPrice, avgMarketPrice).');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/ai/generate-flip-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token') || ''
+        },
+        body: JSON.stringify({
+          title,
+          currentPrice,
+          avgMarketPrice,
+          category: item.category || item.retailer || 'General'
+        })
+      });
+
+      if (!response.ok) {
+        alert('Premium required or failed to generate template.');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Flip template:', data);
+      alert(`Suggested Price: $${data.suggestedResalePrice}\nEstimated Profit: $${data.estimatedProfit}\nMargin: ${data.marginPercent}%`);
+    } catch (err) {
+      console.error('Generate flip error', err);
+      alert('Failed to generate flip template.');
+    }
+  };
+
   return (
     <div className="item-card">
       <div className="item-image">
@@ -114,6 +154,18 @@ function ItemCard({ item, tier }) {
             ? '🛒 View on ' + (item.retailer || '').toUpperCase()
             : '🔗 View Item'}
         </button>
+
+        {/* Premium-only Flip Template generator */}
+        {(tier === 'paid' || tier === 'yearly') && (
+          <button
+            id={`generateFlipBtn-${item.id || 'anon'}`}
+            className="btn btn-secondary generate-flip-btn"
+            onClick={generateFlip}
+            style={{ marginLeft: '0.5rem' }}
+          >
+            Generate Flip Template
+          </button>
+        )}
 
         {tier === 'free' && !item.visible && (
           <p className="delay-notice">⏱️ Visible in {item.delayMinutes} minutes for free tier</p>

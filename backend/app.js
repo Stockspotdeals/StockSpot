@@ -58,6 +58,15 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// AI Templates (premium-only utilities)
+try {
+  const aiTemplates = require('./routes/aiTemplates');
+  app.use('/api/ai', aiTemplates);
+} catch (err) {
+  // If middleware or file missing, log and continue (non-breaking)
+  console.warn('AI templates route not mounted:', err.message);
+}
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
