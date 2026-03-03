@@ -73,12 +73,36 @@ function ItemCard({ item, tier }) {
       }
 
       const data = await response.json();
-      console.log('Flip template:', data);
-      const resultText = `Suggested Price: $${data.suggestedResalePrice}\nEstimated Profit: $${data.estimatedProfit}\nMargin: ${data.marginPercent}%`;
-      if (window.openFlipModal) {
-        window.openFlipModal(resultText);
+      console.log('Flip templates:', data);
+
+      // Format multiple templates for display
+      if (data.success && data.templates && Array.isArray(data.templates)) {
+        const templateHTML = data.templates
+          .map((template, idx) => {
+            return `
+Template ${idx + 1}: ${template.strategyLabel}
+${template.strategyDescription}
+└─ Resale Price: $${template.suggestedResalePrice}
+└─ Estimated Profit: $${template.estimatedProfit}
+└─ Margin: ${template.marginPercent}%
+└─ ${template.urgencyLine}
+            `;
+          })
+          .join('\n---\n');
+
+        if (window.openFlipModal) {
+          window.openFlipModal(templateHTML);
+        } else {
+          alert(templateHTML);
+        }
       } else {
-        alert(resultText);
+        // Fallback for single template format
+        const resultText = `Suggested Price: $${data.suggestedResalePrice}\nEstimated Profit: $${data.estimatedProfit}\nMargin: ${data.marginPercent}%`;
+        if (window.openFlipModal) {
+          window.openFlipModal(resultText);
+        } else {
+          alert(resultText);
+        }
       }
     } catch (err) {
       console.error('Generate flip error', err);
