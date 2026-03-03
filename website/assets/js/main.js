@@ -216,3 +216,22 @@ window.clearSignupEmails = () => {
   localStorage.removeItem('stockspot_emails');
   console.log('Cleared all signup emails');
 };
+
+// Modal controls for Flip Template
+function openFlipModal(content) {
+  const modal = document.getElementById('flipModal');
+  const container = document.getElementById('flipContent');
+  if (!modal || !container) return;
+  container.textContent = content;
+  modal.style.display = 'flex';
+}
+
+function closeFlipModal() {
+  const modal = document.getElementById('flipModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+}
+
+// Expose for external callers
+window.openFlipModal = openFlipModal;
+window.closeFlipModal = closeFlipModal;

@@ -21,13 +21,28 @@ app.use(helmet({
 }));
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://stockspot.com'
-    : 'http://localhost:3000',
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
+// CORS configuration - allow known frontend origins in production
+{
+  // if you deploy with a single known frontend URL, you can set
+  // process.env.FRONTEND_URL and it will be used here.
+  const allowed = [];
+  if (process.env.FRONTEND_URL) {
+    allowed.push(process.env.FRONTEND_URL);
+  }
+  // add our custom domain directly as a fallback
+  allowed.push('https://stockspotdeals.com');
+  // optional: include GitHub Pages URL if you're still hosting there
+  allowed.push('https://your-github-username.github.io');
+
+  const originOption = process.env.NODE_ENV === 'production' ? allowed : 'http://localhost:3000';
+
+  app.use(cors({
+    origin: originOption,
+    methods: ['GET', 'POST'],
+    credentials: true,
+    optionsSuccessStatus: 200
+  }));
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

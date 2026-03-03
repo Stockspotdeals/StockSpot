@@ -38,12 +38,17 @@ function ItemCard({ item, tier }) {
     const avgMarketPrice = item.price?.avgMarket ?? item.avgMarketPrice;
 
     if (!title || !currentPrice || !avgMarketPrice) {
-      alert('Insufficient product pricing data for flip template (needs title, currentPrice, avgMarketPrice).');
+      // insufficient data, show simple modal message
+      if (window.openFlipModal) {
+        window.openFlipModal('Insufficient product pricing data for flip template (needs title, currentPrice, avgMarketPrice).');
+      } else {
+        alert('Insufficient product pricing data for flip template (needs title, currentPrice, avgMarketPrice).');
+      }
       return;
     }
 
     try {
-      const response = await fetch('/api/ai/generate-flip-template', {
+      const response = await fetch('https://api.stockspotdeals.com/api/ai/generate-flip-template', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,16 +63,31 @@ function ItemCard({ item, tier }) {
       });
 
       if (!response.ok) {
-        alert('Premium required or failed to generate template.');
+        const msg = 'Premium required or failed to generate template.';
+        if (window.openFlipModal) {
+          window.openFlipModal(msg);
+        } else {
+          alert(msg);
+        }
         return;
       }
 
       const data = await response.json();
       console.log('Flip template:', data);
-      alert(`Suggested Price: $${data.suggestedResalePrice}\nEstimated Profit: $${data.estimatedProfit}\nMargin: ${data.marginPercent}%`);
+      const resultText = `Suggested Price: $${data.suggestedResalePrice}\nEstimated Profit: $${data.estimatedProfit}\nMargin: ${data.marginPercent}%`;
+      if (window.openFlipModal) {
+        window.openFlipModal(resultText);
+      } else {
+        alert(resultText);
+      }
     } catch (err) {
       console.error('Generate flip error', err);
-      alert('Failed to generate flip template.');
+      const msg = 'Failed to generate flip template.';
+      if (window.openFlipModal) {
+        window.openFlipModal(msg);
+      } else {
+        alert(msg);
+      }
     }
   };
 
