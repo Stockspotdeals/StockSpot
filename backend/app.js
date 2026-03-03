@@ -3,6 +3,16 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config();
+const mongoose = require('mongoose');
+
+// connect early using standard env var; legacy code checks MONGODB_URI too
+const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
+mongoose.connect(uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+  .then(() => console.log('MongoDB connected for StockSpot Layer 2'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 const app = express();
 
@@ -147,9 +157,8 @@ process.on('SIGINT', async () => {
 const startServer = async () => {
   try {
     // Connect to MongoDB
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    // connection already established above via MONGO_URI/MONGODB_URI
+    console.log('✅ MongoDB connection already initialized');
     
       const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, () => {
