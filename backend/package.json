@@ -12,7 +12,8 @@
     "seed": "node scripts/seed.js",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
-    "mongo:test": "node mongoConnect.js"
+    "mongo:test": "node mongoConnect.js",
+    "mongo:setup": "node setupCollections.js"
   },
   "keywords": [
     "stockspot",
