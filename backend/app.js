@@ -3,14 +3,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config();
-const mongoose = require('mongoose');
 
 // connect early using standard env var; legacy code checks MONGODB_URI too
 const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
-mongoose.connect(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+mongoose.connect(uri)
   .then(() => console.log('MongoDB connected for StockSpot Layer 2'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -64,14 +60,46 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    environment: process.env.NODE_ENV || 'development'
-  });
+// Health check endpoint with MongoDB details
+app.get('/health', async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    const collectionCount = collections.length;
+    
+    // Get document counts for key collections
+    const productCount = await db.collection('products').countDocuments().catch(() => 0);
+    const signalCount = await db.collection('signals').countDocuments().catch(() => 0);
+    const templateCount = await db.collection('ai_templates').countDocuments().catch(() => 0);
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: {
+        status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        host: mongoose.connection.host || 'unknown',
+        name: mongoose.connection.name || 'unknown',
+        collections: collectionCount,
+        documents: {
+          products: productCount,
+          signals: signalCount,
+          ai_templates: templateCount
+        }
+      },
+      environment: process.env.NODE_ENV || 'development',
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: {
+        status: 'error',
+        error: error.message
+      },
+      environment: process.env.NODE_ENV || 'development'
+    });
+  }
 });
 
 // API Routes (multi-retailer monitoring mode)
