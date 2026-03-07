@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: stockspot-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false # Set this manually in Render dashboard
+      - key: FRONTEND_URL
+        value: https://stockspotdeals.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
