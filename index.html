@@ -558,9 +558,36 @@
     .text-muted {
       color: var(--text-secondary);
     }
+
+    /* header logo */
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 1rem 0;
+    }
+
+    .site-logo {
+      height: 48px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .site-title {
+      color: #6B85A6;
+      font-weight: 700;
+      font-size: 1.8rem;
+      margin: 0;
+    }
   </style>
 </head>
 <body>
+  <header>
+    <div class="container logo-container">
+      <img src="./assets/images/stockspot-logo.png" alt="StockSpot Logo" class="site-logo">
+      <h1 class="site-title">StockSpot</h1>
+    </div>
+  </header>
   <!-- ========================================================================
        HERO SECTION
        ======================================================================== -->
