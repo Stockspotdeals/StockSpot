@@ -186,7 +186,9 @@ class NotificationManager {
         url: 'https://amazon.com/headphones',
         category: 'Electronics',
         detectedAt: Date.now(),
-        isAmazonAffiliate: true
+        isAmazonAffiliate: true,
+        flags: { restock: false, highDemand: false },
+        lightning: false
       },
       {
         id: 'walmart-1',
@@ -197,7 +199,9 @@ class NotificationManager {
         discount: 62,
         url: 'https://walmart.com/tv',
         category: 'Electronics',
-        detectedAt: Date.now() - 5 * 60 * 1000
+        detectedAt: Date.now() - 5 * 60 * 1000,
+        flags: { restock: false, highDemand: false },
+        lightning: false
       },
       {
         id: 'target-1',
@@ -208,7 +212,9 @@ class NotificationManager {
         discount: 64,
         url: 'https://target.com/bag',
         category: 'Fashion',
-        detectedAt: Date.now() - 8 * 60 * 1000
+        detectedAt: Date.now() - 8 * 60 * 1000,
+        flags: { restock: false, highDemand: false },
+        lightning: false
       },
       {
         id: 'tcg-1',

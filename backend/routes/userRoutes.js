@@ -246,16 +246,24 @@ router.post('/:userId/reset-usage', authenticateToken, requireAdmin, async (req,
       case 'monthly':
         user.resetMonthlyUsage();
         break;
+      case 'push-hourly':
+        user.resetPushHourly();
+        break;
+      case 'push-daily':
+        user.resetPushDaily();
+        break;
       case 'all':
         user.resetHourlyUsage();
         user.resetDailyUsage();
         user.resetMonthlyUsage();
+        user.resetPushHourly();
+        user.resetPushDaily();
         user.usage.trackedProducts = 0;
         break;
       default:
         return res.status(400).json({
           error: 'Invalid reset type',
-          message: 'Reset type must be one of: hourly, daily, monthly, all'
+          message: 'Reset type must be one of: hourly, daily, monthly, push-hourly, push-daily, all'
         });
     }
 

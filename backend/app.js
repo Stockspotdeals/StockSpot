@@ -120,6 +120,15 @@ try {
   console.warn('AI templates route not mounted:', err.message);
 }
 
+// Smart Signal Engine
+try {
+  const signalRoutes = require('./routes/signals');
+  app.use('/api/signals', signalRoutes);
+} catch (err) {
+  // If route file missing, log and continue (non-breaking)
+  console.warn('Signals route not mounted:', err.message);
+}
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
@@ -194,6 +203,30 @@ const startServer = async () => {
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📊 Database: ${mongoose.connection.host}`);
       console.log('📡 Multi-retailer monitoring active (Amazon, Walmart, Target, Best Buy, etc)');
+      
+      // Start Layer 2 Smart Signal Engine
+      try {
+        const runSignalEngine = require('./services/signalEngine');
+        
+        // Run signal engine every 5 minutes in production, every 30 minutes in development
+        const intervalMinutes = process.env.NODE_ENV === 'production' ? 5 : 30;
+        const intervalMs = intervalMinutes * 60 * 1000;
+        
+        console.log(`🎯 Layer 2 Smart Signal Engine scheduled to run every ${intervalMinutes} minutes`);
+        
+        // Run immediately on startup
+        setTimeout(() => {
+          runSignalEngine().catch(err => console.error('Initial signal engine run failed:', err));
+        }, 10000); // Wait 10 seconds after startup
+        
+        // Schedule recurring runs
+        setInterval(() => {
+          runSignalEngine().catch(err => console.error('Scheduled signal engine run failed:', err));
+        }, intervalMs);
+        
+      } catch (err) {
+        console.warn('⚠️  Layer 2 Signal Engine not available:', err.message);
+      }
     });
     
     // Handle server errors

@@ -20,7 +20,8 @@ StockSpot's backend is a comprehensive product tracking engine that monitors inv
 - **Event tracking** for all product changes
 
 ### � Real-Time Notifications
-- **Multi-channel delivery** (Email, Discord, Telegram, Twitter)
+- **Multi-channel delivery** (Email, Discord, Telegram, Twitter, Push)
+- **High-frequency push channel** with hourly/daily caps, priority tiers, and admin injection endpoint
 - **Smart message formatting** per platform
 - **Deduplication** prevents spam notifications
 - **Plan-based delivery limits** and rate limiting
@@ -164,6 +165,7 @@ TWITTER_BEARER_TOKEN=your-twitter-bearer-token
 - `PATCH /api/notifications/channels/:id` - Update channel settings
 - `DELETE /api/notifications/channels/:id` - Remove channel
 - `POST /api/notifications/channels/:id/test` - Test channel delivery
+- `POST /api/notifications/push/:userId` - **ADMIN ONLY** manually enqueue a push notification for a user
 - `GET /api/notifications/events` - Get notification history
 - `GET /api/notifications/stats` - Get notification statistics
 - `POST /api/notifications/events/:id/retry` - Retry failed notification
@@ -264,6 +266,10 @@ const testResult = await service.testNotificationChannel(channelId);
   targetPrice: Number,       // User's target price
   availability: String,      // Current availability status
   isAvailable: Boolean,      // Boolean availability flag
+  flags: {                    // Metadata flags used by newer push logic
+    restock: Boolean,
+    highDemand: Boolean
+  },
   checkInterval: Number,     // Check interval in minutes
   status: String,           // active, paused, failed, deleted
   isActive: Boolean,        // Whether monitoring is active

@@ -245,6 +245,31 @@ router.post('/queue/cleanup', async (req, res) => {
 });
 
 /**
+ * POST /api/notifications/push/:userId
+ * Admin-only manual push injection. Body should contain { items: [...], forcePush: true }
+ * This bypasses hourly caps but still respects daily limit.
+ */
+router.post('/push/:userId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { items, forcePush } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Items array required' });
+    }
+
+    const { NotificationService } = require('../services/NotificationService');
+    const service = new NotificationService();
+
+    const result = await service.sendPushNotification(userId, items, { forcePush: !!forcePush });
+
+    res.json({ success: result.success, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * POST /api/notifications/manual-item/:userId
  * Add a manual item for monitoring (YEARLY tier only)
  */

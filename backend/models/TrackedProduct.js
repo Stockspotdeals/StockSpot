@@ -94,6 +94,17 @@ const TrackedProductSchema = new mongoose.Schema({
     default: Date.now,
     index: true
   },
+  // New flags for enhanced push/priority logic
+  flags: {
+    restock: {
+      type: Boolean,
+      default: false
+    },
+    highDemand: {
+      type: Boolean,
+      default: false
+    }
+  },
   errorCount: {
     type: Number,
     default: 0
@@ -129,6 +140,16 @@ const TrackedProductSchema = new mongoose.Schema({
 // Indexes for efficient queries
 TrackedProductSchema.index({ isActive: 1, nextCheck: 1 });
 TrackedProductSchema.index({ retailer: 1, category: 1 });
+
+// Ensure legacy documents always have flags populated
+TrackedProductSchema.post('init', function(doc) {
+  if (!doc.flags) {
+    doc.flags = { restock: false, highDemand: false };
+  } else {
+    if (doc.flags.restock === undefined) doc.flags.restock = false;
+    if (doc.flags.highDemand === undefined) doc.flags.highDemand = false;
+  }
+});
 TrackedProductSchema.index({ createdAt: -1 });
 
 /**

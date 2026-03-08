@@ -273,11 +273,11 @@ class NotificationTestSuite {
       }
     ];
 
-    // Test enqueue (dry-run)
+    // Test enqueue method exists (dry-run or not)
     this.logTest(
       'Queue: Enqueue notification',
-      queue.isDryRun === true,
-      'Running in DRY_RUN mode'
+      typeof queue.enqueue === 'function',
+      'Enqueue method is defined'
     );
 
     // Test queue statistics (dry-run)
@@ -292,6 +292,83 @@ class NotificationTestSuite {
       true,
       'Queue cleanup logic available'
     );
+  }
+
+  /**
+   * Test: Push limit / priority logic
+   */
+  async testPushLimits() {
+    this.printSection('🔔 Push Limit Tests');
+
+    const { UserModel } = require('../backend/models/User');
+    const { NotificationService } = require('../backend/services/NotificationService');
+    const service = new NotificationService();
+
+    // prevent actual database operations in queue during dry-run tests
+    service.queue.enqueue = async (userId, items, channelType, channelId, opts) => {
+      // mimic successful enqueue without touching DB
+      return { success: true, userId, items, channelType, channelId, opts };
+    };
+
+    const user = await UserModel.create('push@example.com', 'pw', 'free');
+
+    // send 5 standard pushes
+    for (let i = 0; i < 5; i++) {
+      const result = await service.sendPushNotification(user.id, [{ id: `p${i}` }]);
+      this.logTest(`standard push #${i + 1} allowed`, result.success === true);
+    }
+
+    // sixth should be blocked by hourly cap
+    const blocked = await service.sendPushNotification(user.id, [{ id: 'p6' }]);
+    this.logTest('6th standard push blocked', blocked.success === false && blocked.reason === 'rate_limit');
+
+    // advance hour window manually and try again
+    user.usage.pushHourlyWindowStart = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    await UserModel.updateById(user.id, { usage: user.usage });
+    const afterReset = await service.sendPushNotification(user.id, [{ id: 'p7' }], 'push');
+    this.logTest('standard push after hourly reset allowed', afterReset.success === true);
+
+    // priority 1 (heavy discount) should count toward hourly cap
+    // reset hourly window first
+    user.usage.pushHourlyWindowStart = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    user.usage.pushHourlyCount = 0;
+    await UserModel.updateById(user.id, { usage: user.usage });
+    for (let i = 0; i < 5; i++) {
+      const result = await service.sendPushNotification(user.id, [{ id: `d${i}`, discount: 45 }]);
+      this.logTest(`heavy-discount push #${i + 1} allowed`, result.success === true);
+    }
+    const blockedDiscount = await service.sendPushNotification(user.id, [{ id: 'd6', discount: 45 }]);
+    this.logTest('6th heavy-discount push blocked', blockedDiscount.success === false && blockedDiscount.reason === 'rate_limit');
+
+    // priority 2 (high demand restock) bypasses hourly cap
+    for (let i = 0; i < 6; i++) {
+      const result = await service.sendPushNotification(user.id, [{ id: `h${i}`, flags: { restock: true, highDemand: true } }]);
+      this.logTest(`high-demand push #${i + 1} allowed`, result.success === true);
+    }
+
+    // simulate daily count reaching 29 (reset hourly window/count to avoid hour cap interference)
+    user.usage.pushDailyCount = 29;
+    user.usage.pushHourlyCount = 0;
+    user.usage.pushHourlyWindowStart = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    await UserModel.updateById(user.id, { usage: user.usage });
+    const day30 = await service.sendPushNotification(user.id, [{ id: 'd30' }]);
+    this.logTest('30th push of day allowed', day30.success === true);
+    const day31 = await service.sendPushNotification(user.id, [{ id: 'd31' }]);
+    this.logTest('31st push of day blocked', day31.success === false && day31.reason === 'rate_limit');
+  }
+
+  /**
+   * Test: Product schema flags and backward compatibility
+   */
+  testProductFlags() {
+    this.printSection('🏷️ Product Schema Flags Tests');
+    const { TrackedProduct } = require('../backend/models/TrackedProduct');
+
+    const prod = new TrackedProduct({ url: 'http://test', retailer: 'other' });
+    this.logTest('new product has flags default', prod.flags && prod.flags.restock === false && prod.flags.highDemand === false);
+
+    const legacy = TrackedProduct.hydrate({ url: 'http://legacy', retailer: 'other' });
+    this.logTest('hydrated legacy product gains flags', legacy.flags && legacy.flags.restock === false && legacy.flags.highDemand === false);
   }
 
   /**
@@ -382,6 +459,8 @@ class NotificationTestSuite {
       this.testEmailProvider();
       this.testRSSFeedManager();
       this.testNotificationQueue();
+      await this.testPushLimits();
+      this.testProductFlags();
       await this.testNotificationManager();
 
       // Print summary

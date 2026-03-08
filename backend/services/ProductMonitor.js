@@ -48,7 +48,12 @@ class ProductMonitor {
         affiliateLink: productData.affiliateLink || trackedProduct.affiliateLink,
         errorCount: 0, // Reset on successful check
         lastError: null,
-        nextCheck: this.calculateNextCheck(trackedProduct, true)
+        nextCheck: this.calculateNextCheck(trackedProduct, true),
+        // carry forward any new flags, defaulting to existing values or false
+        flags: {
+          restock: (productData.flags && productData.flags.restock) || (trackedProduct.flags && trackedProduct.flags.restock) || false,
+          highDemand: (productData.flags && productData.flags.highDemand) || (trackedProduct.flags && trackedProduct.flags.highDemand) || false
+        }
       };
       
       await trackedProduct.updateOne(updateData);

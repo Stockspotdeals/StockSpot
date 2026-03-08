@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>StockSpot Deals Feed</title>
+    <link>https://stockspot.com</link>
+    <description>Real-time deals and restocks from your favorite retailers</description>
+    <language>en-us</language>
+    <pubDate>Fri, 27 Feb 2026 03:54:41 GMT</pubDate>
+    <lastBuildDate>Fri, 27 Feb 2026 03:54:41 GMT</lastBuildDate>
+    <ttl>5</ttl>
+    <image>
+      <url>https://stockspot.com/logo.png</url>
+      <title>StockSpot</title>
+      <link>https://stockspot.com</link>
+    </image>
+    <item>
+      <title>Premium Wireless Headphones</title>
+      <description>
+        Premium Wireless Headphones
+        Price: $79.99 (was $199.99)
+        Discount: 60%
+        Retailer: Amazon
+      </description>
+      <link>https://amazon.com/headphones</link>
+      <guid>amz-1-user-paid</guid>
+      <pubDate>Fri, 27 Feb 2026 03:54:41 GMT</pubDate>
+      <category>Electronics</category>
+      <content:encoded><![CDATA[
+                <h3>Premium Wireless Headphones</h3>
+                <p><strong>Retailer:</strong> Amazon</p>
+                <p><strong>Price:</strong> $79.99 <s>$199.99</s></p>
+                <p><strong>Discount:</strong> 60% OFF</p>
+                <a href="https://amazon.com/headphones">View Product</a>
+              ]]></content:encoded>
+    </item>
+    <item>
+      <title>4K Smart TV</title>
+      <description>
+        4K Smart TV
+        Price: $299.99 (was $799.99)
+        Discount: 62%
+        Retailer: Walmart
+      </description>
+      <link>https://walmart.com/tv</link>
+      <guid>walmart-1-user-paid</guid>
+      <pubDate>Fri, 27 Feb 2026 03:49:41 GMT</pubDate>
+      <category>Electronics</category>
+      <content:encoded><![CDATA[
+                <h3>4K Smart TV</h3>
+                <p><strong>Retailer:</strong> Walmart</p>
+                <p><strong>Price:</strong> $299.99 <s>$799.99</s></p>
+                <p><strong>Discount:</strong> 62% OFF</p>
+                <a href="https://walmart.com/tv">View Product</a>
+              ]]></content:encoded>
+    </item>
+    <item>
+      <title>Designer Handbag</title>
+      <description>
+        Designer Handbag
+        Price: $89.99 (was $249.99)
+        Discount: 64%
+        Retailer: Target
+      </description>
+      <link>https://target.com/bag</link>
+      <guid>target-1-user-paid</guid>
+      <pubDate>Fri, 27 Feb 2026 03:46:41 GMT</pubDate>
+      <category>Fashion</category>
+      <content:encoded><![CDATA[
+                <h3>Designer Handbag</h3>
+                <p><strong>Retailer:</strong> Target</p>
+                <p><strong>Price:</strong> $89.99 <s>$249.99</s></p>
+                <p><strong>Discount:</strong> 64% OFF</p>
+                <a href="https://target.com/bag">View Product</a>
+              ]]></content:encoded>
+    </item>
+    <item>
+      <title>Scarlet &amp; Violet Booster Box</title>
+      <description>
+        Scarlet &amp; Violet Booster Box
+        Price: $89.99 (was $120.00)
+        Discount: 25%
+        Retailer: Pokemon TCG
+      </description>
+      <link>https://pokemon.com/booster</link>
+      <guid>tcg-1-user-paid</guid>
+      <pubDate>Fri, 27 Feb 2026 03:51:41 GMT</pubDate>
+      <category>Trading Card Games</category>
+      <content:encoded><![CDATA[
+                <h3>Scarlet & Violet Booster Box</h3>
+                <p><strong>Retailer:</strong> Pokemon TCG</p>
+                <p><strong>Price:</strong> $89.99 <s>$120.00</s></p>
+                <p><strong>Discount:</strong> 25% OFF</p>
+                <a href="https://pokemon.com/booster">View Product</a>
+              ]]></content:encoded>
+    </item>
+    <item>
+      <title>NBA 2024-25 Rookie Cards</title>
+      <description>
+        NBA 2024-25 Rookie Cards
+        Price: $149.99 (was $200.00)
+        Discount: 25%
+        Retailer: Sports Cards
+      </description>
+      <link>https://sportscards.com/nba</link>
+      <guid>sports-1-user-paid</guid>
+      <pubDate>Fri, 27 Feb 2026 03:52:41 GMT</pubDate>
+      <category>Sports Cards</category>
+      <content:encoded><![CDATA[
+                <h3>NBA 2024-25 Rookie Cards</h3>
+                <p><strong>Retailer:</strong> Sports Cards</p>
+                <p><strong>Price:</strong> $149.99 <s>$200.00</s></p>
+                <p><strong>Discount:</strong> 25% OFF</p>
+                <a href="https://sportscards.com/nba">View Product</a>
+              ]]></content:encoded>
+    </item>
+  </channel>
+</rss>

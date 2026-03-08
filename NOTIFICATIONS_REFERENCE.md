@@ -407,6 +407,7 @@ cron.schedule('0 2 * * *', async () => {
 - [ ] Configure email provider (SendGrid or Nodemailer)
 - [ ] Connect MongoDB with auth
 - [ ] Create TTL index on NotificationQueue
+- [ ] Push notification channel added; use POST `/api/notifications/push/:userId` for manual injections
 - [ ] Run tests: `npm run test:notifications`
 - [ ] Set up cron jobs (optional)
 - [ ] Monitor queue stats regularly
@@ -420,7 +421,7 @@ cron.schedule('0 2 * * *', async () => {
 | NotificationManager.js | Orchestrate feed processing | 180 |
 | EmailProvider.js | Send emails via SendGrid/Nodemailer | 310 |
 | RSSFeedManager.js | Generate RSS feeds per user | 200 |
-| NotificationQueue.js | MongoDB queue with retries | 280 |
+| NotificationQueue.js | MongoDB queue with retries (now supports push channel with rate limiting) | 280 |
 | notifications.js | API routes | 220 |
 | notification-test.js | Comprehensive test suite | 450 |
 | User.js | MongoDB schema | 230 |

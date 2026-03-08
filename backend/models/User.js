@@ -46,6 +46,11 @@ class User {
       alertsToday: 0,
       apiCallsThisHour: 0,
       dealsThisMonth: 0,
+      // new push counters for high-frequency system
+      pushHourlyCount: 0,
+      pushHourlyWindowStart: null,
+      pushDailyCount: 0,
+      pushDailyWindowStart: null,
       lastApiCall: null,
       lastAlert: null
     };
@@ -60,9 +65,27 @@ class User {
     this.updatedAt = new Date();
   }
 
+  /**
+   * Reset push hourly counters (used internally)
+   */
+  resetPushHourly() {
+    this.usage.pushHourlyCount = 0;
+    this.usage.pushHourlyWindowStart = new Date();
+    this.updatedAt = new Date();
+  }
+
   resetDailyUsage() {
     this.usage.alertsToday = 0;
     this.usage.lastAlert = new Date();
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Reset push daily counter (midnight UTC)
+   */
+  resetPushDaily() {
+    this.usage.pushDailyCount = 0;
+    this.usage.pushDailyWindowStart = new Date();
     this.updatedAt = new Date();
   }
 
@@ -150,6 +173,60 @@ class User {
   incrementDeal() {
     this.usage.dealsThisMonth++;
     this.usage.lastDeal = new Date();
+    this.updatedAt = new Date();
+  }
+
+  /**
+   * Determine if a push notification may be sent based on priority and current counters
+   * priority: 0=standard,1=heavy discount,2=restock high demand,3=manual
+   */
+  canSendPush(priority = 0) {
+    const now = new Date();
+
+    // reset hourly window if expired
+    if (!this.usage.pushHourlyWindowStart || (now - new Date(this.usage.pushHourlyWindowStart) >= 60 * 60 * 1000)) {
+      this.resetPushHourly();
+    }
+
+    // reset daily window if past midnight UTC
+    const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    if (!this.usage.pushDailyWindowStart || new Date(this.usage.pushDailyWindowStart) < utcMidnight) {
+      this.resetPushDaily();
+    }
+
+    // hard daily cap applies to all
+    if (this.usage.pushDailyCount >= 30) {
+      return false;
+    }
+
+    // hourly cap only for priorities < 2
+    if (priority < 2 && this.usage.pushHourlyCount >= 5) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Record that a push has been sent. priority influences which counters increment.
+   */
+  recordPush(priority = 0) {
+    const now = new Date();
+
+    // ensure windows up to date
+    if (!this.usage.pushHourlyWindowStart || (now - new Date(this.usage.pushHourlyWindowStart) >= 60 * 60 * 1000)) {
+      this.resetPushHourly();
+    }
+    const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    if (!this.usage.pushDailyWindowStart || new Date(this.usage.pushDailyWindowStart) < utcMidnight) {
+      this.resetPushDaily();
+    }
+
+    // increment counters
+    if (priority < 2) {
+      this.usage.pushHourlyCount++;
+    }
+    this.usage.pushDailyCount++;
     this.updatedAt = new Date();
   }
 

@@ -20,7 +20,12 @@ const notificationQueueSchema = new mongoose.Schema({
     originalPrice: Number,
     discount: Number,
     url: String,
-    category: String
+    category: String,
+    flags: {
+      restock: Boolean,
+      highDemand: Boolean
+    },
+    lightning: Boolean
   }],
   channel: {
     type: String,
@@ -64,8 +69,9 @@ class NotificationQueue {
   /**
    * Enqueue a notification
    */
-  async enqueue(userId, items, channel = 'email', scheduledFor = null) {
+  async enqueue(userId, items, channel = 'email', scheduledFor = null, opts = {}) {
     try {
+
       const notification = {
         userId,
         items,
@@ -223,6 +229,25 @@ class NotificationQueue {
   /**
    * Cancel a notification
    */
+
+  /**
+   * Determine priority for a potential push based on item data and options
+   */
+  determinePushPriority(items = [], opts = {}) {
+    // highest priority: explicit forcePush
+    if (opts.forcePush) return 3;
+
+    // check item flags for restock/high demand
+    const hasHighDemandRestock = items.some(i => i.flags && i.flags.restock && i.flags.highDemand);
+    if (hasHighDemandRestock) return 2;
+
+    // heavy discount or lightning deal
+    const hasHeavyDiscount = items.some(i => (i.discount && i.discount >= 40) || i.lightning === true);
+    if (hasHeavyDiscount) return 1;
+
+    return 0;
+  }
+
   async cancelNotification(notificationId) {
     try {
       const notification = await NotificationQueueModel.findByIdAndUpdate(

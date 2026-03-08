@@ -7,6 +7,10 @@ class NotificationService {
     this.isDryRun = process.env.DRY_RUN === 'true';
     this.initializeProviders();
     this.rateLimits = new Map();
+
+    // queue used for push transport
+    const { NotificationQueue } = require('../notifications/NotificationQueue');
+    this.queue = new NotificationQueue();
   }
 
   initializeProviders() {
@@ -318,6 +322,37 @@ class NotificationService {
         error: error.message
       };
     }
+  }
+
+
+  /**
+   * Send a push notification for a user, enforcing rate limits
+   * opts may include { forcePush: boolean }
+   */
+  async sendPushNotification(userId, items, opts = {}) {
+    // Decision layer - use UserModel to inspect and update counters
+    const { UserModel } = require('../models/User');
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // figure out priority using utility from queue
+    const priority = this.queue.determinePushPriority(items, opts);
+
+    console.log(`🔔 [Decision] evaluating push for user ${userId} priority ${priority}`);
+
+    if (!user.canSendPush(priority)) {
+      console.log(`⚠️ [Decision] push blocked for user ${userId}`);
+      return { success: false, reason: 'rate_limit' };
+    }
+
+    // record that we are sending one
+    user.recordPush(priority);
+    await UserModel.updateById(userId, { usage: user.usage });
+
+    // hand off to transport
+    return this.queue.enqueue(userId, items, 'push', null, opts);
   }
 
   async getNotificationStats(userId) {
