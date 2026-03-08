@@ -166,18 +166,55 @@
     /* ============================================================================
        HERO SECTION
        ============================================================================ */
-    .hero {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .hero-section {
+      position: relative;
       text-align: center;
-      min-height: 100vh;
-      padding: 4rem 1.5rem;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+      padding: 120px 20px;
+      background-color: #0F172A;
+      overflow: hidden;
+    }
+
+    .hero-section::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 700px;
+      height: 700px;
+      background-image: url("./assets/images/stockspot-logo.png");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      transform: translate(-50%, -50%);
+      opacity: 0.08;
+      z-index: 0;
     }
 
     .hero-content {
+      position: relative;
+      z-index: 1;
       max-width: 900px;
+    }
+
+    .hero-title {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #6B85A6;
+      margin-bottom: 10px;
+    }
+
+    .hero-subtitle {
+      font-size: 1.2rem;
+      color: #F8FAFC;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+      .hero-section::before {
+        width: 400px;
+        height: 400px;
+      }
     }
 
     .hero h1 {
@@ -591,10 +628,10 @@
   <!-- ========================================================================
        HERO SECTION
        ======================================================================== -->
-  <section class="hero">
+  <section class="hero-section">
     <div class="hero-content">
-      <h1>StockSpot</h1>
-      <p class="subtitle">Real-time product restock and price drop alerts for resellers and deal hunters.</p>
+      <h1 class="hero-title">StockSpot</h1>
+      <p class="hero-subtitle">Real-time product restock and price drop alerts for resellers and deal hunters.</p>
       <div class="hero-buttons">
         <button class="btn btn-primary">Start Free</button>
         <button class="btn btn-secondary">Upgrade to Premium</button>
