@@ -168,73 +168,120 @@
        ============================================================================ */
     .hero-section {
       position: relative;
+      height: 90vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      padding: 120px 20px;
-      background-color: #0F172A;
+      color: white;
       overflow: hidden;
     }
 
     .hero-section::before {
-      content: "";
+      content: '';
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 700px;
-      height: 700px;
+      transform: translate(-50%, -50%);
+      width: 1400px;
+      height: 1400px;
       background-image: url("./assets/images/stockspot-logo.png");
+      background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      background-size: contain;
-      transform: translate(-50%, -50%);
-      opacity: 0.08;
+      opacity: 0.06;
       z-index: 0;
+      pointer-events: none;
     }
 
     .hero-content {
       position: relative;
       z-index: 1;
-      max-width: 900px;
+      max-width: 800px;
+      padding: 0 2rem;
     }
 
     .hero-title {
-      font-size: 3rem;
+      font-size: 4rem;
       font-weight: 700;
-      color: #6B85A6;
-      margin-bottom: 10px;
+      margin-bottom: 1rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
     .hero-subtitle {
-      font-size: 1.2rem;
-      color: #F8FAFC;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    @media (max-width: 768px) {
-      .hero-section::before {
-        width: 400px;
-        height: 400px;
-      }
-    }
-
-    .hero h1 {
-      background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+      line-height: 1.4;
     }
 
     .hero-buttons {
       display: flex;
-      gap: 1.5rem;
+      gap: 1rem;
       justify-content: center;
-      margin-top: 2.5rem;
       flex-wrap: wrap;
     }
 
-    .hero-buttons button {
+    .primary-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
       padding: 1rem 2rem;
-      font-size: 1.0625rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .primary-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+    }
+
+    .secondary-btn {
+      background: transparent;
+      color: white;
+      border: 2px solid white;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .secondary-btn:hover {
+      background: white;
+      color: var(--background);
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+      .hero-section::before {
+        width: 700px;
+        height: 700px;
+      }
+
+      .hero-title {
+        font-size: 2.5rem;
+      }
+
+      .hero-subtitle {
+        font-size: 1.2rem;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .primary-btn,
+      .secondary-btn {
+        width: 200px;
+      }
     }
 
     /* ============================================================================
@@ -619,22 +666,19 @@
   </style>
 </head>
 <body>
-  <header>
-    <div class="container logo-container">
-      <img src="./assets/images/stockspot-logo.png" alt="StockSpot Logo" class="site-logo">
-      <h1 class="site-title">StockSpot</h1>
-    </div>
-  </header>
   <!-- ========================================================================
        HERO SECTION
        ======================================================================== -->
   <section class="hero-section">
     <div class="hero-content">
       <h1 class="hero-title">StockSpot</h1>
-      <p class="hero-subtitle">Real-time product restock and price drop alerts for resellers and deal hunters.</p>
+      <p class="hero-subtitle">
+        Real-time product restock and price drop alerts for resellers and deal hunters
+      </p>
+
       <div class="hero-buttons">
-        <button class="btn btn-primary">Start Free</button>
-        <button class="btn btn-secondary">Upgrade to Premium</button>
+        <button class="primary-btn">Start Free</button>
+        <button class="secondary-btn">Upgrade to Premium</button>
       </div>
     </div>
   </section>
