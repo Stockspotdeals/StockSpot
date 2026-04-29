@@ -865,6 +865,61 @@
         height: 32px;
       }
     }
+
+    /* ============================================================================
+       MODAL
+       ============================================================================ */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #0F172A;
+      padding: 40px;
+      border-radius: 10px;
+      text-align: center;
+      color: white;
+      max-width: 500px;
+      border: 1px solid #334155;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-content h2 {
+      color: #F8FAFC;
+      margin-bottom: 20px;
+      font-size: 1.75rem;
+    }
+
+    .modal-content p {
+      color: #94A3B8;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    .modal-close-btn {
+      background: #2563EB;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+    }
   </style>
 </head>
 <body>
@@ -879,8 +934,8 @@
       </div>
       <div class="navbar-right">
         <a href="#pricing" class="nav-link hide-mobile">Pricing</a>
-        <a href="/app" class="nav-link hide-mobile">Launch App</a>
-        <a href="/login" class="nav-link">Login</a>
+        <a href="#pricing" class="nav-link hide-mobile">Launch App</a>
+        <a href="#pricing" class="nav-link">Login</a>
         <a href="#pricing" class="nav-btn-upgrade">Upgrade</a>
       </div>
     </div>
@@ -909,7 +964,7 @@
       <p>StockSpot tracks price drops and restocks in real-time so you can flip products faster than everyone else.</p>
 
       <div class="cta-buttons">
-        <a href="/app" class="cta-primary">Start Free</a>
+        <a href="javascript:void(0);" onclick="openModal()" class="cta-primary">Start Free</a>
         <a href="#pricing" class="cta-secondary">View Pricing</a>
       </div>
     </div>
@@ -995,7 +1050,7 @@
   <!-- ========================================================================
        PRICING SECTION
        ======================================================================== -->
-  <section class="pricing">
+  <section class="pricing" id="pricing">
     <div class="container">
       <div class="section-header">
         <h2>Simple, Transparent Pricing</h2>
@@ -1060,7 +1115,36 @@
     </div>
   </footer>
 
+  <!-- ========================================================================
+       APP PREVIEW MODAL
+       ======================================================================== -->
+  <div id="appModal" class="modal">
+    <div class="modal-content">
+      <h2>StockSpot App (Preview)</h2>
+      <p>This is a live preview environment. Full app launching coming soon.</p>
+      <p>Sign up above to get early access to the complete StockSpot application.</p>
+      <button class="modal-close-btn" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
   <script>
+    // Modal functions
+    function openModal() {
+      document.getElementById('appModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('appModal').style.display = 'none';
+    }
+
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+      const modal = document.getElementById('appModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    }
+
     // Smooth scroll and button interactions
     document.querySelectorAll('button').forEach(button => {
       button.addEventListener('click', function(e) {
