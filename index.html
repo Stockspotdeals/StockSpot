@@ -311,6 +311,44 @@
       margin: 0 auto;
     }
 
+    .features {
+      padding: 80px 20px;
+      background: #0F172A;
+      text-align: center;
+    }
+
+    .features h2 {
+      color: #F8FAFC;
+      font-size: 2rem;
+      margin-bottom: 40px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: #0B1220;
+      padding: 24px;
+      border-radius: 10px;
+      border: 1px solid #1F2937;
+      text-align: left;
+    }
+
+    .feature-card h3 {
+      color: #22C55E;
+      margin-bottom: 10px;
+    }
+
+    .feature-card p {
+      color: #94A3B8;
+      font-size: 0.95rem;
+    }
+
     .primary-btn {
       background: var(--primary);
       color: white;
@@ -891,6 +929,34 @@
       <p class="stats">
         Tracking thousands of products daily • Real-time restock alerts • AI-powered deal signals
       </p>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <h2>Everything You Need to Find Profitable Deals</h2>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Real-Time Restock Alerts</h3>
+          <p>Get notified instantly when high-demand products come back in stock.</p>
+        </div>
+
+        <div class="feature-card">
+          <h3>Price Drop Tracking</h3>
+          <p>Monitor price changes across major retailers and catch deals early.</p>
+        </div>
+
+        <div class="feature-card">
+          <h3>AI Flip Suggestions</h3>
+          <p>AI identifies profitable resale opportunities automatically.</p>
+        </div>
+
+        <div class="feature-card">
+          <h3>Affiliate-Ready Links</h3>
+          <p>Automatically generate monetized links for every deal.</p>
+        </div>
+      </div>
     </div>
   </section>
 
