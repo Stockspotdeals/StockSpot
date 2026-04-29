@@ -1066,7 +1066,7 @@
             <li>Limited smart signals</li>
             <li>Community templates</li>
           </ul>
-          <a href="#app" class="plan-button">Start Free</a>
+          <a href="#app" class="plan-button" data-plan="free">Start Free</a>
         </div>
 
         <!-- Premium Plan -->
@@ -1081,7 +1081,7 @@
             <li>AI resale templates</li>
             <li>Priority alerts</li>
           </ul>
-          <button class="plan-button" onclick="openUpgradeModal()">Upgrade to Premium</button>
+          <button class="plan-button" id="upgradeBtn" data-plan="premium" data-stripe="premium_monthly">Upgrade to Premium</button>
         </div>
       </div>
     </div>
@@ -1193,6 +1193,25 @@
 
     document.querySelectorAll('.feature-card').forEach(card => {
       observer.observe(card);
+    });
+
+    // ========================================================================
+    // STRIPE INTEGRATION READY
+    // ========================================================================
+    // Stripe integration will replace modal in next phase
+    document.getElementById('upgradeBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Stripe payment processing will be implemented here
+      const planData = {
+        plan: this.getAttribute('data-plan'),
+        stripeProduct: this.getAttribute('data-stripe')
+      };
+      
+      console.log('Premium plan selected - Stripe checkout ready:', planData);
+      
+      // Temporary UX fallback until Stripe is integrated
+      document.getElementById('upgradeModal').style.display = 'flex';
     });
   </script>
 </body>
