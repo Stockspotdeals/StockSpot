@@ -222,6 +222,57 @@
       flex-wrap: wrap;
     }
 
+    .cta-section {
+      text-align: center;
+      padding: 80px 20px;
+      background: #020617;
+    }
+
+    .cta-section h2 {
+      font-size: 2.2rem;
+      color: #F8FAFC;
+      margin-bottom: 16px;
+    }
+
+    .cta-section p {
+      color: #94A3B8;
+      max-width: 600px;
+      margin: 0 auto 30px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .cta-primary {
+      background: #22C55E;
+      color: #020617;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .cta-secondary {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #F8FAFC;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+
+    .cta-primary:hover {
+      opacity: 0.9;
+    }
+
+    .cta-secondary:hover {
+      border-color: #22C55E;
+    }
+
     .primary-btn {
       background: var(--primary);
       color: white;
@@ -663,9 +714,102 @@
       font-size: 1.8rem;
       margin: 0;
     }
+
+    /* ============================================================================
+       NAVBAR
+       ============================================================================ */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background-color: #0F172A;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .navbar-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 72px;
+    }
+
+    .navbar .logo-container {
+      padding: 0;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .nav-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover {
+      color: #22C55E;
+    }
+
+    .nav-btn-upgrade {
+      background-color: #2563EB;
+      color: white;
+      padding: 0.6rem 1.25rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .nav-btn-upgrade:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    @media (max-width: 768px) {
+      .navbar-right {
+        gap: 1rem;
+      }
+      .nav-link.hide-mobile {
+        display: none;
+      }
+      .site-title {
+        font-size: 1.4rem;
+      }
+      .site-logo {
+        height: 32px;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- ========================================================================
+       NAVBAR
+       ======================================================================== -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <div class="logo-container">
+        <img src="./assets/images/stockspot-logo.png" alt="StockSpot" class="site-logo">
+        <span class="site-title">StockSpot</span>
+      </div>
+      <div class="navbar-right">
+        <a href="#pricing" class="nav-link hide-mobile">Pricing</a>
+        <a href="/app" class="nav-link hide-mobile">Launch App</a>
+        <a href="/login" class="nav-link">Login</a>
+        <a href="#pricing" class="nav-btn-upgrade">Upgrade</a>
+      </div>
+    </div>
+  </nav>
+
   <!-- ========================================================================
        HERO SECTION
        ======================================================================== -->
@@ -679,6 +823,18 @@
       <div class="hero-buttons">
         <button class="primary-btn">Start Free</button>
         <button class="secondary-btn">Upgrade to Premium</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="container">
+      <h2>Never Miss a Profitable Restock Again</h2>
+      <p>StockSpot tracks price drops and restocks in real-time so you can flip products faster than everyone else.</p>
+
+      <div class="cta-buttons">
+        <a href="/app" class="cta-primary">Start Free</a>
+        <a href="#pricing" class="cta-secondary">View Pricing</a>
       </div>
     </div>
   </section>
