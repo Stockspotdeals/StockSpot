@@ -573,6 +573,9 @@
       cursor: pointer;
       transition: var(--transition);
       font-size: 1rem;
+      text-decoration: none;
+      display: block;
+      text-align: center;
     }
 
     .pricing-card:not(.featured) .plan-button {
@@ -953,7 +956,7 @@
     </div>
   </section>
 
-  <section class="cta-section">
+  <section class="cta-section" id="app">
     <div class="container">
       <h2>Never Miss a Profitable Restock Again</h2>
       <p>StockSpot tracks price drops and restocks in real-time so you can flip products faster than everyone else.</p>
@@ -1063,7 +1066,7 @@
             <li>Limited smart signals</li>
             <li>Community templates</li>
           </ul>
-          <button class="plan-button">Start Free</button>
+          <a href="#app" class="plan-button">Start Free</a>
         </div>
 
         <!-- Premium Plan -->
@@ -1078,7 +1081,7 @@
             <li>AI resale templates</li>
             <li>Priority alerts</li>
           </ul>
-          <button class="plan-button">Upgrade to Premium</button>
+          <button class="plan-button" onclick="openUpgradeModal()">Upgrade to Premium</button>
         </div>
       </div>
     </div>
@@ -1122,6 +1125,17 @@
     </div>
   </div>
 
+  <!-- ========================================================================
+       UPGRADE MODAL
+       ======================================================================== -->
+  <div id="upgradeModal" class="modal">
+    <div class="modal-content">
+      <h2>Upgrade to Premium</h2>
+      <p>Premium access is coming soon. You'll get real-time alerts, AI flip signals, and early deal access.</p>
+      <button class="modal-close-btn" onclick="closeUpgradeModal()">Close</button>
+    </div>
+  </div>
+
   <script>
     // Modal functions
     function openModal() {
@@ -1132,11 +1146,23 @@
       document.getElementById('appModal').style.display = 'none';
     }
 
+    function openUpgradeModal() {
+      document.getElementById('upgradeModal').style.display = 'flex';
+    }
+
+    function closeUpgradeModal() {
+      document.getElementById('upgradeModal').style.display = 'none';
+    }
+
     // Close modal when clicking outside of it
     window.onclick = function(event) {
-      const modal = document.getElementById('appModal');
-      if (event.target === modal) {
-        modal.style.display = 'none';
+      const appModal = document.getElementById('appModal');
+      const upgradeModal = document.getElementById('upgradeModal');
+      if (event.target === appModal) {
+        appModal.style.display = 'none';
+      }
+      if (event.target === upgradeModal) {
+        upgradeModal.style.display = 'none';
       }
     }
 
