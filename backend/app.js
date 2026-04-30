@@ -4,11 +4,19 @@ const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config();
 
-// connect early using standard env var; legacy code checks MONGODB_URI too
-const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
-mongoose.connect(uri)
-  .then(() => console.log('MongoDB connected for StockSpot Layer 2'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Load MongoDB URI from standard env var; legacy support remains for MONGODB_URI
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 10000
+};
+
+if (!mongoUri) {
+  console.error('MongoDB connection error: MONGO_URI or MONGODB_URI is not set');
+} else {
+  mongoose.connect(mongoUri, mongooseOptions)
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.error('MongoDB connection error:', err));
+}
 
 const app = express();
 
@@ -196,8 +204,11 @@ const startServer = async () => {
     // Connect to MongoDB
     // connection already established above via MONGO_URI/MONGODB_URI
     console.log('✅ MongoDB connection already initialized');
-    
-      const PORT = process.env.PORT || 5000;
+
+    const PORT_BASE = Number(process.env.PORT) || 3000;
+    const PORT = process.env.NODE_ENV === 'production'
+      ? PORT_BASE
+      : PORT_BASE + Math.floor(Math.random() * 1000);
     const server = app.listen(PORT, () => {
       console.log(`🚀 StockSpot server running on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -253,4 +264,7 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = app;
+module.exports = {
+  app,
+  startServer
+};
