@@ -6,11 +6,14 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 
-const uri = process.env.MONGO_URI;
+const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 10000
+};
 
 (async () => {
   try {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, mongooseOptions);
     const db = mongoose.connection.db;
 
     console.log("\n🔧 Setting up StockSpot collections...\n");

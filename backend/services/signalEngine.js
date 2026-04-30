@@ -10,21 +10,26 @@ async function runSignalEngine() {
   // Ensure MongoDB connection is ready
   if (mongoose.connection.readyState !== 1) {
     console.log('⏳ Waiting for MongoDB connection...');
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('MongoDB connection timeout'));
-      }, 10000);
+    try {
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('MongoDB connection timeout'));
+        }, 10000);
 
-      if (mongoose.connection.readyState === 1) {
-        clearTimeout(timeout);
-        resolve();
-      } else {
-        mongoose.connection.once('connected', () => {
+        if (mongoose.connection.readyState === 1) {
           clearTimeout(timeout);
           resolve();
-        });
-      }
-    });
+        } else {
+          mongoose.connection.once('connected', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        }
+      });
+    } catch (error) {
+      console.warn('⚠️ MongoDB unavailable, skipping signal engine run:', error.message);
+      return [];
+    }
   }
 
   try {

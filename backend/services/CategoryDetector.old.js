@@ -207,7 +207,10 @@ class CategoryDetector {
       [CATEGORY_TYPES.ONE_PIECE_TCG]: '🏴‍☠️',
       [CATEGORY_TYPES.SPORTS_CARDS]: '🏈',
       [CATEGORY_TYPES.GENERAL]: '🛍️'
-  // Add other category detection methods
+    };
+    return emojiMap[category] || '🛍️';
+  }
+
   static isGaming(text) {
     const gamingKeywords = [
       'gaming', 'video game', 'console', 'xbox', 'playstation', 'nintendo', 

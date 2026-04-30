@@ -20,6 +20,10 @@ process.env.NODE_ENV = 'development';
 const express = require('express');
 const cors = require('cors');
 const { FeedObserver } = require('./services/FeedObserver');
+const TierManager = require('./tiers/TierManager');
+const MockDataGenerator = require('./tests/MockDataGenerator');
+const FeedGenerator = require('./feeds/FeedGenerator');
+const RetailerMonitor = require('./monitors/RetailerMonitor');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -59,6 +63,7 @@ app.get('/status', (req, res) => {
     mode: 'dry-run',
     app: 'StockSpot',
     version: '3.0.0',
+    categories: [
       'pokemon-tcg',
       'one-piece-tcg',
       'sports-cards',
@@ -140,7 +145,6 @@ app.get('/api/retailers', (req, res) => {
  */
 app.get('/api/categories', (req, res) => {
   try {
-    const RetailerMonitor = require('./monitors/RetailerMonitor');
     const categories = Object.values(RetailerMonitor.CATEGORIES);
     res.json({
       categories,

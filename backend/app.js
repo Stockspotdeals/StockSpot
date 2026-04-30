@@ -1,3 +1,6 @@
+console.log('Initializing server...');
+console.log('Connecting to MongoDB...');
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -206,8 +209,8 @@ const startServer = async () => {
     console.log('✅ MongoDB connection already initialized');
 
     const PORT = Number(process.env.PORT) || 3000;
-    const server = app.listen(PORT, () => {
-      console.log(`🚀 StockSpot server running on port ${PORT}`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running and listening on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📊 Database: ${mongoose.connection.readyState === 1 ? mongoose.connection.host : 'pending'}`);
       console.log('📡 Multi-retailer monitoring active (Amazon, Walmart, Target, Best Buy, etc)');
