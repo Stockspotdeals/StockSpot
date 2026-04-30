@@ -4,14 +4,14 @@ const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config();
 
-// Load MongoDB URI from standard env var; legacy support remains for MONGODB_URI
-const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+// Load MongoDB URI from standard env var
+const mongoUri = process.env.MONGO_URI;
 const mongooseOptions = {
   serverSelectionTimeoutMS: 10000
 };
 
 if (!mongoUri) {
-  console.error('MongoDB connection error: MONGO_URI or MONGODB_URI is not set');
+  console.error('MongoDB connection error: MONGO_URI is not set');
 } else {
   mongoose.connect(mongoUri, mongooseOptions)
     .then(() => console.log('MongoDB connected'))
@@ -205,14 +205,11 @@ const startServer = async () => {
     // connection already established above via MONGO_URI/MONGODB_URI
     console.log('✅ MongoDB connection already initialized');
 
-    const PORT_BASE = Number(process.env.PORT) || 3000;
-    const PORT = process.env.NODE_ENV === 'production'
-      ? PORT_BASE
-      : PORT_BASE + Math.floor(Math.random() * 1000);
+    const PORT = Number(process.env.PORT) || 3000;
     const server = app.listen(PORT, () => {
       console.log(`🚀 StockSpot server running on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📊 Database: ${mongoose.connection.host}`);
+      console.log(`📊 Database: ${mongoose.connection.readyState === 1 ? mongoose.connection.host : 'pending'}`);
       console.log('📡 Multi-retailer monitoring active (Amazon, Walmart, Target, Best Buy, etc)');
       
       // Start Layer 2 Smart Signal Engine
