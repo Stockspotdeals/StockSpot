@@ -1,4 +1,4 @@
-const { UserModel } = require('../models/User');
+const { AuthUserModel } = require('../models/AuthUser');
 const { verifyToken, extractTokenFromHeader, extractTokenFromCookies } = require('../utils/tokenUtils');
 
 /**
@@ -25,7 +25,7 @@ const authenticateToken = async (req, res, next) => {
     const decoded = verifyToken(token);
     
     // Get user from database
-    const user = await UserModel.findById(decoded.userId);
+    const user = await AuthUserModel.findById(decoded.userId);
     
     if (!user) {
       return res.status(401).json({
@@ -84,7 +84,7 @@ const optionalAuthentication = async (req, res, next) => {
 
     if (token) {
       const decoded = verifyToken(token);
-      const user = await UserModel.findById(decoded.userId);
+      const user = await AuthUserModel.findById(decoded.userId);
       
       if (user && user.status === 'active') {
         req.user = user;
@@ -165,8 +165,8 @@ const requireSelfOrAdmin = (userIdParam = 'userId') => {
       });
     }
 
-    const targetUserId = parseInt(req.params[userIdParam]);
-    const currentUserId = req.user.id;
+    const targetUserId = req.params[userIdParam];
+    const currentUserId = req.user.id ? req.user.id.toString() : req.user._id?.toString();
     const isAdmin = req.user.plan === 'admin';
 
     if (!isAdmin && targetUserId !== currentUserId) {

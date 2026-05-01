@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <script src="https://js.stripe.com/v3/"></script>
   <style>
     /* ============================================================================
        ROOT VARIABLES & RESET
@@ -923,6 +924,56 @@
     .modal-content {
       background: #0F172A;
       padding: 40px;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .auth-form input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: #0F172A;
+      color: #F8FAFC;
+      font-size: 1rem;
+    }
+
+    .auth-form button {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: none;
+      background: #2563EB;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .auth-form button:hover {
+      background: #1d4ed8;
+    }
+
+    .auth-form .auth-toggle {
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: underline;
+      background: transparent;
+      border: none;
+      padding: 0;
+      font: inherit;
+    }
+
+    .user-status {
+      color: #94A3B8;
+      margin-left: 1rem;
+    }
+
       border-radius: 10px;
       text-align: center;
       color: white;
@@ -973,7 +1024,9 @@
       <div class="navbar-right">
         <a href="#pricing" class="nav-link hide-mobile">Pricing</a>
         <a href="javascript:void(0);" onclick="openModal()" class="nav-link hide-mobile">Launch App</a>
-        <a href="#pricing" class="nav-link">Login</a>
+        <a href="javascript:void(0);" class="nav-link" id="loginNav">Login</a>
+        <a href="javascript:void(0);" class="nav-link" id="logoutNav" style="display:none;">Logout</a>
+        <span class="user-status" id="userStatus" style="display:none;"></span>
         <a href="#pricing" class="nav-btn-upgrade">Upgrade</a>
       </div>
     </div>
@@ -1175,17 +1228,41 @@
     </div>
   </div>
 
+  <div id="loginModal" class="modal">
+    <div class="modal-content">
+      <h2>Login</h2>
+      <form id="loginForm" class="auth-form">
+        <input id="loginEmail" type="email" placeholder="Email" required>
+        <input id="loginPassword" type="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+        <p style="color: #94A3B8;">Don't have an account? <button type="button" class="auth-toggle" onclick="switchToRegister()">Register</button></p>
+      </form>
+      <button class="modal-close-btn" onclick="closeLoginModal()">Close</button>
+    </div>
+  </div>
+
+  <div id="registerModal" class="modal">
+    <div class="modal-content">
+      <h2>Register</h2>
+      <form id="registerForm" class="auth-form">
+        <input id="registerEmail" type="email" placeholder="Email" required>
+        <input id="registerPassword" type="password" placeholder="Password" required>
+        <input id="registerConfirmPassword" type="password" placeholder="Confirm Password" required>
+        <button type="submit">Register</button>
+        <p style="color: #94A3B8;">Already have an account? <button type="button" class="auth-toggle" onclick="switchToLogin()">Login</button></p>
+      </form>
+      <button class="modal-close-btn" onclick="closeRegisterModal()">Close</button>
+    </div>
+  </div>
+
   <script>
-    // ========================================================================
-    // USER STATE SIMULATION (Frontend only - no auth yet)
-    // ========================================================================
-    const user = {
-      isPremium: false // Change to true to simulate premium user
+    const stripe = Stripe("pk_test_51TS748LZ30FLlixpHFG6aI4GpjWCjVB2bNU5DNWNcJDWhFkg6qj3MMTB1f4T6MEu50CZCX1hM7rms6ln7YKdAvAL00V0Vpvk8z");
+    const BACKEND_URL = 'https://stockspot.onrender.com';
+    const appState = {
+      accessToken: localStorage.getItem('stockspotAccessToken'),
+      user: null
     };
 
-    // ========================================================================
-    // MODAL FUNCTIONS
-    // ========================================================================
     function openModal() {
       document.getElementById('appModal').style.display = 'flex';
     }
@@ -1202,6 +1279,32 @@
       document.getElementById('upgradeModal').style.display = 'none';
     }
 
+    function openLoginModal() {
+      document.getElementById('loginModal').style.display = 'flex';
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').style.display = 'none';
+    }
+
+    function openRegisterModal() {
+      document.getElementById('registerModal').style.display = 'flex';
+    }
+
+    function closeRegisterModal() {
+      document.getElementById('registerModal').style.display = 'none';
+    }
+
+    function switchToRegister() {
+      closeLoginModal();
+      openRegisterModal();
+    }
+
+    function switchToLogin() {
+      closeRegisterModal();
+      openLoginModal();
+    }
+
     function scrollToPricing() {
       document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
     }
@@ -1210,29 +1313,174 @@
     window.onclick = function(event) {
       const appModal = document.getElementById('appModal');
       const upgradeModal = document.getElementById('upgradeModal');
+      const loginModal = document.getElementById('loginModal');
+      const registerModal = document.getElementById('registerModal');
       if (event.target === appModal) {
-        appModal.style.display = 'none';
+        closeModal();
       }
       if (event.target === upgradeModal) {
-        upgradeModal.style.display = 'none';
+        closeUpgradeModal();
       }
-    }
+      if (event.target === loginModal) {
+        closeLoginModal();
+      }
+      if (event.target === registerModal) {
+        closeRegisterModal();
+      }
+    };
 
-    // ========================================================================
-    // PREMIUM UI GATING
-    // ========================================================================
-    document.addEventListener('DOMContentLoaded', () => {
-      if (!user.isPremium) {
-        // Show premium lock overlay on premium features
-        document.querySelectorAll('.premium-feature-lock .premium-lock').forEach(lock => {
-          lock.style.display = 'block';
-        });
+    const authHeaders = () => {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (appState.accessToken) {
+        headers.Authorization = `Bearer ${appState.accessToken}`;
+      }
+      return headers;
+    };
+
+    const apiFetch = async (path, options = {}) => {
+      const response = await fetch(`${BACKEND_URL}${path}`, {
+        ...options,
+        headers: {
+          ...authHeaders(),
+          ...(options.headers || {})
+        }
+      });
+
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        const errorMessage = body?.message || body?.error || `Request failed with status ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      return body;
+    };
+
+    const setAccessToken = (token) => {
+      appState.accessToken = token || null;
+      if (token) {
+        localStorage.setItem('stockspotAccessToken', token);
       } else {
-        // Hide premium locks for premium users
-        document.querySelectorAll('.premium-feature-lock .premium-lock').forEach(lock => {
-          lock.style.display = 'none';
+        localStorage.removeItem('stockspotAccessToken');
+      }
+    };
+
+    const updateAuthDisplay = () => {
+      const loginNav = document.getElementById('loginNav');
+      const logoutNav = document.getElementById('logoutNav');
+      const userStatus = document.getElementById('userStatus');
+
+      if (appState.user) {
+        if (loginNav) loginNav.style.display = 'none';
+        if (logoutNav) logoutNav.style.display = 'inline-block';
+        if (userStatus) {
+          userStatus.textContent = `Logged in as ${appState.user.email}`;
+          userStatus.style.display = 'inline-block';
+        }
+      } else {
+        if (loginNav) loginNav.style.display = 'inline-block';
+        if (logoutNav) logoutNav.style.display = 'none';
+        if (userStatus) userStatus.style.display = 'none';
+      }
+
+      const premiumLocked = !appState.user || appState.user.subscriptionStatus !== 'premium';
+      document.querySelectorAll('.premium-feature-lock .premium-lock').forEach(lock => {
+        lock.style.display = premiumLocked ? 'block' : 'none';
+      });
+    };
+
+    const logout = () => {
+      setAccessToken(null);
+      appState.user = null;
+      updateAuthDisplay();
+      closeLoginModal();
+      closeRegisterModal();
+    };
+
+    const loadCurrentUser = async () => {
+      if (!appState.accessToken) {
+        updateAuthDisplay();
+        return;
+      }
+
+      try {
+        const data = await apiFetch('/auth/me');
+        appState.user = data.user;
+      } catch (error) {
+        console.warn('Failed to load current user:', error);
+        setAccessToken(null);
+        appState.user = null;
+      } finally {
+        updateAuthDisplay();
+      }
+    };
+
+    const handleLoginSubmit = async (event) => {
+      event.preventDefault();
+      try {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
+
+        const data = await apiFetch('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+
+        setAccessToken(data.accessToken);
+        appState.user = data.user;
+        updateAuthDisplay();
+        closeLoginModal();
+      } catch (error) {
+        console.error('Login error:', error);
+        alert(error.message || 'Login failed');
+      }
+    };
+
+    const handleRegisterSubmit = async (event) => {
+      event.preventDefault();
+      try {
+        const email = document.getElementById('registerEmail').value.trim();
+        const password = document.getElementById('registerPassword').value.trim();
+        const confirmPassword = document.getElementById('registerConfirmPassword').value.trim();
+
+        const data = await apiFetch('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email, password, confirmPassword })
+        });
+
+        setAccessToken(data.accessToken);
+        appState.user = data.user;
+        updateAuthDisplay();
+        closeRegisterModal();
+      } catch (error) {
+        console.error('Registration error:', error);
+        alert(error.message || 'Registration failed');
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginNav = document.getElementById('loginNav');
+      const logoutNav = document.getElementById('logoutNav');
+
+      if (loginNav) {
+        loginNav.addEventListener('click', (e) => {
+          e.preventDefault();
+          openLoginModal();
         });
       }
+
+      if (logoutNav) {
+        logoutNav.addEventListener('click', (e) => {
+          e.preventDefault();
+          logout();
+        });
+      }
+
+      document.getElementById('loginForm')?.addEventListener('submit', handleLoginSubmit);
+      document.getElementById('registerForm')?.addEventListener('submit', handleRegisterSubmit);
+
+      loadCurrentUser();
     });
 
     // Add fade-in animation on scroll
@@ -1253,38 +1501,28 @@
     // ========================================================================
     const upgradeBtn = document.getElementById('upgradeBtn');
     if (upgradeBtn) {
-      upgradeBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-
+      upgradeBtn.addEventListener('click', async () => {
         try {
-          // Call backend to create Stripe checkout session
           const res = await fetch("https://stockspot.onrender.com/create-checkout-session", {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              plan: 'premium_monthly'
-            })
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan: "premium_monthly" })
           });
 
           const data = await res.json();
 
           if (data.url) {
-            // Redirect to Stripe checkout
             window.location.href = data.url;
           } else {
-            console.error('No checkout URL received:', data);
-            alert('Unable to start checkout. Please try again.');
+            alert("Checkout session failed");
           }
         } catch (err) {
-          console.error('Stripe checkout error:', err);
-          alert('Checkout error. Please try again later.');
+          console.error(err);
+          alert("Stripe checkout error");
         }
       });
     }
 
-    // Also handle nav upgrade button
     const navUpgradeBtn = document.querySelector('.nav-btn-upgrade');
     if (navUpgradeBtn) {
       navUpgradeBtn.addEventListener('click', (e) => {

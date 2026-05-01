@@ -5,6 +5,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
@@ -84,17 +85,28 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     try {
-      const { UserModel } = require('./models/User');
-      const userId = session.client_reference_id;
-      
-      // Update user subscription in MongoDB
-      const user = await UserModel.updateById(userId, {
-        subscriptionStatus: 'active',
-        stripeCustomerId: session.customer,
-        subscriptionStartDate: new Date(),
-      });
-      
-      console.log(`✅ Subscription activated for user ${userId} (${session.customer})`);
+      const { AuthUserModel } = require('./models/AuthUser');
+      const customerEmail = session.customer_details?.email || session.customer_email || session.metadata?.email;
+      let user = null;
+
+      if (customerEmail) {
+        user = await AuthUserModel.findByEmail(customerEmail);
+      }
+
+      if (!user && session.customer) {
+        user = await AuthUserModel.findOne({ stripeCustomerId: session.customer });
+      }
+
+      if (user) {
+        await AuthUserModel.updateById(user.id, {
+          subscriptionStatus: 'premium',
+          stripeCustomerId: session.customer,
+          subscriptionStartDate: new Date()
+        });
+        console.log(`✅ Subscription activated for user ${user.email} (${session.customer})`);
+      } else {
+        console.warn('⚠️ Stripe webhook: no matching auth user found', customerEmail, session.customer);
+      }
     } catch (err) {
       console.error('❌ Failed to update subscription:', err.message);
       return res.status(500).json({ error: 'Failed to process subscription' });
@@ -105,17 +117,14 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object;
     try {
-      const { UserModel } = require('./models/User');
-      
-      // Find user by stripeCustomerId and deactivate
-      const users = require('./models/User').UserModel.users || [];
-      const user = users.find(u => u.stripeCustomerId === subscription.customer);
+      const { AuthUserModel } = require('./models/AuthUser');
+      const user = await AuthUserModel.findOne({ stripeCustomerId: subscription.customer });
       if (user) {
-        await UserModel.updateById(user.id, {
-          subscriptionStatus: 'inactive',
-          subscriptionEndDate: new Date(),
+        await AuthUserModel.updateById(user.id, {
+          subscriptionStatus: 'free',
+          subscriptionEndDate: subscription.ended_at ? new Date(subscription.ended_at * 1000) : new Date()
         });
-        console.log(`✅ Subscription cancelled for user ${user.id}`);
+        console.log(`✅ Subscription cancelled for user ${user.email}`);
       }
     } catch (err) {
       console.error('❌ Failed to cancel subscription:', err.message);
@@ -128,6 +137,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Request logging
 app.use((req, res, next) => {
@@ -185,6 +195,14 @@ app.get('/api/status', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Auth routes
+try {
+  const authRoutes = require('./routes/authRoutes');
+  app.use('/auth', authRoutes);
+} catch (err) {
+  console.warn('Auth route not mounted:', err.message);
+}
 
 // AI Templates (premium-only utilities)
 try {

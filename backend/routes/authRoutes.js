@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { UserModel } = require('../models/User');
+const { AuthUserModel } = require('../models/AuthUser');
 const { hashPassword, verifyPassword, validatePasswordStrength, checkPasswordCompromised } = require('../utils/passwordUtils');
 const { generateTokenPair, verifyToken } = require('../utils/tokenUtils');
 const { authRateLimit } = require('../middleware/rateLimitMiddleware');
@@ -72,7 +72,7 @@ router.post('/register', authRateLimit, registerValidation, async (req, res) => 
     const { email, password } = req.body;
 
     // Check if user already exists
-    const existingUser = await UserModel.findByEmail(email);
+    const existingUser = await AuthUserModel.findByEmail(email);
     if (existingUser) {
       return res.status(409).json({
         error: 'User already exists',
@@ -84,7 +84,10 @@ router.post('/register', authRateLimit, registerValidation, async (req, res) => 
     const hashedPassword = await hashPassword(password);
 
     // Create user
-    const user = await UserModel.create(email, hashedPassword);
+    const user = await AuthUserModel.create({
+      email,
+      passwordHash: hashedPassword
+    });
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokenPair(user);
@@ -134,7 +137,7 @@ router.post('/login', authRateLimit, loginValidation, async (req, res) => {
     const { email, password } = req.body;
 
     // Find user
-    const user = await UserModel.findByEmail(email);
+    const user = await AuthUserModel.findByEmail(email);
     if (!user) {
       return res.status(401).json({
         error: 'Authentication failed',
@@ -207,7 +210,7 @@ router.post('/refresh', async (req, res) => {
     const decoded = verifyToken(refreshToken);
     
     // Find user
-    const user = await UserModel.findById(decoded.userId);
+    const user = await AuthUserModel.findById(decoded.userId);
     if (!user) {
       return res.status(401).json({
         error: 'User not found',
@@ -323,6 +326,20 @@ router.post('/logout-all', authenticateToken, async (req, res) => {
 /**
  * Get current user profile
  */
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    res.json({
+      user: req.user.toJSON()
+    });
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    res.status(500).json({
+      error: 'Profile fetch failed',
+      message: 'An error occurred while fetching profile'
+    });
+  }
+});
+
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     res.json({
@@ -363,7 +380,7 @@ router.put('/profile', authenticateToken, [
 
     if (email && email !== req.user.email) {
       // Check if new email is already in use
-      const existingUser = await UserModel.findByEmail(email);
+      const existingUser = await AuthUserModel.findByEmail(email);
       if (existingUser) {
         return res.status(409).json({
           error: 'Email already in use',
@@ -374,7 +391,7 @@ router.put('/profile', authenticateToken, [
     }
 
     // Update user
-    const updatedUser = await UserModel.updateById(req.user.id, updates);
+    const updatedUser = await AuthUserModel.updateById(req.user.id, updates);
 
     res.json({
       message: 'Profile updated successfully',
@@ -446,7 +463,7 @@ router.put('/change-password', authenticateToken, [
     // Hash new password
     const hashedPassword = await hashPassword(newPassword);
 
-    // Update password (this would need to be implemented in UserModel)
+    // Update password (saved via AuthUserModel instance methods)
     req.user.passwordHash = hashedPassword;
     req.user.updatedAt = new Date();
 
