@@ -795,6 +795,41 @@
     }
 
     /* ============================================================================
+       PREMIUM LOCK UI
+       ============================================================================ */
+    .premium-lock {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      color: #94A3B8;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      transition: var(--transition);
+    }
+
+    .premium-lock p {
+      margin: 0 0 12px 0;
+      font-size: 0.95rem;
+    }
+
+    .premium-lock-cta {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .premium-lock-cta:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    /* ============================================================================
        NAVBAR
        ============================================================================ */
     .navbar {
@@ -1036,10 +1071,14 @@
           <p>AI-powered product opportunity detection. Our system learns what matters to you and surfaces the best deals.</p>
         </div>
 
-        <div class="feature-card fade-in">
+        <div class="feature-card fade-in premium-feature-lock">
           <div class="feature-icon">📝</div>
           <h3>Flip Templates</h3>
           <p>Prewritten resale listings to help you sell faster. Save time and boost resale velocity with our templates.</p>
+          <div class="premium-lock" style="margin-top: 12px; display: none;">
+            <p>🔒 Premium Feature</p>
+            <button class="premium-lock-cta" onclick="scrollToPricing()">Upgrade Now</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1137,7 +1176,16 @@
   </div>
 
   <script>
-    // Modal functions
+    // ========================================================================
+    // USER STATE SIMULATION (Frontend only - no auth yet)
+    // ========================================================================
+    const user = {
+      isPremium: false // Change to true to simulate premium user
+    };
+
+    // ========================================================================
+    // MODAL FUNCTIONS
+    // ========================================================================
     function openModal() {
       document.getElementById('appModal').style.display = 'flex';
     }
@@ -1154,6 +1202,10 @@
       document.getElementById('upgradeModal').style.display = 'none';
     }
 
+    function scrollToPricing() {
+      document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+    }
+
     // Close modal when clicking outside of it
     window.onclick = function(event) {
       const appModal = document.getElementById('appModal');
@@ -1166,20 +1218,21 @@
       }
     }
 
-    // Smooth scroll and button interactions
-    document.querySelectorAll('button').forEach(button => {
-      button.addEventListener('click', function(e) {
-        // Add ripple effect
-        const ripple = document.createElement('span');
-        const rect = this.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        const x = e.clientX - rect.left - size / 2;
-        const y = e.clientY - rect.top - size / 2;
-        
-        // Log button action (for future Stripe integration)
-        const buttonText = this.textContent.trim();
-        console.log('Button clicked:', buttonText);
-      });
+    // ========================================================================
+    // PREMIUM UI GATING
+    // ========================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!user.isPremium) {
+        // Show premium lock overlay on premium features
+        document.querySelectorAll('.premium-feature-lock .premium-lock').forEach(lock => {
+          lock.style.display = 'block';
+        });
+      } else {
+        // Hide premium locks for premium users
+        document.querySelectorAll('.premium-feature-lock .premium-lock').forEach(lock => {
+          lock.style.display = 'none';
+        });
+      }
     });
 
     // Add fade-in animation on scroll
@@ -1196,23 +1249,51 @@
     });
 
     // ========================================================================
-    // STRIPE INTEGRATION READY
+    // STRIPE WEBHOOK INTEGRATION
     // ========================================================================
-    // Stripe integration will replace modal in next phase
-    document.getElementById('upgradeBtn').addEventListener('click', function(e) {
-      e.preventDefault();
-      
-      // Stripe payment processing will be implemented here
-      const planData = {
-        plan: this.getAttribute('data-plan'),
-        stripeProduct: this.getAttribute('data-stripe')
-      };
-      
-      console.log('Premium plan selected - Stripe checkout ready:', planData);
-      
-      // Temporary UX fallback until Stripe is integrated
-      document.getElementById('upgradeModal').style.display = 'flex';
-    });
+    const RENDER_BACKEND_URL = 'https://your-render-backend-url.onrender.com'; // TODO: Replace with actual Render URL
+
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        try {
+          // Call backend to create Stripe checkout session
+          const res = await fetch(`${RENDER_BACKEND_URL}/create-checkout-session`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              plan: 'premium_monthly'
+            })
+          });
+
+          const data = await res.json();
+
+          if (data.url) {
+            // Redirect to Stripe checkout
+            window.location.href = data.url;
+          } else {
+            console.error('No checkout URL received:', data);
+            alert('Unable to start checkout. Please try again.');
+          }
+        } catch (err) {
+          console.error('Stripe checkout error:', err);
+          alert('Checkout error. Please try again later.');
+        }
+      });
+    }
+
+    // Also handle nav upgrade button
+    const navUpgradeBtn = document.querySelector('.nav-btn-upgrade');
+    if (navUpgradeBtn) {
+      navUpgradeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        scrollToPricing();
+      });
+    }
   </script>
 </body>
 </html>
