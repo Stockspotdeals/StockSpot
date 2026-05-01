@@ -1501,24 +1501,31 @@
     // ========================================================================
     const upgradeBtn = document.getElementById('upgradeBtn');
     if (upgradeBtn) {
-      upgradeBtn.addEventListener('click', async () => {
-        try {
-          const res = await fetch("https://stockspot.onrender.com/create-checkout-session", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plan: "premium_monthly" })
-          });
+      upgradeBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
 
-          const data = await res.json();
+        if (!appState.accessToken) {
+          openLoginModal();
+          return;
+        }
+
+        try {
+          const data = await apiFetch('/create-checkout-session', {
+            method: 'POST',
+            body: JSON.stringify({
+              plan: 'premium_monthly'
+            })
+          });
 
           if (data.url) {
             window.location.href = data.url;
           } else {
-            alert("Checkout session failed");
+            console.error('No checkout URL received:', data);
+            alert('Unable to start checkout. Please try again.');
           }
         } catch (err) {
-          console.error(err);
-          alert("Stripe checkout error");
+          console.error('Stripe checkout error:', err);
+          alert('Checkout error. Please try again later.');
         }
       });
     }

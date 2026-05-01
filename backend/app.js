@@ -204,6 +204,35 @@ try {
   console.warn('Auth route not mounted:', err.message);
 }
 
+// Stripe checkout session creation
+app.post('/create-checkout-session', require('./middleware/authMiddleware').authenticateToken, async (req, res) => {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [
+        {
+          price: process.env.STRIPE_PRICE_PREMIUM_MONTHLY,
+          quantity: 1
+        }
+      ],
+      customer_email: req.user.email,
+      success_url: 'https://stockspotdeals.com/success',
+      cancel_url: 'https://stockspotdeals.com/cancel'
+    });
+
+    console.log('Stripe checkout session created');
+
+    if (!session.url) {
+      throw new Error('No checkout URL returned from Stripe');
+    }
+
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Failed to create checkout session:', error);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+});
+
 // AI Templates (premium-only utilities)
 try {
   const aiTemplates = require('./routes/aiTemplates');
