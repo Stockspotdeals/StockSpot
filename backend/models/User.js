@@ -41,6 +41,10 @@ class User {
     this.passwordHash = hashedPassword;
     this.plan = plan;
     this.status = USER_STATUS.ACTIVE;
+    this.subscriptionStatus = 'inactive'; // 'active' | 'inactive' (Stripe)
+    this.stripeCustomerId = null;
+    this.subscriptionStartDate = null;
+    this.subscriptionEndDate = null;
     this.usage = {
       trackedProducts: 0,
       alertsToday: 0,
@@ -251,6 +255,10 @@ class User {
       email: this.email,
       plan: this.plan,
       status: this.status,
+      subscriptionStatus: this.subscriptionStatus,
+      stripeCustomerId: this.stripeCustomerId,
+      subscriptionStartDate: this.subscriptionStartDate,
+      subscriptionEndDate: this.subscriptionEndDate,
       usage: this.usage,
       planLimits: this.getPlanLimits(),
       createdAt: this.createdAt,

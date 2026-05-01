@@ -5,6 +5,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
 // Load MongoDB URI from standard env var
@@ -60,6 +61,69 @@ app.use(helmet({
     optionsSuccessStatus: 200
   }));
 }
+
+// Stripe webhook must use raw body (before JSON parsing)
+app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error('❌ Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log(`📨 Stripe webhook received: ${event.type}`);
+
+  // Handle checkout.session.completed
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    try {
+      const { UserModel } = require('./models/User');
+      const userId = session.client_reference_id;
+      
+      // Update user subscription in MongoDB
+      const user = await UserModel.updateById(userId, {
+        subscriptionStatus: 'active',
+        stripeCustomerId: session.customer,
+        subscriptionStartDate: new Date(),
+      });
+      
+      console.log(`✅ Subscription activated for user ${userId} (${session.customer})`);
+    } catch (err) {
+      console.error('❌ Failed to update subscription:', err.message);
+      return res.status(500).json({ error: 'Failed to process subscription' });
+    }
+  }
+
+  // Handle customer.subscription.deleted
+  if (event.type === 'customer.subscription.deleted') {
+    const subscription = event.data.object;
+    try {
+      const { UserModel } = require('./models/User');
+      
+      // Find user by stripeCustomerId and deactivate
+      const users = require('./models/User').UserModel.users || [];
+      const user = users.find(u => u.stripeCustomerId === subscription.customer);
+      if (user) {
+        await UserModel.updateById(user.id, {
+          subscriptionStatus: 'inactive',
+          subscriptionEndDate: new Date(),
+        });
+        console.log(`✅ Subscription cancelled for user ${user.id}`);
+      }
+    } catch (err) {
+      console.error('❌ Failed to cancel subscription:', err.message);
+    }
+  }
+
+  res.json({ received: true });
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
