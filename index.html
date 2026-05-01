@@ -1251,8 +1251,6 @@
     // ========================================================================
     // STRIPE WEBHOOK INTEGRATION
     // ========================================================================
-    const RENDER_BACKEND_URL = 'https://your-render-backend-url.onrender.com'; // TODO: Replace with actual Render URL
-
     const upgradeBtn = document.getElementById('upgradeBtn');
     if (upgradeBtn) {
       upgradeBtn.addEventListener('click', async (e) => {
@@ -1260,7 +1258,7 @@
 
         try {
           // Call backend to create Stripe checkout session
-          const res = await fetch(`${RENDER_BACKEND_URL}/create-checkout-session`, {
+          const res = await fetch("https://stockspot.onrender.com/create-checkout-session", {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
