@@ -84,9 +84,10 @@ class Dashboard {
       this.loadMoreBtn.addEventListener('click', () => this.loadMoreItems());
     }
 
-    // Check authentication
+    // Check authentication - use safe UI state instead of instant redirect
     if (!this.authToken && !this.userEmail) {
-      window.location.href = '/';
+      console.warn('No authentication detected - rendering guest state');
+      this.renderAuthRequiredState();
     }
   }
 
@@ -373,6 +374,25 @@ class Dashboard {
 
   showSettings() {
     alert(`User Settings\n\nEmail: ${this.userEmail}\nTier: ${this.userTier}\n\nMore settings coming soon!`);
+  }
+
+  /**
+   * Render safe auth-required state instead of redirecting
+   * Shows friendly message with login button
+   */
+  renderAuthRequiredState() {
+    this.feedContainer.innerHTML = `
+      <div style="text-align: center; padding: 3rem 1rem;">
+        <h2 style="color: var(--text); margin-bottom: 1rem;">Authentication Required</h2>
+        <p style="color: var(--gray); margin-bottom: 1.5rem;">You need to be logged in to view the dashboard.</p>
+        <a href="/" style="display: inline-block; padding: 0.75rem 1.5rem; background: var(--primary); color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">
+          Return to Login
+        </a>
+      </div>
+    `;
+    this.tierDisplay.textContent = 'Guest';
+    this.tierBadge.className = 'tier-badge';
+    this.tierBadge.innerHTML = '<span>🔓</span> <span id="tier-text">Guest</span>';
   }
 
   logout() {

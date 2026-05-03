@@ -162,8 +162,7 @@ async function refreshSection(section) {
             updateSectionData(section, data);
             showNotification('success', `${section} data refreshed successfully!`);
             
-            // Reload page to show updated data
-            setTimeout(() => window.location.reload(), 1000);
+            // No page reload - data already updated above
         } else {
             throw new Error('Failed to refresh data');
         }
@@ -198,8 +197,17 @@ async function processQueue() {
             const data = await response.json();
             showNotification('success', `Queue processed! ${data.processed} items posted.`);
             
-            // Reload page to show updated queue
-            setTimeout(() => window.location.reload(), 1500);
+            // Refresh queue data instead of full page reload
+            setTimeout(() => {
+                const queueSection = document.getElementById('queue-section');
+                if (queueSection) {
+                    // Fetch fresh queue data
+                    fetch('/api/get-queue')
+                        .then(r => r.json())
+                        .then(data => updateSectionData('queue', data))
+                        .catch(err => console.error('Queue refresh error:', err));
+                }
+            }, 500);
         } else {
             throw new Error('Failed to process queue');
         }
@@ -229,7 +237,14 @@ async function clearQueue() {
         
         if (response.ok) {
             showNotification('success', 'Queue cleared successfully!');
-            setTimeout(() => window.location.reload(), 1000);
+            
+            // Refresh queue display instead of full page reload
+            setTimeout(() => {
+                const queueSection = document.getElementById('queue-section');
+                if (queueSection) {
+                    queueSection.innerHTML = '<p style="text-align: center; color: #999;">Queue is empty</p>';
+                }
+            }, 500);
         } else {
             throw new Error('Failed to clear queue');
         }
