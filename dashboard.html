@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockSpot Dashboard</title>
+  <style>
+    :root {
+      --bg: #090b14;
+      --surface: #111827;
+      --surface-soft: #1f2937;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #2563eb;
+      --accent-strong: #3b82f6;
+      --border: rgba(148, 163, 184, 0.15);
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 28%),
+                  linear-gradient(180deg, #0b1123 0%, #090b14 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3vw, 2.75rem);
+      letter-spacing: -0.04em;
+    }
+
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .button-secondary {
+      padding: 0.9rem 1.4rem;
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      color: var(--text);
+      font-weight: 600;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .button-secondary:hover {
+      transform: translateY(-1px);
+      background: rgba(37, 99, 235, 0.14);
+    }
+
+    .panel {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      box-shadow: var(--shadow);
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .panel h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.25rem;
+    }
+
+    .panel p {
+      margin: 0.5rem 0;
+      color: var(--muted);
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .status-card {
+      background: rgba(31, 41, 55, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+    }
+
+    .status-card strong {
+      display: block;
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .status-card span {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .signals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+
+    .signal-card {
+      position: relative;
+      background: rgba(31, 41, 55, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 1.1rem;
+      padding: 1.3rem;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+
+    .signal-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .signal-card .signal-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .signal-card .signal-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .signal-type {
+      padding: 0.4rem 0.75rem;
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--accent-strong);
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .signal-card.blurred {
+      filter: blur(4px) saturate(0.55);
+      pointer-events: none;
+    }
+
+    .overlay-box {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8, 15, 30, 0.88);
+      border-radius: 1.1rem;
+      color: var(--text);
+      text-align: center;
+      padding: 1rem;
+      backdrop-filter: blur(4px);
+    }
+
+    .overlay-box strong {
+      display: block;
+      margin-bottom: 0.6rem;
+      font-size: 1rem;
+    }
+
+    .overlay-box span {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .error-message {
+      padding: 1rem 1.25rem;
+      background: rgba(220, 38, 38, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.18);
+      color: #fecaca;
+      border-radius: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 760px) {
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-wrap {
+        padding: 1.5rem 1rem 3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <header>
+      <div>
+        <p style="margin:0;color:var(--muted);text-transform:uppercase;letter-spacing:0.18em;font-size:0.82rem;">Dashboard</p>
+        <h1>StockSpot Dashboard</h1>
+      </div>
+      <div class="header-meta">
+        <a href="index.html" class="button-secondary">Return to Landing</a>
+      </div>
+    </header>
+
+    <div id="errorMessage" class="error-message" style="display:none;"></div>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>User Status</h2>
+      </div>
+      <div class="status-grid">
+        <div class="status-card">
+          <strong>Email</strong>
+          <span id="userEmail">Loading…</span>
+        </div>
+        <div class="status-card">
+          <strong>Subscription</strong>
+          <span id="userSubscription">Loading…</span>
+        </div>
+        <div class="status-card">
+          <strong>Dashboard</strong>
+          <span id="userNote">Premium content locked until upgrade</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="position:relative; overflow:hidden;">
+      <div class="section-title">
+        <h2>Signals Feed</h2>
+      </div>
+      <div id="signalsGrid" class="signals-grid"></div>
+      <div id="premiumOverlay" class="overlay-box" style="display:none;">
+        <strong>Upgrade to unlock premium signals</strong>
+        <span>Premium users see all market signals and full insights.</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Premium Locked Content</h2>
+      </div>
+      <p>Premium users enjoy advanced alerts, priority signal delivery, and exclusive market insights. Free users can still view basic alerts but must upgrade to unlock the full feed.</p>
+    </section>
+  </div>
+
+  <script>
+    const BACKEND_URL = 'https://stockspot.onrender.com';
+    const token = localStorage.getItem('stockspotAccessToken');
+    const errorMessage = document.getElementById('errorMessage');
+    const userEmail = document.getElementById('userEmail');
+    const userSubscription = document.getElementById('userSubscription');
+    const userNote = document.getElementById('userNote');
+    const signalsGrid = document.getElementById('signalsGrid');
+    const premiumOverlay = document.getElementById('premiumOverlay');
+
+    const showError = (message) => {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    };
+
+    const redirectToHome = () => {
+      localStorage.removeItem('stockspotAccessToken');
+      window.location.href = 'index.html';
+    };
+
+    const loadDashboard = async () => {
+      if (!token) {
+        redirectToHome();
+        return;
+      }
+
+      try {
+        const profileRes = await fetch(`${BACKEND_URL}/auth/me`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!profileRes.ok) {
+          throw new Error('Unable to load user profile');
+        }
+
+        const profileData = await profileRes.json();
+        const user = profileData.user;
+
+        if (!user || !user.email) {
+          throw new Error('Invalid user data');
+        }
+
+        userEmail.textContent = user.email;
+        userSubscription.textContent = user.subscriptionStatus || 'free';
+        userNote.textContent = user.subscriptionStatus === 'premium' ? 'Premium access granted' : 'Upgrade to premium for full access';
+
+        const signalsRes = await fetch(`${BACKEND_URL}/signals`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!signalsRes.ok) {
+          throw new Error('Unable to load signals');
+        }
+
+        const signalsData = await signalsRes.json();
+        const signals = Array.isArray(signalsData) ? signalsData : signalsData.signals || [];
+
+        if (!signals.length) {
+          signalsGrid.innerHTML = '<p style="color: var(--muted); margin:0;">No signals available right now.</p>';
+        } else {
+          signalsGrid.innerHTML = signals.map(signal => {
+            const name = signal.productName || signal.name || 'Unknown product';
+            const price = signal.price ? `$${signal.price}` : 'Price unavailable';
+            const type = signal.signalType || signal.type || 'signal';
+            return `
+              <div class="signal-card ${user.subscriptionStatus !== 'premium' ? 'blurred' : ''}">
+                <div class="signal-name">${name}</div>
+                <div class="signal-meta">
+                  <span>${price}</span>
+                  <span class="signal-type">${type}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        if (user.subscriptionStatus !== 'premium') {
+          premiumOverlay.style.display = 'flex';
+        }
+      } catch (error) {
+        console.error(error);
+        showError('Unable to load data. Please log in again or try later.');
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+  </script>
+</body>
+</html>

@@ -1023,7 +1023,7 @@
       </div>
       <div class="navbar-right">
         <a href="#pricing" class="nav-link hide-mobile">Pricing</a>
-        <a href="javascript:void(0);" onclick="openModal()" class="nav-link hide-mobile">Launch App</a>
+        <a href="dashboard.html" class="nav-link hide-mobile">Launch App</a>
         <a href="javascript:void(0);" class="nav-link" id="loginNav">Login</a>
         <a href="javascript:void(0);" class="nav-link" id="logoutNav" style="display:none;">Logout</a>
         <span class="user-status" id="userStatus" style="display:none;"></span>
@@ -1050,7 +1050,7 @@
       <p>StockSpot tracks price drops and restocks in real-time so you can flip products faster than everyone else.</p>
 
       <div class="cta-buttons">
-        <a href="javascript:void(0);" onclick="openModal()" class="cta-primary">Start Free</a>
+        <a href="dashboard.html" class="cta-primary">Start Free</a>
         <a href="#pricing" class="cta-secondary">View Pricing</a>
       </div>
     </div>
@@ -1158,7 +1158,7 @@
             <li>Limited smart signals</li>
             <li>Community templates</li>
           </ul>
-          <a href="#app" class="plan-button" data-plan="free">Start Free</a>
+          <a href="dashboard.html" class="plan-button" data-plan="free">Start Free</a>
         </div>
 
         <!-- Premium Plan -->
@@ -1190,7 +1190,7 @@
         No downloads required.<br>
         Access instantly from your browser.
       </p>
-      <button class="btn btn-accent">Launch App</button>
+      <a href="dashboard.html" class="btn btn-accent">Launch App</a>
     </div>
   </section>
 
@@ -1431,6 +1431,7 @@
         appState.user = data.user;
         updateAuthDisplay();
         closeLoginModal();
+        window.location.href = 'dashboard.html';
       } catch (error) {
         console.error('Login error:', error);
         alert(error.message || 'Login failed');
@@ -1453,6 +1454,7 @@
         appState.user = data.user;
         updateAuthDisplay();
         closeRegisterModal();
+        window.location.href = 'dashboard.html';
       } catch (error) {
         console.error('Registration error:', error);
         alert(error.message || 'Registration failed');
