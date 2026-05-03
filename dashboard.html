@@ -298,23 +298,61 @@
     const signalsGrid = document.getElementById('signalsGrid');
     const premiumOverlay = document.getElementById('premiumOverlay');
 
+    let isAuthenticated = false;
+    let currentUser = null;
+
     const showError = (message) => {
       errorMessage.textContent = message;
       errorMessage.style.display = 'block';
     };
 
-    const redirectToHome = () => {
-      localStorage.removeItem('stockspotAccessToken');
-      window.location.href = 'index.html';
+    const renderGuestState = () => {
+      userEmail.textContent = 'Not logged in';
+      userSubscription.textContent = 'guest';
+      userNote.textContent = 'Please log in to access the dashboard';
+      signalsGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 2rem; text-align: center;">
+          <p style="color: var(--muted); margin: 1rem 0;">You need to be logged in to view this dashboard.</p>
+          <a href="index.html" class="button-secondary" style="display: inline-block; margin-top: 1rem;">
+            Go to Login
+          </a>
+        </div>
+      `;
+      premiumOverlay.style.display = 'none';
     };
 
-    const loadDashboard = async () => {
+    const renderDashboard = (user) => {
+      userEmail.textContent = user.email || 'User';
+      userSubscription.textContent = user.subscriptionStatus || 'free';
+      userNote.textContent = user.subscriptionStatus === 'premium' 
+        ? 'Premium access granted ✓' 
+        : 'Upgrade to premium for full access';
+
+      if (user.subscriptionStatus !== 'premium') {
+        premiumOverlay.style.display = 'flex';
+      }
+    };
+
+    /**
+     * SAFE AUTH BOOTSTRAP
+     * - Never redirects instantly on page load
+     * - Validates token asynchronously
+     * - Renders appropriate UI state
+     */
+    const checkAuth = async () => {
+      // Step 1: Check if token exists
       if (!token) {
-        redirectToHome();
+        console.warn('No authentication token found');
+        renderGuestState();
         return;
       }
 
+      // Step 2: Show loading state
+      userEmail.textContent = 'Validating…';
+      userSubscription.textContent = 'checking…';
+
       try {
+        // Step 3: Validate token with backend
         const profileRes = await fetch(`${BACKEND_URL}/auth/me`, {
           headers: {
             'Content-Type': 'application/json',
@@ -323,20 +361,35 @@
         });
 
         if (!profileRes.ok) {
-          throw new Error('Unable to load user profile');
+          throw new Error(`Auth validation failed: ${profileRes.status}`);
         }
 
         const profileData = await profileRes.json();
         const user = profileData.user;
 
         if (!user || !user.email) {
-          throw new Error('Invalid user data');
+          throw new Error('Invalid user data received');
         }
 
-        userEmail.textContent = user.email;
-        userSubscription.textContent = user.subscriptionStatus || 'free';
-        userNote.textContent = user.subscriptionStatus === 'premium' ? 'Premium access granted' : 'Upgrade to premium for full access';
+        // Step 4: Authentication successful
+        isAuthenticated = true;
+        currentUser = user;
+        renderDashboard(user);
 
+        // Step 5: Load signals asynchronously (non-blocking)
+        await loadSignals(user);
+
+      } catch (err) {
+        console.warn('Authentication failed:', err.message);
+        // Step 6: Invalid token - render guest state (no redirect)
+        localStorage.removeItem('stockspotAccessToken');
+        renderGuestState();
+        showError('Session expired. Please log in again.');
+      }
+    };
+
+    const loadSignals = async (user) => {
+      try {
         const signalsRes = await fetch(`${BACKEND_URL}/signals`, {
           headers: {
             'Content-Type': 'application/json',
@@ -345,14 +398,14 @@
         });
 
         if (!signalsRes.ok) {
-          throw new Error('Unable to load signals');
+          throw new Error(`Signals API failed: ${signalsRes.status}`);
         }
 
         const signalsData = await signalsRes.json();
         const signals = Array.isArray(signalsData) ? signalsData : signalsData.signals || [];
 
         if (!signals.length) {
-          signalsGrid.innerHTML = '<p style="color: var(--muted); margin:0;">No signals available right now.</p>';
+          signalsGrid.innerHTML = '<p style="color: var(--muted); margin:0; grid-column: 1 / -1;">No signals available right now.</p>';
         } else {
           signalsGrid.innerHTML = signals.map(signal => {
             const name = signal.productName || signal.name || 'Unknown product';
@@ -370,16 +423,17 @@
           }).join('');
         }
 
-        if (user.subscriptionStatus !== 'premium') {
-          premiumOverlay.style.display = 'flex';
-        }
-      } catch (error) {
-        console.error(error);
-        showError('Unable to load data. Please log in again or try later.');
+      } catch (err) {
+        console.error('Signal loading failed:', err);
+        signalsGrid.innerHTML = '<p style="color: var(--muted); margin:0; grid-column: 1 / -1;">Unable to load signals at this time.</p>';
       }
     };
 
-    document.addEventListener('DOMContentLoaded', loadDashboard);
+    /**
+     * INITIALIZE ON PAGE LOAD
+     * Starts async auth validation without blocking UI
+     */
+    window.addEventListener('load', checkAuth);
   </script>
 </body>
 </html>
