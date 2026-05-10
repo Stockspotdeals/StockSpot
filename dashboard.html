@@ -289,151 +289,265 @@
   </div>
 
   <script>
+    /**
+     * STATE-DRIVEN SAAS DASHBOARD
+     * Central state management for consistent UI rendering
+     */
+
     const BACKEND_URL = 'https://stockspot.onrender.com';
-    const token = localStorage.getItem('stockspotAccessToken');
-    const errorMessage = document.getElementById('errorMessage');
-    const userEmail = document.getElementById('userEmail');
-    const userSubscription = document.getElementById('userSubscription');
-    const userNote = document.getElementById('userNote');
-    const signalsGrid = document.getElementById('signalsGrid');
-    const premiumOverlay = document.getElementById('premiumOverlay');
 
-    let isAuthenticated = false;
-    let currentUser = null;
-
-    const showError = (message) => {
-      errorMessage.textContent = message;
-      errorMessage.style.display = 'block';
+    // ============================================
+    // 1. GLOBAL APP STATE
+    // ============================================
+    const AppState = {
+      loading: true,
+      user: null,
+      isPremium: false,
+      signals: [],
+      error: null
     };
 
-    const renderGuestState = () => {
-      userEmail.textContent = 'Not logged in';
-      userSubscription.textContent = 'guest';
-      userNote.textContent = 'Please log in to access the dashboard';
-      signalsGrid.innerHTML = `
-        <div style="grid-column: 1 / -1; padding: 2rem; text-align: center;">
-          <p style="color: var(--muted); margin: 1rem 0;">You need to be logged in to view this dashboard.</p>
-          <a href="index.html" class="button-secondary" style="display: inline-block; margin-top: 1rem;">
-            Go to Login
-          </a>
-        </div>
-      `;
-      premiumOverlay.style.display = 'none';
-    };
-
-    const renderDashboard = (user) => {
-      userEmail.textContent = user.email || 'User';
-      userSubscription.textContent = user.subscriptionStatus || 'free';
-      userNote.textContent = user.subscriptionStatus === 'premium' 
-        ? 'Premium access granted ✓' 
-        : 'Upgrade to premium for full access';
-
-      if (user.subscriptionStatus !== 'premium') {
-        premiumOverlay.style.display = 'flex';
-      }
-    };
+    // ============================================
+    // 2. INITIALIZATION
+    // ============================================
+    window.addEventListener('load', bootstrapApp);
 
     /**
-     * SAFE AUTH BOOTSTRAP
-     * - Never redirects instantly on page load
-     * - Validates token asynchronously
-     * - Renders appropriate UI state
+     * Bootstrap the entire application
+     * - Check authentication
+     * - Load user data
+     * - Load signals
+     * - Render appropriate UI
      */
-    const checkAuth = async () => {
-      // Step 1: Check if token exists
+    async function bootstrapApp() {
+      // Always show loading state first
+      renderLoading();
+
+      const token = localStorage.getItem('stockspotAccessToken');
+
+      // No token = guest mode
       if (!token) {
-        console.warn('No authentication token found');
-        renderGuestState();
+        console.log('No auth token found - rendering guest state');
+        AppState.loading = false;
+        renderGuest();
         return;
       }
 
-      // Step 2: Show loading state
-      userEmail.textContent = 'Validating…';
-      userSubscription.textContent = 'checking…';
-
       try {
-        // Step 3: Validate token with backend
-        const profileRes = await fetch(`${BACKEND_URL}/auth/me`, {
+        // Validate token with backend
+        const authRes = await fetch(`${BACKEND_URL}/auth/me`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           }
         });
 
-        if (!profileRes.ok) {
-          throw new Error(`Auth validation failed: ${profileRes.status}`);
+        if (!authRes.ok) {
+          throw new Error(`Auth failed: ${authRes.status}`);
         }
 
-        const profileData = await profileRes.json();
-        const user = profileData.user;
+        const authData = await authRes.json();
+        const user = authData.user;
 
         if (!user || !user.email) {
-          throw new Error('Invalid user data received');
+          throw new Error('Invalid user data');
         }
 
-        // Step 4: Authentication successful
-        isAuthenticated = true;
-        currentUser = user;
-        renderDashboard(user);
+        // Update state with user info
+        AppState.user = user;
+        AppState.isPremium = user.subscriptionStatus === 'premium';
 
-        // Step 5: Load signals asynchronously (non-blocking)
-        await loadSignals(user);
+        // Load signals after auth succeeds
+        await loadSignals(token);
+
+        // Render authenticated dashboard
+        AppState.loading = false;
+        renderDashboard();
 
       } catch (err) {
-        console.warn('Authentication failed:', err.message);
-        // Step 6: Invalid token - render guest state (no redirect)
+        console.error('Bootstrap failed:', err);
+        AppState.error = err.message;
+        AppState.loading = false;
+        
+        // Clear invalid token
         localStorage.removeItem('stockspotAccessToken');
-        renderGuestState();
-        showError('Session expired. Please log in again.');
+        
+        // Render guest state on auth failure (no redirect)
+        renderGuest();
       }
-    };
+    }
 
-    const loadSignals = async (user) => {
+    // ============================================
+    // 3. LOAD SIGNALS
+    // ============================================
+    async function loadSignals(token) {
       try {
-        const signalsRes = await fetch(`${BACKEND_URL}/signals`, {
+        const res = await fetch(`${BACKEND_URL}/signals`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           }
         });
 
-        if (!signalsRes.ok) {
-          throw new Error(`Signals API failed: ${signalsRes.status}`);
+        if (!res.ok) {
+          throw new Error(`Signals failed: ${res.status}`);
         }
 
-        const signalsData = await signalsRes.json();
-        const signals = Array.isArray(signalsData) ? signalsData : signalsData.signals || [];
-
-        if (!signals.length) {
-          signalsGrid.innerHTML = '<p style="color: var(--muted); margin:0; grid-column: 1 / -1;">No signals available right now.</p>';
-        } else {
-          signalsGrid.innerHTML = signals.map(signal => {
-            const name = signal.productName || signal.name || 'Unknown product';
-            const price = signal.price ? `$${signal.price}` : 'Price unavailable';
-            const type = signal.signalType || signal.type || 'signal';
-            return `
-              <div class="signal-card ${user.subscriptionStatus !== 'premium' ? 'blurred' : ''}">
-                <div class="signal-name">${name}</div>
-                <div class="signal-meta">
-                  <span>${price}</span>
-                  <span class="signal-type">${type}</span>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
+        const data = await res.json();
+        AppState.signals = Array.isArray(data) ? data : (data.signals || []);
 
       } catch (err) {
         console.error('Signal loading failed:', err);
-        signalsGrid.innerHTML = '<p style="color: var(--muted); margin:0; grid-column: 1 / -1;">Unable to load signals at this time.</p>';
+        AppState.signals = [];
       }
-    };
+    }
+
+    // ============================================
+    // 4. RENDER FUNCTIONS (STATE → UI)
+    // ============================================
 
     /**
-     * INITIALIZE ON PAGE LOAD
-     * Starts async auth validation without blocking UI
+     * Render loading state
      */
-    window.addEventListener('load', checkAuth);
+    function renderLoading() {
+      const pageWrap = document.querySelector('.page-wrap');
+      if (pageWrap) {
+        pageWrap.innerHTML = `
+          <div style="text-align: center; padding: 4rem 2rem;">
+            <p style="color: var(--muted); font-size: 1.1rem;">
+              ⏳ Loading StockSpot Dashboard...
+            </p>
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Render guest state (not logged in)
+     */
+    function renderGuest() {
+      const pageWrap = document.querySelector('.page-wrap');
+      if (pageWrap) {
+        pageWrap.innerHTML = `
+          <header>
+            <div>
+              <p style="margin:0;color:var(--muted);text-transform:uppercase;letter-spacing:0.18em;font-size:0.82rem;">Dashboard</p>
+              <h1>StockSpot Dashboard</h1>
+            </div>
+          </header>
+
+          ${AppState.error ? `
+            <div style="padding: 1rem 1.25rem; background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(248, 113, 113, 0.18); color: #fecaca; border-radius: 1rem; margin-bottom: 1.25rem;">
+              ${AppState.error}
+            </div>
+          ` : ''}
+
+          <section class="panel">
+            <div style="text-align: center; padding: 2rem;">
+              <h2 style="margin: 0 0 1rem;">Authentication Required</h2>
+              <p style="color: var(--muted); margin: 0 0 1.5rem;">
+                You need to be logged in to view the dashboard.
+              </p>
+              <a href="index.html" class="button-secondary" style="display: inline-block;">
+                Return to Login
+              </a>
+            </div>
+          </section>
+        `;
+      }
+    }
+
+    /**
+     * Render authenticated dashboard
+     */
+    function renderDashboard() {
+      const pageWrap = document.querySelector('.page-wrap');
+      if (pageWrap) {
+        pageWrap.innerHTML = `
+          <header>
+            <div>
+              <p style="margin:0;color:var(--muted);text-transform:uppercase;letter-spacing:0.18em;font-size:0.82rem;">Dashboard</p>
+              <h1>StockSpot Dashboard</h1>
+            </div>
+            <div class="header-meta">
+              <a href="index.html" class="button-secondary">Return to Landing</a>
+            </div>
+          </header>
+
+          <section class="panel">
+            <div class="section-title">
+              <h2>User Status</h2>
+            </div>
+            <div class="status-grid">
+              <div class="status-card">
+                <strong>Email</strong>
+                <span>${AppState.user.email || 'User'}</span>
+              </div>
+              <div class="status-card">
+                <strong>Subscription</strong>
+                <span>${AppState.user.subscriptionStatus || 'free'}</span>
+              </div>
+              <div class="status-card">
+                <strong>Dashboard</strong>
+                <span>${AppState.isPremium ? 'Premium access granted ✓' : 'Upgrade to premium for full access'}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" style="position:relative; overflow:hidden;">
+            <div class="section-title">
+              <h2>Signals Feed</h2>
+            </div>
+            <div id="signalsGrid" class="signals-grid"></div>
+            ${!AppState.isPremium ? `
+              <div id="premiumOverlay" class="overlay-box" style="display:flex;">
+                <strong>Upgrade to unlock premium signals</strong>
+                <span>Premium users see all market signals and full insights.</span>
+              </div>
+            ` : ''}
+          </section>
+
+          <section class="panel">
+            <div class="section-title">
+              <h2>Premium Locked Content</h2>
+            </div>
+            <p>Premium users enjoy advanced alerts, priority signal delivery, and exclusive market insights. Free users can still view basic alerts but must upgrade to unlock the full feed.</p>
+          </section>
+        `;
+
+        // Render signals after DOM is ready
+        renderSignals();
+      }
+    }
+
+    /**
+     * Render signals based on state
+     */
+    function renderSignals() {
+      const container = document.getElementById('signalsGrid');
+      if (!container) return;
+
+      if (!AppState.signals || AppState.signals.length === 0) {
+        container.innerHTML = '<p style="color: var(--muted); margin:0; grid-column: 1 / -1;">No signals available right now.</p>';
+        return;
+      }
+
+      container.innerHTML = AppState.signals.map(signal => {
+        const name = signal.productName || signal.name || 'Unknown product';
+        const price = signal.price ? `$${signal.price}` : 'Price unavailable';
+        const type = signal.signalType || signal.type || 'signal';
+
+        return `
+          <div class="signal-card ${!AppState.isPremium ? 'blurred' : ''}">
+            <div class="signal-name">${name}</div>
+            <div class="signal-meta">
+              <span>${price}</span>
+              <span class="signal-type">${type}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
   </script>
 </body>
 </html>
