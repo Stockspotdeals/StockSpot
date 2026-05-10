@@ -310,7 +310,9 @@
     // ============================================
     // 2. INITIALIZATION
     // ============================================
-    window.addEventListener('load', bootstrapApp);
+    window.onload = async () => {
+      await bootstrapApp();
+    };
 
     /**
      * Bootstrap the entire application
@@ -323,7 +325,7 @@
       // Always show loading state first
       renderLoading();
 
-      const token = localStorage.getItem('stockspotAccessToken');
+      const token = localStorage.getItem('token') || localStorage.getItem('stockspotAccessToken');
 
       // No token = guest mode
       if (!token) {
@@ -371,6 +373,7 @@
         
         // Clear invalid token
         localStorage.removeItem('stockspotAccessToken');
+        localStorage.removeItem('token');
         
         // Render guest state on auth failure (no redirect)
         renderGuest();
@@ -382,7 +385,7 @@
     // ============================================
     async function loadSignals(token) {
       try {
-        const res = await fetch(`${BACKEND_URL}/signals`, {
+        const res = await fetch(`${BACKEND_URL}/alert-signals`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`

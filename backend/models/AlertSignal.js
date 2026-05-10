@@ -1,0 +1,78 @@
+const mongoose = require('mongoose');
+
+const alertSignalSchema = new mongoose.Schema({
+  productName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  store: {
+    type: String,
+    required: true,
+    enum: ['Amazon', 'Best Buy', 'Target', 'Walmart', 'Newegg', 'Micro Center', 'Other']
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  originalPrice: {
+    type: Number,
+    min: 0
+  },
+  signalType: {
+    type: String,
+    required: true,
+    enum: ['restock', 'price-drop', 'reseller']
+  },
+  affiliateUrl: {
+    type: String,
+    trim: true
+  },
+  premiumOnly: {
+    type: Boolean,
+    default: false
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  imageUrl: {
+    type: String,
+    trim: true
+  },
+  expiresAt: {
+    type: Date,
+    default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
+  }
+}, {
+  timestamps: true,
+  collection: 'alert_signals'
+});
+
+// Indexes for performance
+alertSignalSchema.index({ signalType: 1, premiumOnly: 1 });
+alertSignalSchema.index({ store: 1 });
+alertSignalSchema.index({ createdAt: -1 });
+alertSignalSchema.index({ expiresAt: 1 });
+
+// Virtual for discount percentage
+alertSignalSchema.virtual('discountPercent').get(function() {
+  if (this.originalPrice && this.originalPrice > this.price) {
+    return Math.round(((this.originalPrice - this.price) / this.originalPrice) * 100);
+  }
+  return 0;
+});
+
+// Method to check if signal is expired
+alertSignalSchema.methods.isExpired = function() {
+  return new Date() > this.expiresAt;
+};
+
+// Static method to clean expired signals
+alertSignalSchema.statics.cleanExpired = async function() {
+  const result = await this.deleteMany({ expiresAt: { $lt: new Date() } });
+  return result.deletedCount;
+};
+
+module.exports = mongoose.model('AlertSignal', alertSignalSchema);

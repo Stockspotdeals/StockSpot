@@ -251,6 +251,15 @@ try {
   console.warn('Signals route not mounted:', err.message);
 }
 
+// Alert Signals for Dashboard
+try {
+  const alertSignalRoutes = require('./routes/alertSignals');
+  app.use('/api/alert-signals', alertSignalRoutes);
+} catch (err) {
+  // If route file missing, log and continue (non-breaking)
+  console.warn('Alert signals route not mounted:', err.message);
+}
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
