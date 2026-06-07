@@ -226,13 +226,39 @@ self.addEventListener('sync', (event) => {
  */
 self.addEventListener('push', (event) => {
   console.log('[Service Worker] Push received');
-  
-  const options = {
-    body: event.data ? event.data.text() : 'New deal available!',
+
+  let payload = {
+    title: 'StockSpot Deal Alert',
+    body: 'New deal available!',
     icon: '/images/icon-192x192.png',
     badge: '/images/badge-72x72.png',
     tag: 'stockspot-notification',
+    data: { url: '/dashboard.html' }
+  };
+
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      payload = {
+        title: data.title || payload.title,
+        body: data.body || payload.body,
+        icon: data.icon || payload.icon,
+        badge: data.badge || payload.badge,
+        tag: data.tag || payload.tag,
+        data: data.data || payload.data
+      };
+    } catch (error) {
+      payload.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: payload.body,
+    icon: payload.icon,
+    badge: payload.badge,
+    tag: payload.tag,
     requireInteraction: false,
+    data: payload.data,
     actions: [
       {
         action: 'open',
@@ -246,7 +272,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('StockSpot Deal Alert', options)
+    self.registration.showNotification(payload.title, options)
   );
 });
 
@@ -257,17 +283,16 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   if (event.action === 'open' || !event.action) {
+    const targetUrl = event.notification.data?.url || '/dashboard.html';
     event.waitUntil(
       clients.matchAll({ type: 'window' }).then(clientList => {
-        // Check if app is already open
         for (let client of clientList) {
-          if (client.url === '/' && 'focus' in client) {
+          if (client.url === targetUrl && 'focus' in client) {
             return client.focus();
           }
         }
-        // Open new window if not open
         if (clients.openWindow) {
-          return clients.openWindow('/dashboard.html');
+          return clients.openWindow(targetUrl);
         }
       })
     );

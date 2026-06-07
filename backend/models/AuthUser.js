@@ -17,6 +17,11 @@ const AuthUserSchema = new mongoose.Schema({
     enum: ['free', 'premium'],
     default: 'free'
   },
+  plan: {
+    type: String,
+    enum: ['free', 'premium', 'admin'],
+    default: 'free'
+  },
   stripeCustomerId: {
     type: String,
     default: null
@@ -46,6 +51,13 @@ const AuthUserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+});
+
+AuthUserSchema.pre('save', function(next) {
+  if (!this.plan) {
+    this.plan = this.subscriptionStatus === 'premium' ? 'premium' : 'free';
+  }
+  next();
 });
 
 AuthUserSchema.virtual('id').get(function() {

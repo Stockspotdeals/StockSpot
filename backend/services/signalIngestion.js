@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const Signal = require('../models/Signal');
 const Product = require('../models/Product');
+const { processSignalWatchlistAlerts } = require('./watchlistAlertMatcher');
 
 const sources = {};
 let schedulerStarted = false;
@@ -165,6 +166,13 @@ async function createSignalIfNeeded(payload) {
   console.log(`Signal inserted: ${payload.title} | ${payload.store} | ${payload.signalType}`);
   console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
   console.log(`Ranking updated for signal: ${signal._id}`);
+
+  try {
+    await processSignalWatchlistAlerts(signal);
+  } catch (alertError) {
+    console.error('Watchlist alert processing failed for signal:', alertError.message);
+  }
+
   return signal;
 }
 

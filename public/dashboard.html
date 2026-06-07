@@ -171,6 +171,101 @@
       margin-bottom: 20px;
     }
 
+    .watchlist-panel,
+    .recent-alerts {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .watchlist-form {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .watchlist-form input {
+      flex: 1;
+      min-width: 220px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .watchlist-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .watchlist-item,
+    .alert-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--light);
+    }
+
+    .watchlist-keyword,
+    .alert-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .alert-details {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--gray);
+      margin-top: 10px;
+    }
+
+    .alert-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-tertiary {
+      background: #eef2ff;
+      color: #3f51b5;
+      border: none;
+    }
+
+    .btn-tertiary:hover {
+      background: #dbe4ff;
+    }
+
+    .alert-status {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .alert-status.pending {
+      color: #f39c12;
+    }
+
+    .alert-status.failed {
+      color: var(--danger);
+    }
+
     .top-opportunities-header {
       display: flex;
       justify-content: space-between;
@@ -696,6 +791,7 @@
           <div class="tier-badge" id="tier-display">
             <span>🎁</span> <span id="tier-text">Free</span>
           </div>
+          <button class="btn btn-secondary btn-sm" id="notification-btn">🔔 Enable Push</button>
           <button class="btn btn-secondary btn-sm" id="settings-btn">⚙️ Settings</button>
           <button class="btn btn-secondary btn-sm" id="logout-btn">Logout</button>
         </div>
@@ -733,6 +829,39 @@
           <div class="top-opportunities-note">Top 5 highest-scoring signals</div>
         </div>
         <div id="top-opportunities" class="top-grid"></div>
+      </section>
+
+      <section class="watchlist-panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">Watchlist</p>
+            <h2>My Watchlist</h2>
+          </div>
+          <div class="top-opportunities-note">Track products & keywords you care about</div>
+        </div>
+
+        <form id="watchlist-form" class="watchlist-form">
+          <input id="watchlist-keyword" type="text" placeholder="Add keyword like PS5, RTX 4080, headphones" />
+          <button type="submit" class="btn btn-primary btn-sm">Add</button>
+        </form>
+
+        <div id="watchlist-list" class="watchlist-list">
+          <div style="color: var(--gray);">Loading watchlist…</div>
+        </div>
+      </section>
+
+      <section class="recent-alerts">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">Recent Alerts</p>
+            <h2>Matched Signals</h2>
+          </div>
+          <div class="top-opportunities-note">Latest watchlist alerts and delivery status</div>
+        </div>
+
+        <div id="recent-alerts-list" class="watchlist-list">
+          <div style="color: var(--gray);">Loading alerts…</div>
+        </div>
       </section>
 
       <!-- Feed -->

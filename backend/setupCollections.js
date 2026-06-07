@@ -98,7 +98,49 @@ const mongooseOptions = {
     }
 
     // =========================================================================
-    // 3. AI_TEMPLATES COLLECTION
+    // 3. WATCHLIST COLLECTION
+    // =========================================================================
+    const watchlistExists = await db.listCollections({ name: "watchlists" }).hasNext();
+    if (!watchlistExists) {
+      console.log("📌 Creating 'watchlists' collection...");
+      await db.createCollection("watchlists");
+      await db.collection("watchlists").createIndex({ userId: 1, keyword: 1 }, { unique: true });
+      await db.collection("watchlists").createIndex({ createdAt: -1 });
+      console.log("   ✅ Created with indexes\n");
+    } else {
+      console.log("   ✓ 'watchlists' already exists\n");
+    }
+
+    // =========================================================================
+    // 4. ALERTS COLLECTION
+    // =========================================================================
+    const alertsExists = await db.listCollections({ name: "alerts" }).hasNext();
+    if (!alertsExists) {
+      console.log("🚨 Creating 'alerts' collection...");
+      await db.createCollection("alerts");
+      await db.collection("alerts").createIndex({ userId: 1, createdAt: -1 });
+      await db.collection("alerts").createIndex({ signalId: 1, keyword: 1 });
+      console.log("   ✅ Created with indexes\n");
+    } else {
+      console.log("   ✓ 'alerts' already exists\n");
+    }
+
+    // =========================================================================
+    // 5. PUSH SUBSCRIPTIONS COLLECTION
+    // =========================================================================
+    const subsExists = await db.listCollections({ name: "pushsubscriptions" }).hasNext();
+    if (!subsExists) {
+      console.log("🔔 Creating 'pushsubscriptions' collection...");
+      await db.createCollection("pushsubscriptions");
+      await db.collection("pushsubscriptions").createIndex({ userId: 1 });
+      await db.collection("pushsubscriptions").createIndex({ endpoint: 1 }, { unique: true });
+      console.log("   ✅ Created with indexes\n");
+    } else {
+      console.log("   ✓ 'pushsubscriptions' already exists\n");
+    }
+
+    // =========================================================================
+    // 6. AI_TEMPLATES COLLECTION
     // =========================================================================
     const aiExists = await db.listCollections({ name: "ai_templates" }).hasNext();
     

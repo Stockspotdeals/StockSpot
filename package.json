@@ -52,9 +52,10 @@
     "mongoose": "^9.1.1",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
-    "nodemailer": "^7.0.12",
     "node-cron": "^3.0.3",
+    "nodemailer": "^7.0.12",
     "stripe": "^14.15.0",
+    "web-push": "^3.6.7",
     "xml": "^1.0.1"
   },
   "devDependencies": {

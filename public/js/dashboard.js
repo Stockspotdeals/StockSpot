@@ -13,8 +13,11 @@ class Dashboard {
     this.allFeedItems = [];
     this.filteredItems = [];
     this.topOpportunities = [];
+    this.watchlistItems = [];
+    this.alertItems = [];
     this.isLoading = false;
     this.hasMore = true;
+    this.pushEnabled = false;
 
     this.initializeElements();
     this.setupEventListeners();
@@ -38,6 +41,11 @@ class Dashboard {
     this.loadMoreBtn = document.getElementById('load-more-btn');
     this.loadMoreContainer = document.getElementById('load-more-container');
     this.topOpportunitiesContainer = document.getElementById('top-opportunities');
+    this.watchlistForm = document.getElementById('watchlist-form');
+    this.watchlistKeywordInput = document.getElementById('watchlist-keyword');
+    this.watchlistList = document.getElementById('watchlist-list');
+    this.recentAlertsList = document.getElementById('recent-alerts-list');
+    this.notificationBtn = document.getElementById('notification-btn');
 
     // Update tier display
     this.updateTierDisplay();
@@ -81,6 +89,15 @@ class Dashboard {
       this.addItemForm.addEventListener('submit', (e) => this.handleAddItem(e));
     }
 
+    // Watchlist form
+    if (this.watchlistForm) {
+      this.watchlistForm.addEventListener('submit', (e) => this.handleWatchlistAdd(e));
+    }
+
+    if (this.notificationBtn) {
+      this.notificationBtn.addEventListener('click', () => this.handleNotificationToggle());
+    }
+
     // Load more button
     if (this.loadMoreBtn) {
       this.loadMoreBtn.addEventListener('click', () => this.loadMoreItems());
@@ -101,7 +118,12 @@ class Dashboard {
     this.refreshBtn.innerHTML = '<span class="spinner"></span> <span id="refresh-text">Refreshing...</span>';
 
     try {
-      await this.loadSignals();
+      await Promise.all([
+        this.loadSignals(),
+        this.loadWatchlist(),
+        this.loadRecentAlerts()
+      ]);
+      await this.loadPushSubscriptionState();
       this.applyFilter();
       this.renderTopOpportunities();
       this.showNotification('✅ Signals updated', 'success');
@@ -421,6 +443,313 @@ class Dashboard {
       console.error('Add item error:', error);
       this.showNotification(error.message || 'Failed to add item', 'error');
     }
+  }
+
+  async loadWatchlist() {
+    if (!this.authToken) {
+      if (this.watchlistList) {
+        this.watchlistList.innerHTML = '<div style="color: var(--gray);">Login to manage your watchlist.</div>';
+      }
+      this.watchlistItems = [];
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/watchlist', {
+        headers: {
+          Authorization: `Bearer ${this.authToken}`
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load watchlist');
+      }
+
+      this.watchlistItems = Array.isArray(data.watchlist) ? data.watchlist : [];
+      this.renderWatchlist();
+    } catch (error) {
+      console.error('Watchlist load failed:', error);
+      if (this.watchlistList) {
+        this.watchlistList.innerHTML = `<div style="color: var(--gray);">Unable to load watchlist.</div>`;
+      }
+    }
+  }
+
+  renderWatchlist() {
+    if (!this.watchlistList) return;
+    if (!this.watchlistItems.length) {
+      this.watchlistList.innerHTML = '<div style="color: var(--gray);">No watchlist keywords yet. Add one to start receiving alerts.</div>';
+      return;
+    }
+
+    this.watchlistList.innerHTML = this.watchlistItems.map(item => `
+      <div class="watchlist-item">
+        <div class="watchlist-keyword">${this.escapeHTML(item.keyword)}</div>
+        <button class="btn btn-tertiary btn-sm" onclick="dashboard.removeWatchlistItem('${item._id}')">Remove</button>
+      </div>
+    `).join('');
+  }
+
+  async handleWatchlistAdd(e) {
+    e.preventDefault();
+
+    if (!this.authToken) {
+      this.showNotification('You must be logged in to save watchlist keywords', 'error');
+      return;
+    }
+
+    const keyword = this.watchlistKeywordInput?.value.trim();
+    if (!keyword) {
+      this.showNotification('Please enter a keyword to watch for', 'error');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({ keyword })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to add watchlist keyword');
+      }
+
+      this.showNotification('✅ Watchlist keyword added', 'success');
+      this.watchlistKeywordInput.value = '';
+      await this.loadWatchlist();
+    } catch (error) {
+      console.error('Watchlist add failed:', error);
+      this.showNotification(error.message || 'Failed to add watchlist keyword', 'error');
+    }
+  }
+
+  async loadPushSubscriptionState() {
+    if (!this.authToken || !this.notificationBtn) {
+      return;
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      this.updateNotificationButton(false, 'Push not supported');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/push', {
+        headers: {
+          Authorization: `Bearer ${this.authToken}`
+        }
+      });
+      const data = await response.json();
+      const enabled = response.ok && Array.isArray(data.subscriptions) && data.subscriptions.length > 0;
+      this.updateNotificationButton(enabled);
+    } catch (error) {
+      console.error('Failed to load push subscription state:', error);
+      this.updateNotificationButton(false);
+    }
+  }
+
+  async handleNotificationToggle() {
+    if (!this.authToken) {
+      this.showNotification('You must be logged in to enable notifications', 'error');
+      return;
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      this.showNotification('Push notifications are not supported in this browser', 'error');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      this.showNotification('Please enable browser notifications in your settings', 'error');
+      return;
+    }
+
+    if (this.pushEnabled) {
+      await this.unsubscribeFromPush();
+    } else {
+      await this.subscribeToPush();
+    }
+  }
+
+  async subscribeToPush() {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        this.showNotification('Notification permission denied', 'error');
+        return;
+      }
+
+      const keyResponse = await fetch('/api/push/vapid-public-key');
+      const keyData = await keyResponse.json();
+      if (!keyResponse.ok || !keyData.publicKey) {
+        throw new Error('Unable to retrieve VAPID public key');
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.urlBase64ToUint8Array(keyData.publicKey)
+      });
+
+      const response = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({ subscription })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save push subscription');
+      }
+
+      this.showNotification('✅ Push notifications enabled', 'success');
+      this.updateNotificationButton(true);
+    } catch (error) {
+      console.error('Push subscription failed:', error);
+      this.showNotification(error.message || 'Unable to enable push notifications', 'error');
+      this.updateNotificationButton(false);
+    }
+  }
+
+  async unsubscribeFromPush() {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        await subscription.unsubscribe();
+        await fetch('/api/push/unsubscribe', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({ endpoint: subscription.endpoint })
+        });
+      }
+
+      this.showNotification('🔕 Push notifications disabled', 'success');
+      this.updateNotificationButton(false);
+    } catch (error) {
+      console.error('Push unsubscribe failed:', error);
+      this.showNotification(error.message || 'Unable to disable push notifications', 'error');
+    }
+  }
+
+  updateNotificationButton(enabled, label) {
+    if (!this.notificationBtn) return;
+
+    this.pushEnabled = enabled;
+    this.notificationBtn.textContent = label || (enabled ? '🔕 Disable Push' : '🔔 Enable Push');
+    this.notificationBtn.classList.toggle('btn-primary', enabled);
+    this.notificationBtn.classList.toggle('btn-secondary', !enabled);
+  }
+
+  urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  async removeWatchlistItem(id) {
+    if (!this.authToken) {
+      this.showNotification('You must be logged in to update watchlist', 'error');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/watchlist/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${this.authToken}`
+        }
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to remove watchlist item');
+      }
+
+      this.showNotification('✅ Watchlist item removed', 'success');
+      await this.loadWatchlist();
+    } catch (error) {
+      console.error('Watchlist remove failed:', error);
+      this.showNotification(error.message || 'Failed to remove watchlist item', 'error');
+    }
+  }
+
+  async loadRecentAlerts() {
+    if (!this.authToken) {
+      if (this.recentAlertsList) {
+        this.recentAlertsList.innerHTML = '<div style="color: var(--gray);">Login to see your recent alerts.</div>';
+      }
+      this.alertItems = [];
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/alerts', {
+        headers: {
+          Authorization: `Bearer ${this.authToken}`
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load alerts');
+      }
+
+      this.alertItems = Array.isArray(data.alerts) ? data.alerts : [];
+      this.renderRecentAlerts();
+    } catch (error) {
+      console.error('Recent alerts load failed:', error);
+      if (this.recentAlertsList) {
+        this.recentAlertsList.innerHTML = `<div style="color: var(--gray);">Unable to load recent alerts.</div>`;
+      }
+    }
+  }
+
+  renderRecentAlerts() {
+    if (!this.recentAlertsList) return;
+    if (!this.alertItems.length) {
+      this.recentAlertsList.innerHTML = '<div style="color: var(--gray);">No recent alerts yet. Matched signals will appear here.</div>';
+      return;
+    }
+
+    this.recentAlertsList.innerHTML = this.alertItems.map(alert => {
+      const statusClass = alert.delivered ? 'alert-status' : 'alert-status pending';
+      const signal = alert.signal || {};
+      return `
+        <div class="alert-item">
+          <div>
+            <div class="alert-label">${this.escapeHTML(alert.keyword)} matched</div>
+            <div class="alert-details">
+              <div>${signal.productName ? this.escapeHTML(signal.productName) : 'Unknown signal'}</div>
+              <div>Type: ${this.escapeHTML(signal.signalType || 'Deal')}</div>
+              <div>Status: <span class="${statusClass}">${alert.delivered ? 'Delivered' : 'Pending'}</span></div>
+            </div>
+          </div>
+          <div class="alert-actions">
+            ${signal.affiliateUrl ? `<a href="${signal.affiliateUrl}" target="_blank" class="btn btn-primary btn-sm">View</a>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   showSettings() {

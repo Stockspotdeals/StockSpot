@@ -31,7 +31,7 @@ const generateTokenPair = (user) => {
   const payload = {
     userId: user.id,
     email: user.email,
-    plan: user.plan,
+    plan: user.plan || (user.subscriptionStatus === 'premium' ? 'premium' : 'free'),
     status: user.status
   };
 

@@ -198,12 +198,12 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Utility: Get auth token
-export function getAuthToken() {
+function getAuthToken() {
   return localStorage.getItem('auth_token') || '';
 }
 
 // Utility: Make authenticated API call
-export async function apiCall(endpoint, options = {}) {
+async function apiCall(endpoint, options = {}) {
   const headers = options.headers || {};
   const token = getAuthToken();
 
@@ -230,7 +230,7 @@ export async function apiCall(endpoint, options = {}) {
 }
 
 // Utility: Check if online
-export function isOnline() {
+function isOnline() {
   return navigator.onLine;
 }
 
@@ -250,7 +250,7 @@ window.addEventListener('offline', () => {
 });
 
 // Push notification permission
-export async function requestNotificationPermission() {
+async function requestNotificationPermission() {
   if (!('Notification' in window)) {
     console.log('Notifications not supported');
     return false;
@@ -269,7 +269,7 @@ export async function requestNotificationPermission() {
 }
 
 // Register background sync
-export async function registerBackgroundSync(tag = 'sync-notifications') {
+async function registerBackgroundSync(tag = 'sync-notifications') {
   if (!('serviceWorker' in navigator) || !('SyncManager' in window)) {
     console.log('Background sync not supported');
     return false;

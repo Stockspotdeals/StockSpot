@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 // Import models
 const Product = require("../models/Product"); // products collection
 const Signal = require("../models/Signal");   // signals collection
+const { processSignalWatchlistAlerts } = require('./watchlistAlertMatcher');
 
 async function runSignalEngine() {
   console.log('🚀 Starting Smart Signal Engine...');
@@ -65,6 +66,11 @@ async function runSignalEngine() {
           console.log(`🆕 Restock signal created for: ${product.name}`);
           console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
           console.log(`Ranking updated for signal: ${signal._id}`);
+          try {
+            await processSignalWatchlistAlerts(signal);
+          } catch (alertError) {
+            console.error('Watchlist alert processing failed for signal:', alertError.message);
+          }
         }
       }
 
@@ -97,6 +103,11 @@ async function runSignalEngine() {
             console.log(`💰 Price drop signal created for: ${product.name} (${priceDropPercent.toFixed(1)}% off)`);
             console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
             console.log(`Ranking updated for signal: ${signal._id}`);
+            try {
+              await processSignalWatchlistAlerts(signal);
+            } catch (alertError) {
+              console.error('Watchlist alert processing failed for signal:', alertError.message);
+            }
           }
         }
       }
@@ -124,6 +135,11 @@ async function runSignalEngine() {
           console.log(`❌ Out-of-stock signal created for: ${product.name}`);
           console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
           console.log(`Ranking updated for signal: ${signal._id}`);
+          try {
+            await processSignalWatchlistAlerts(signal);
+          } catch (alertError) {
+            console.error('Watchlist alert processing failed for signal:', alertError.message);
+          }
         }
       }
 

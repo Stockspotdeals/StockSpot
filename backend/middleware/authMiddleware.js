@@ -112,7 +112,7 @@ const requirePlan = (allowedPlans) => {
       });
     }
 
-    const userPlan = req.user.plan;
+    const userPlan = req.user.plan || (req.user.subscriptionStatus === 'premium' ? 'premium' : 'free');
     const plans = Array.isArray(allowedPlans) ? allowedPlans : [allowedPlans];
 
     if (!plans.includes(userPlan)) {

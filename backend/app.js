@@ -101,6 +101,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
       if (user) {
         await AuthUserModel.updateById(user.id, {
           subscriptionStatus: 'premium',
+          plan: 'premium',
           stripeCustomerId: session.customer,
           subscriptionStartDate: new Date()
         });
@@ -123,6 +124,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
       if (user) {
         await AuthUserModel.updateById(user.id, {
           subscriptionStatus: 'free',
+          plan: 'free',
           subscriptionEndDate: subscription.ended_at ? new Date(subscription.ended_at * 1000) : new Date()
         });
         console.log(`✅ Subscription cancelled for user ${user.email}`);
@@ -259,6 +261,30 @@ try {
 } catch (err) {
   // If route file missing, log and continue (non-breaking)
   console.warn('Alert signals route not mounted:', err.message);
+}
+
+// Watchlist Routes
+try {
+  const watchlistRoutes = require('./routes/watchlist');
+  app.use('/api/watchlist', watchlistRoutes);
+} catch (err) {
+  console.warn('Watchlist route not mounted:', err.message);
+}
+
+// Push notification subscription routes
+try {
+  const pushRoutes = require('./routes/pushSubscriptions');
+  app.use('/api/push', pushRoutes);
+} catch (err) {
+  console.warn('Push subscription route not mounted:', err.message);
+}
+
+// Alert history routes
+try {
+  const alertRoutes = require('./routes/alerts');
+  app.use('/api/alerts', alertRoutes);
+} catch (err) {
+  console.warn('Alerts route not mounted:', err.message);
 }
 
 // Initialize automated signal ingestion scheduler after routes are mounted

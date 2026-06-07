@@ -86,7 +86,8 @@ router.post('/register', authRateLimit, registerValidation, async (req, res) => 
     // Create user
     const user = await AuthUserModel.create({
       email,
-      passwordHash: hashedPassword
+      passwordHash: hashedPassword,
+      plan: 'free'
     });
 
     // Generate tokens
