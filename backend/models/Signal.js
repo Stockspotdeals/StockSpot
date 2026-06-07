@@ -29,6 +29,17 @@ const signalSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  estimatedCommission: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  monetizationScore: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 10
+  },
   imageUrl: {
     type: String,
     trim: true

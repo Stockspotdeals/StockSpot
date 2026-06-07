@@ -172,6 +172,7 @@ class Dashboard {
 
     const signals = data.signals;
     this.allFeedItems = signals.map(signal => ({
+      id: signal._id,
       title: signal.title || signal.productName || 'Signal Opportunity',
       description: signal.description || signal.metadata?.notes || '',
       retailer: (signal.store || 'unknown').toLowerCase(),
@@ -182,13 +183,15 @@ class Dashboard {
       source: signal.source || 'signal',
       score: typeof signal.score === 'number' ? signal.score : 0,
       signalType: signal.signalType,
-      premiumOnly: signal.premiumOnly
+      premiumOnly: signal.premiumOnly,
+      estimatedCommission: typeof signal.estimatedCommission === 'number' ? signal.estimatedCommission : 0,
+      monetizationScore: typeof signal.monetizationScore === 'number' ? signal.monetizationScore : 0
     }));
 
     this.page = 0;
     this.filteredItems = [...this.allFeedItems];
     this.topOpportunities = [...this.allFeedItems]
-      .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.timestamp - a.timestamp))
+      .sort((a, b) => (b.estimatedCommission || 0) - (a.estimatedCommission || 0) || (b.score || 0) - (a.score || 0) || (b.timestamp - a.timestamp))
       .slice(0, 5);
 
     this.updateLiveStatusBadge(this.signalSourceEndpoint);
@@ -358,9 +361,10 @@ class Dashboard {
           <div class="opportunity-badge">${this.escapeHTML(item.signalType || 'Signal')}</div>
           <h3>${this.escapeHTML(item.title)}</h3>
           <div class="opportunity-score">⭐ Opportunity Score: ${item.score ?? 'N/A'}</div>
+          <div class="opportunity-score">💰 Est. Commission: $${item.estimatedCommission?.toFixed(2) ?? '0.00'}</div>
           <div style="color: var(--gray); font-size: 13px;">${this.escapeHTML(item.description.substring(0, 120))}${item.description.length > 120 ? '...' : ''}</div>
         </div>
-        <a href="${item.url}" target="_blank">View Opportunity →</a>
+        <a href="${item.url}" target="_blank" data-signal-id="${item.id || ''}" onclick="dashboard.trackAffiliateClickFromElement(this)">View Opportunity →</a>
       </div>
     `;
   }
@@ -400,7 +404,7 @@ class Dashboard {
         </div>
 
         ${item.score != null ? `<div class="feed-price">⭐ Opportunity Score: ${item.score}</div>` : ''}
-
+        ${item.estimatedCommission ? `<div class="feed-price">💰 Est. Commission: $${item.estimatedCommission.toFixed(2)}</div>` : ''}
         ${item.price && item.price !== 'Contact' ? `<div class="feed-price">$${item.price}</div>` : ''}
 
         ${item.description ? `<div class="feed-description">${this.escapeHTML(item.description.substring(0, 150))}${item.description.length > 150 ? '...' : ''}</div>` : ''}
@@ -410,7 +414,7 @@ class Dashboard {
         </div>
 
         <div class="feed-actions">
-          <a href="${item.url}" target="_blank" class="feed-btn feed-btn-view">View Deal →</a>
+          <a href="${item.url}" target="_blank" class="feed-btn feed-btn-view" data-signal-id="${item.id || ''}" onclick="dashboard.trackAffiliateClickFromElement(this)">View Deal →</a>
           <button class="feed-btn feed-btn-ignore" onclick="dashboard.markAsRead(this)">✓ Done</button>
         </div>
       </div>
@@ -421,6 +425,44 @@ class Dashboard {
     const item = btn.closest('.feed-item');
     item.style.opacity = '0.5';
     item.style.pointerEvents = 'none';
+  }
+
+  async trackAffiliateClickFromElement(anchor) {
+    const signalId = anchor.dataset.signalId;
+    const affiliateUrl = anchor.href;
+    if (!signalId || !affiliateUrl) {
+      return true;
+    }
+
+    const payload = {
+      signalId,
+      affiliateUrl
+    };
+
+    const body = JSON.stringify(payload);
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
+    try {
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon('/affiliate/click', blob);
+      } else {
+        fetch('/affiliate/click', {
+          method: 'POST',
+          headers,
+          body
+        }).catch(() => {});
+      }
+    } catch (error) {
+      console.warn('Affiliate click tracking failed:', error);
+    }
+
+    return true;
   }
 
   loadMoreItems() {

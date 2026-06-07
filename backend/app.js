@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeSignalScheduler } = require('./services/signalIngestion');
 const { initializeAISourcingScheduler } = require('./services/signalSourcer');
+const { initializeConnectorScheduler } = require('./services/dataConnectors');
 require('dotenv').config();
 
 // Load MongoDB URI from standard env var
@@ -288,6 +289,14 @@ try {
   console.warn('Alerts route not mounted:', err.message);
 }
 
+// Affiliate monetization click tracking
+try {
+  const affiliateRoutes = require('./routes/affiliateRoutes');
+  app.use('/affiliate', affiliateRoutes);
+} catch (err) {
+  console.warn('Affiliate route not mounted:', err.message);
+}
+
 // Initialize automated signal ingestion scheduler after routes are mounted
 try {
   initializeSignalScheduler();
@@ -300,6 +309,13 @@ try {
   initializeAISourcingScheduler();
 } catch (err) {
   console.error('Failed to initialize AI signal sourcing scheduler:', err.message);
+}
+
+// Initialize automated external connector scheduler after routes are mounted
+try {
+  initializeConnectorScheduler();
+} catch (err) {
+  console.error('Failed to initialize external data connector scheduler:', err.message);
 }
 
 // 404 handler

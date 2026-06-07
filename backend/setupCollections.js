@@ -140,7 +140,35 @@ const mongooseOptions = {
     }
 
     // =========================================================================
-    // 6. AI_TEMPLATES COLLECTION
+    // 6. AFFILIATE CLICK TRACKING COLLECTION
+    // =========================================================================
+    const clicksExists = await db.listCollections({ name: "affiliateclicks" }).hasNext();
+    if (!clicksExists) {
+      console.log("🔗 Creating 'affiliateclicks' collection...");
+      await db.createCollection("affiliateclicks");
+      await db.collection("affiliateclicks").createIndex({ signalId: 1 });
+      await db.collection("affiliateclicks").createIndex({ clickAt: -1 });
+      console.log("   ✅ Created with indexes\n");
+    } else {
+      console.log("   ✓ 'affiliateclicks' already exists\n");
+    }
+
+    // =========================================================================
+    // 7. AFFILIATE REVENUE COLLECTION
+    // =========================================================================
+    const revenueExists = await db.listCollections({ name: "affiliaterevenues" }).hasNext();
+    if (!revenueExists) {
+      console.log("💰 Creating 'affiliaterevenues' collection...");
+      await db.createCollection("affiliaterevenues");
+      await db.collection("affiliaterevenues").createIndex({ signalId: 1 }, { unique: true });
+      await db.collection("affiliaterevenues").createIndex({ estimatedRevenueTotal: -1 });
+      console.log("   ✅ Created with indexes\n");
+    } else {
+      console.log("   ✓ 'affiliaterevenues' already exists\n");
+    }
+
+    // =========================================================================
+    // 8. AI_TEMPLATES COLLECTION
     // =========================================================================
     const aiExists = await db.listCollections({ name: "ai_templates" }).hasNext();
     

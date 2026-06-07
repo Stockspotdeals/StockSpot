@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const Signal = require('../models/Signal');
 const { processSignalWatchlistAlerts } = require('./watchlistAlertMatcher');
 const { calculateSignalScore } = require('./signalScoring');
+const { enrichSignalWithAffiliateData, calculateMonetizationBoost } = require('./affiliateEnricher');
 
 const signalEmitter = new EventEmitter();
 const duplicateCache = new Map();
@@ -60,6 +61,8 @@ function addLiveSignal(signal, matchedCount = 0) {
     description: signal.description,
     store: signal.store,
     affiliateUrl: signal.affiliateUrl,
+    estimatedCommission: signal.estimatedCommission || 0,
+    monetizationScore: signal.monetizationScore || 0,
     imageUrl: signal.imageUrl,
     signalType: signal.signalType,
     premiumOnly: signal.premiumOnly,
@@ -142,9 +145,12 @@ async function processSignal(payload) {
       return null;
     }
 
+    const enrichedPayload = enrichSignalWithAffiliateData(payload);
+    const monetizationBoost = calculateMonetizationBoost(enrichedPayload.estimatedCommission);
     const scoredSignal = {
-      ...payload,
-      score: calculateSignalScore(payload),
+      ...enrichedPayload,
+      score: Math.min(100, Math.max(0, calculateSignalScore(enrichedPayload) + monetizationBoost)),
+      monetizationScore: enrichedPayload.monetizationScore || monetizationBoost,
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -212,6 +218,8 @@ async function getLiveSignals(isPremium = false, limit = 50) {
       premiumOnly: signal.premiumOnly,
       score: signal.score,
       priority: signal.priority,
+      estimatedCommission: signal.estimatedCommission || 0,
+      monetizationScore: signal.monetizationScore || 0,
       status: signal.status,
       matchStatus: signal.matchStatus,
       createdAt: signal.createdAt,
