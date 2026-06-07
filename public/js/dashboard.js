@@ -12,6 +12,7 @@ class Dashboard {
     this.authToken = localStorage.getItem('auth_token') || '';
     this.allFeedItems = [];
     this.filteredItems = [];
+    this.topOpportunities = [];
     this.isLoading = false;
     this.hasMore = true;
 
@@ -36,6 +37,7 @@ class Dashboard {
     this.addItemForm = document.getElementById('add-item-form');
     this.loadMoreBtn = document.getElementById('load-more-btn');
     this.loadMoreContainer = document.getElementById('load-more-container');
+    this.topOpportunitiesContainer = document.getElementById('top-opportunities');
 
     // Update tier display
     this.updateTierDisplay();
@@ -99,33 +101,48 @@ class Dashboard {
     this.refreshBtn.innerHTML = '<span class="spinner"></span> <span id="refresh-text">Refreshing...</span>';
 
     try {
-      // Load from RSS feed (which aggregates all feeds)
-      const response = await fetch('/feeds/public.xml');
-      const text = await response.text();
-
-      // Parse RSS
-      const items = this.parseRSSFeed(text);
-
-      // Apply tier-based filtering
-      this.allFeedItems = this.applyTierFiltering(items);
-      
-      // Reset pagination
-      this.page = 0;
-      this.filteredItems = [...this.allFeedItems];
-      
-      this.displayItems();
-      this.showNotification('✅ Feed updated', 'success');
+      await this.loadSignals();
+      this.applyFilter();
+      this.renderTopOpportunities();
+      this.showNotification('✅ Signals updated', 'success');
     } catch (error) {
-      console.error('Feed load error:', error);
-      this.showNotification('Failed to load feed', 'error');
-      
-      // Try API fallback
-      this.loadFeedFromAPI();
+      console.warn('API signals load failed, falling back to RSS feed:', error);
+      await this.loadFeedFromAPI();
     } finally {
       this.isLoading = false;
       this.refreshBtn.disabled = false;
       this.refreshBtn.innerHTML = '<span>🔄</span> <span id="refresh-text">Refresh</span>';
     }
+  }
+
+  async loadSignals() {
+    const response = await fetch('/api/signals');
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to load signals');
+    }
+
+    const signals = Array.isArray(data.signals) ? data.signals : [];
+    this.allFeedItems = signals.map(signal => ({
+      title: signal.title || signal.productName || 'Signal Opportunity',
+      description: signal.description || signal.metadata?.notes || '',
+      retailer: (signal.store || 'unknown').toLowerCase(),
+      price: typeof signal.price === 'number' ? signal.price.toFixed(2) : signal.price || 'N/A',
+      url: signal.affiliateUrl || '#',
+      timestamp: new Date(signal.createdAt),
+      guid: signal._id,
+      source: signal.source || 'signal',
+      score: typeof signal.score === 'number' ? signal.score : 0,
+      signalType: signal.signalType,
+      premiumOnly: signal.premiumOnly
+    }));
+
+    this.page = 0;
+    this.filteredItems = [...this.allFeedItems];
+    this.topOpportunities = [...this.allFeedItems]
+      .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.timestamp - a.timestamp))
+      .slice(0, 5);
   }
 
   async loadFeedFromAPI() {
@@ -252,11 +269,43 @@ class Dashboard {
     this.emptyState.style.display = 'none';
 
     // Sort by timestamp (newest first)
-    const sorted = itemsToDisplay.sort((a, b) => b.timestamp - a.timestamp);
+    const sorted = itemsToDisplay.sort((a, b) => {
+      const scoreA = a.score || 0;
+      const scoreB = b.score || 0;
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
+      return b.timestamp - a.timestamp;
+    });
 
     // Group by day
     this.feedContainer.innerHTML = this.renderFeedItems(sorted);
     this.loadMoreContainer.style.display = this.hasMore ? 'block' : 'none';
+  }
+
+  renderTopOpportunities() {
+    if (!this.topOpportunitiesContainer) return;
+
+    if (!this.topOpportunities.length) {
+      this.topOpportunitiesContainer.innerHTML = '<div style="color: var(--gray);">No top opportunities available yet.</div>';
+      return;
+    }
+
+    this.topOpportunitiesContainer.innerHTML = this.topOpportunities.map(item => this.renderTopOpportunityCard(item)).join('');
+  }
+
+  renderTopOpportunityCard(item) {
+    return `
+      <div class="opportunity-card">
+        <div>
+          <div class="opportunity-badge">${this.escapeHTML(item.signalType || 'Signal')}</div>
+          <h3>${this.escapeHTML(item.title)}</h3>
+          <div class="opportunity-score">⭐ Opportunity Score: ${item.score ?? 'N/A'}</div>
+          <div style="color: var(--gray); font-size: 13px;">${this.escapeHTML(item.description.substring(0, 120))}${item.description.length > 120 ? '...' : ''}</div>
+        </div>
+        <a href="${item.url}" target="_blank">View Opportunity →</a>
+      </div>
+    `;
   }
 
   renderFeedItems(items) {
@@ -292,6 +341,8 @@ class Dashboard {
           <div class="feed-title">${this.escapeHTML(item.title)}</div>
           <span class="retailer-badge ${item.retailer}">${retailerIcon} ${this.capitalizeRetailer(item.retailer)}</span>
         </div>
+
+        ${item.score != null ? `<div class="feed-price">⭐ Opportunity Score: ${item.score}</div>` : ''}
 
         ${item.price && item.price !== 'Contact' ? `<div class="feed-price">$${item.price}</div>` : ''}
 

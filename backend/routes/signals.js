@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
   try {
     const signals = await Signal.find({ status: 'active' })
       .populate('productId', 'name price retailer')
-      .sort({ createdAt: -1 })
+      .sort({ score: -1, createdAt: -1 })
       .limit(50);
 
     res.json({

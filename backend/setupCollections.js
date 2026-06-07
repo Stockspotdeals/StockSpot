@@ -90,6 +90,7 @@ const mongooseOptions = {
       await db.collection("signals").createIndex({ productId: 1 });
       await db.collection("signals").createIndex({ userId: 1, createdAt: -1 });
       await db.collection("signals").createIndex({ signalType: 1, status: 1 });
+      await db.collection("signals").createIndex({ score: -1, createdAt: -1 });
       
       console.log("   ✅ Created with indexes\n");
     } else {

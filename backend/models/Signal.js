@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { calculateSignalScore } = require('../services/signalScoring');
 
 const signalSchema = new mongoose.Schema({
   productId: {
@@ -53,6 +54,13 @@ const signalSchema = new mongoose.Schema({
     enum: ['active', 'sent', 'expired', 'cancelled'],
     default: 'active'
   },
+  score: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+    index: true
+  },
   priority: {
     type: Number,
     enum: [0, 1, 2, 3], // 0=standard, 1=heavy discount, 2=restock high demand, 3=manual
@@ -93,7 +101,15 @@ signalSchema.index({ status: 1 });
 signalSchema.index({ productId: 1 });
 signalSchema.index({ userId: 1, createdAt: -1 });
 signalSchema.index({ signalType: 1, status: 1 });
+signalSchema.index({ score: -1, createdAt: -1 });
 signalSchema.index({ createdAt: -1 });
+
+signalSchema.pre('save', function(next) {
+  if (this.isNew) {
+    this.score = calculateSignalScore(this);
+  }
+  next();
+});
 
 // Pre-save middleware to set expiration
 // signalSchema.pre('save', function(next) {

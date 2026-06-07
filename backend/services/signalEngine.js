@@ -63,6 +63,8 @@ async function runSignalEngine() {
           });
           signalsCreated.push(signal);
           console.log(`🆕 Restock signal created for: ${product.name}`);
+          console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
+          console.log(`Ranking updated for signal: ${signal._id}`);
         }
       }
 
@@ -93,6 +95,8 @@ async function runSignalEngine() {
             });
             signalsCreated.push(signal);
             console.log(`💰 Price drop signal created for: ${product.name} (${priceDropPercent.toFixed(1)}% off)`);
+            console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
+            console.log(`Ranking updated for signal: ${signal._id}`);
           }
         }
       }
@@ -118,6 +122,8 @@ async function runSignalEngine() {
           });
           signalsCreated.push(signal);
           console.log(`❌ Out-of-stock signal created for: ${product.name}`);
+          console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
+          console.log(`Ranking updated for signal: ${signal._id}`);
         }
       }
 
