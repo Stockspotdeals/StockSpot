@@ -3,8 +3,44 @@ const mongoose = require('mongoose');
 const signalSchema = new mongoose.Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true
+    ref: 'Product'
+  },
+  productName: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  title: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  store: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  affiliateUrl: {
+    type: String,
+    trim: true
+  },
+  imageUrl: {
+    type: String,
+    trim: true
+  },
+  source: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  premiumOnly: {
+    type: Boolean,
+    default: false,
+    index: true
   },
   signalType: {
     type: String,

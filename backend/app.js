@@ -7,6 +7,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { initializeSignalScheduler } = require('./services/signalIngestion');
 require('dotenv').config();
 
 // Load MongoDB URI from standard env var
@@ -258,6 +259,13 @@ try {
 } catch (err) {
   // If route file missing, log and continue (non-breaking)
   console.warn('Alert signals route not mounted:', err.message);
+}
+
+// Initialize automated signal ingestion scheduler after routes are mounted
+try {
+  initializeSignalScheduler();
+} catch (err) {
+  console.error('Failed to initialize automated signal ingestion scheduler:', err.message);
 }
 
 // 404 handler
