@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeSignalScheduler } = require('./services/signalIngestion');
+const { initializeAISourcingScheduler } = require('./services/signalSourcer');
 require('dotenv').config();
 
 // Load MongoDB URI from standard env var
@@ -292,6 +293,13 @@ try {
   initializeSignalScheduler();
 } catch (err) {
   console.error('Failed to initialize automated signal ingestion scheduler:', err.message);
+}
+
+// Initialize automated AI sourcing scheduler after routes are mounted
+try {
+  initializeAISourcingScheduler();
+} catch (err) {
+  console.error('Failed to initialize AI signal sourcing scheduler:', err.message);
 }
 
 // 404 handler

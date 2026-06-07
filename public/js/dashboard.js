@@ -18,6 +18,7 @@ class Dashboard {
     this.isLoading = false;
     this.hasMore = true;
     this.pushEnabled = false;
+    this.signalSourceEndpoint = '/api/signals/live';
 
     this.initializeElements();
     this.setupEventListeners();
@@ -46,6 +47,7 @@ class Dashboard {
     this.watchlistList = document.getElementById('watchlist-list');
     this.recentAlertsList = document.getElementById('recent-alerts-list');
     this.notificationBtn = document.getElementById('notification-btn');
+    this.liveStatusBadge = document.getElementById('live-status-badge');
 
     // Update tier display
     this.updateTierDisplay();
@@ -138,14 +140,37 @@ class Dashboard {
   }
 
   async loadSignals() {
-    const response = await fetch('/api/signals');
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to load signals');
+    const headers = {};
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
-    const signals = Array.isArray(data.signals) ? data.signals : [];
+    const endpoints = ['/api/signals/live', '/api/signals'];
+    let data = null;
+    let response = null;
+
+    for (const endpoint of endpoints) {
+      try {
+        response = await fetch(endpoint, { headers });
+        data = await response.json();
+
+        if (response.ok && Array.isArray(data.signals)) {
+          this.signalSourceEndpoint = endpoint;
+          break;
+        }
+
+        console.warn(`Signal fetch from ${endpoint} failed, trying next endpoint.`, response.status, data && data.error);
+      } catch (error) {
+        console.warn(`Signal fetch from ${endpoint} threw, trying fallback.`, error);
+      }
+    }
+
+    if (!response || !response.ok || !Array.isArray(data.signals)) {
+      this.signalSourceEndpoint = '/api/signals';
+      throw new Error((data && data.error) || 'Failed to load signals from live or fallback endpoint');
+    }
+
+    const signals = data.signals;
     this.allFeedItems = signals.map(signal => ({
       title: signal.title || signal.productName || 'Signal Opportunity',
       description: signal.description || signal.metadata?.notes || '',
@@ -165,6 +190,16 @@ class Dashboard {
     this.topOpportunities = [...this.allFeedItems]
       .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.timestamp - a.timestamp))
       .slice(0, 5);
+
+    this.updateLiveStatusBadge(this.signalSourceEndpoint);
+  }
+
+  updateLiveStatusBadge(endpoint) {
+    if (!this.liveStatusBadge) return;
+
+    const isLive = endpoint === '/api/signals/live';
+    this.liveStatusBadge.textContent = isLive ? 'Live feed' : 'Fallback feed';
+    this.liveStatusBadge.classList.toggle('fallback', !isLive);
   }
 
   async loadFeedFromAPI() {

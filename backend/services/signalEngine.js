@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Import models
 const Product = require("../models/Product"); // products collection
 const Signal = require("../models/Signal");   // signals collection
-const { processSignalWatchlistAlerts } = require('./watchlistAlertMatcher');
+const { processSignal } = require('./signalPipeline');
 
 async function runSignalEngine() {
   console.log('🚀 Starting Smart Signal Engine...');
@@ -51,8 +51,9 @@ async function runSignalEngine() {
         });
 
         if (!existingSignal) {
-          const signal = await Signal.create({
+          const signal = await processSignal({
             productId: product._id,
+            productName: product.name,
             signalType: "restock",
             status: "active",
             priority: product.confidence > 80 ? 2 : 1, // High confidence = higher priority
@@ -62,14 +63,11 @@ async function runSignalEngine() {
               currentStock: product.stock
             }
           });
-          signalsCreated.push(signal);
-          console.log(`🆕 Restock signal created for: ${product.name}`);
-          console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
-          console.log(`Ranking updated for signal: ${signal._id}`);
-          try {
-            await processSignalWatchlistAlerts(signal);
-          } catch (alertError) {
-            console.error('Watchlist alert processing failed for signal:', alertError.message);
+          if (signal) {
+            signalsCreated.push(signal);
+            console.log(`🆕 Restock signal created for: ${product.name}`);
+            console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
+            console.log(`Ranking updated for signal: ${signal._id}`);
           }
         }
       }
@@ -87,8 +85,9 @@ async function runSignalEngine() {
           });
 
           if (!existingSignal) {
-            const signal = await Signal.create({
+            const signal = await processSignal({
               productId: product._id,
+              productName: product.name,
               signalType: "price-drop",
               status: "active",
               priority: priceDropPercent > 20 ? 1 : 0, // Large drops = higher priority
@@ -99,14 +98,11 @@ async function runSignalEngine() {
                 percentChange: -priceDropPercent
               }
             });
-            signalsCreated.push(signal);
-            console.log(`💰 Price drop signal created for: ${product.name} (${priceDropPercent.toFixed(1)}% off)`);
-            console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
-            console.log(`Ranking updated for signal: ${signal._id}`);
-            try {
-              await processSignalWatchlistAlerts(signal);
-            } catch (alertError) {
-              console.error('Watchlist alert processing failed for signal:', alertError.message);
+            if (signal) {
+              signalsCreated.push(signal);
+              console.log(`💰 Price drop signal created for: ${product.name} (${priceDropPercent.toFixed(1)}% off)`);
+              console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
+              console.log(`Ranking updated for signal: ${signal._id}`);
             }
           }
         }
@@ -121,8 +117,9 @@ async function runSignalEngine() {
         });
 
         if (!existingSignal) {
-          const signal = await Signal.create({
+          const signal = await processSignal({
             productId: product._id,
+            productName: product.name,
             signalType: "out-of-stock",
             status: "active",
             priority: 0,
@@ -131,14 +128,11 @@ async function runSignalEngine() {
               currentStock: 0
             }
           });
-          signalsCreated.push(signal);
-          console.log(`❌ Out-of-stock signal created for: ${product.name}`);
-          console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
-          console.log(`Ranking updated for signal: ${signal._id}`);
-          try {
-            await processSignalWatchlistAlerts(signal);
-          } catch (alertError) {
-            console.error('Watchlist alert processing failed for signal:', alertError.message);
+          if (signal) {
+            signalsCreated.push(signal);
+            console.log(`❌ Out-of-stock signal created for: ${product.name}`);
+            console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
+            console.log(`Ranking updated for signal: ${signal._id}`);
           }
         }
       }

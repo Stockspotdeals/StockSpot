@@ -1,7 +1,7 @@
 const cron = require('node-cron');
-const Signal = require('../models/Signal');
 const Product = require('../models/Product');
-const { processSignalWatchlistAlerts } = require('./watchlistAlertMatcher');
+const { processSignal } = require('./signalPipeline');
+const { loadAIOpportunities } = require('./signalSourcer');
 
 const sources = {};
 let schedulerStarted = false;
@@ -131,6 +131,10 @@ async function registerDefaultSources() {
     return loadTemplateSource();
   });
 
+  addSource('ai_sourcer', async () => {
+    return loadAIOpportunities();
+  });
+
   addSource('placeholder', async () => {
     // Future placeholder for external ingestion sources like API, scraper, or affiliate feeds.
     return [];
@@ -138,39 +142,19 @@ async function registerDefaultSources() {
 }
 
 async function createSignalIfNeeded(payload) {
-  const query = {
-    signalType: payload.signalType,
-    store: payload.store,
-    status: 'active'
-  };
-
-  if (payload.productId) {
-    query.productId = payload.productId;
-  } else if (payload.productName) {
-    query.productName = payload.productName;
-  }
-
-  const duplicateExists = await Signal.exists(query);
-  if (duplicateExists) {
-    console.log(`Duplicate skipped: ${payload.productName || payload.title} | ${payload.store} | ${payload.signalType}`);
-    return null;
-  }
-
-  const signal = await Signal.create({
+  const signal = await processSignal({
     ...payload,
     status: 'active',
     createdAt: new Date(),
     updatedAt: new Date()
   });
 
-  console.log(`Signal inserted: ${payload.title} | ${payload.store} | ${payload.signalType}`);
-  console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
-  console.log(`Ranking updated for signal: ${signal._id}`);
-
-  try {
-    await processSignalWatchlistAlerts(signal);
-  } catch (alertError) {
-    console.error('Watchlist alert processing failed for signal:', alertError.message);
+  if (signal) {
+    console.log(`Signal inserted: ${payload.title || payload.productName} | ${payload.store} | ${payload.signalType}`);
+    console.log(`Signal scored: ${signal._id} | score=${signal.score}`);
+    console.log(`Ranking updated for signal: ${signal._id}`);
+  } else {
+    console.log(`Signal skipped or queued: ${payload.title || payload.productName} | ${payload.store} | ${payload.signalType}`);
   }
 
   return signal;

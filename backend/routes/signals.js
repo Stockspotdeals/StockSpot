@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { optionalAuthentication } = require('../middleware/authMiddleware');
 const runSignalEngine = require('../services/signalEngine');
+const { getLiveSignals } = require('../services/signalPipeline');
 const Signal = require('../models/Signal');
 
 // GET /api/signals - Get all active signals
@@ -45,6 +47,26 @@ router.post('/run', async (req, res) => {
       success: false,
       error: 'Signal engine run failed',
       details: error.message
+    });
+  }
+});
+
+// GET /api/signals/live - Get latest live signals with match status
+router.get('/live', optionalAuthentication, async (req, res) => {
+  try {
+    const isPremium = req.user && req.user.subscriptionStatus === 'premium';
+    const signals = await getLiveSignals(isPremium, 50);
+
+    res.json({
+      success: true,
+      signals,
+      count: signals.length
+    });
+  } catch (error) {
+    console.error('Error fetching live signals:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch live signals'
     });
   }
 });

@@ -13,19 +13,21 @@ function matchesWatchlist(text, keyword) {
 
 async function processSignalWatchlistAlerts(signal) {
   if (!signal || (!signal.productName && !signal.title)) {
-    return;
+    return 0;
   }
+
+  let alertsCreated = 0;
 
   try {
     const watchlists = await Watchlist.find().lean();
     if (!watchlists.length) {
-      return;
+      return 0;
     }
 
     const matchableText = `${signal.productName || ''} ${signal.title || ''}`.toLowerCase();
     const matches = watchlists.filter(entry => matchesWatchlist(matchableText, entry.keyword));
     if (!matches.length) {
-      return;
+      return 0;
     }
 
     const userIds = [...new Set(matches.map(entry => entry.userId.toString()))];
@@ -68,6 +70,7 @@ async function processSignalWatchlistAlerts(signal) {
         }
       });
 
+      alertsCreated += 1;
       console.log(`Alert created for user ${user.email} matching keyword "${watchlist.keyword}" on signal ${signal._id}`);
 
       try {
@@ -95,7 +98,7 @@ async function processSignalWatchlistAlerts(signal) {
 
         const pushResults = await sendAlertPushNotification(watchlist.userId, pushPayload);
         if (Array.isArray(pushResults) && pushResults.length) {
-          console.log(`Push alert results for ${user.email}:`, pushResults.map(r => ({ subscriptionId: r.subscriptionId, success: r.success }))); 
+          console.log(`Push alert results for ${user.email}:`, pushResults.map(r => ({ subscriptionId: r.subscriptionId, success: r.success })));
         }
       } catch (pushError) {
         console.error(`Failed to send push alert to ${user.email}:`, pushError.message || pushError);
@@ -104,6 +107,8 @@ async function processSignalWatchlistAlerts(signal) {
   } catch (error) {
     console.error('Error processing watchlist alerts:', error.message);
   }
+
+  return alertsCreated;
 }
 
 module.exports = {
