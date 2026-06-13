@@ -297,6 +297,14 @@ try {
   console.warn('Affiliate route not mounted:', err.message);
 }
 
+// User profit dashboard and value summary
+try {
+  const userValueRoutes = require('./routes/userValueRoutes');
+  app.use('/user', userValueRoutes);
+} catch (err) {
+  console.warn('User value route not mounted:', err.message);
+}
+
 // Initialize automated signal ingestion scheduler after routes are mounted
 try {
   initializeSignalScheduler();

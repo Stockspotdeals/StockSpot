@@ -168,7 +168,36 @@ const mongooseOptions = {
     }
 
     // =========================================================================
-    // 8. AI_TEMPLATES COLLECTION
+    // 8. USER SIGNAL INTERACTIONS COLLECTION
+    // =========================================================================
+    const interactionsExists = await db.listCollections({ name: "usersignalinteractions" }).hasNext();
+    if (!interactionsExists) {
+      console.log("📈 Creating 'usersignalinteractions' collection...");
+      await db.createCollection("usersignalinteractions");
+      await db.collection("usersignalinteractions").createIndex({ userId: 1 });
+      await db.collection("usersignalinteractions").createIndex({ signalId: 1 });
+      await db.collection("usersignalinteractions").createIndex({ actionType: 1 });
+      console.log("   ✅ Created with indexes\n");
+    } else {
+      console.log("   ✓ 'usersignalinteractions' already exists\n");
+    }
+
+    // =========================================================================
+    // 9. USER VALUE SUMMARIES COLLECTION
+    // =========================================================================
+    const summaryExists = await db.listCollections({ name: "uservalueSummaries" }).hasNext();
+    if (!summaryExists) {
+      console.log("💡 Creating 'uservalueSummaries' collection...");
+      await db.createCollection("uservalueSummaries");
+      await db.collection("uservalueSummaries").createIndex({ userId: 1 }, { unique: true });
+      await db.collection("uservalueSummaries").createIndex({ engagementScore: -1 });
+      console.log("   ✅ Created with indexes\n");
+    } else {
+      console.log("   ✓ 'uservalueSummaries' already exists\n");
+    }
+
+    // =========================================================================
+    // 10. AI_TEMPLATES COLLECTION
     // =========================================================================
     const aiExists = await db.listCollections({ name: "ai_templates" }).hasNext();
     

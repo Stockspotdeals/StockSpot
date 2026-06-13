@@ -171,6 +171,44 @@
       margin-bottom: 20px;
     }
 
+    .impact-panel {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .impact-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-bottom: 20px;
+    }
+
+    .impact-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      min-height: 96px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .impact-card strong {
+      display: block;
+      font-size: 1rem;
+      color: var(--gray-dark);
+    }
+
+    .impact-card .impact-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
     .watchlist-panel,
     .recent-alerts {
       background: white;
@@ -877,6 +915,22 @@
           <div class="top-opportunities-note">Top 5 signals with strong affiliate earning potential</div>
         </div>
         <div id="top-opportunities" class="top-grid"></div>
+      </section>
+
+      <section class="impact-panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-label">My Impact</p>
+            <h2>Value dashboard</h2>
+          </div>
+          <div class="top-opportunities-note">Track savings, affiliate potential, and engagement</div>
+        </div>
+
+        <div id="impact-summary" class="impact-grid">
+          <div class="impact-card">Loading your impact…</div>
+        </div>
+
+        <div id="top-deals-engaged" class="top-grid"></div>
       </section>
 
       <section class="watchlist-panel">

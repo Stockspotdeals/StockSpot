@@ -4,6 +4,7 @@ const { optionalAuthentication } = require('../middleware/authMiddleware');
 const AffiliateClick = require('../models/AffiliateClick');
 const AffiliateRevenue = require('../models/AffiliateRevenue');
 const Signal = require('../models/Signal');
+const { recordInteraction } = require('../services/userValueEngine');
 
 router.post('/click', optionalAuthentication, async (req, res) => {
   try {
@@ -48,6 +49,16 @@ router.post('/click', optionalAuthentication, async (req, res) => {
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
+
+      if (req.user) {
+        await recordInteraction({
+          userId: req.user._id,
+          signalId: signal._id,
+          actionType: 'affiliateClick',
+          estimatedValue: estimatedCommission,
+          metadata: { affiliateUrl }
+        });
+      }
     }
 
     return res.json({ success: true, clickId: clickRecord._id });

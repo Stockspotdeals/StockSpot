@@ -15,6 +15,7 @@ class Dashboard {
     this.topOpportunities = [];
     this.watchlistItems = [];
     this.alertItems = [];
+    this.userValueSummary = null;
     this.isLoading = false;
     this.hasMore = true;
     this.pushEnabled = false;
@@ -42,6 +43,8 @@ class Dashboard {
     this.loadMoreBtn = document.getElementById('load-more-btn');
     this.loadMoreContainer = document.getElementById('load-more-container');
     this.topOpportunitiesContainer = document.getElementById('top-opportunities');
+    this.impactSummaryContainer = document.getElementById('impact-summary');
+    this.topDealsEngagedContainer = document.getElementById('top-deals-engaged');
     this.watchlistForm = document.getElementById('watchlist-form');
     this.watchlistKeywordInput = document.getElementById('watchlist-keyword');
     this.watchlistList = document.getElementById('watchlist-list');
@@ -123,11 +126,13 @@ class Dashboard {
       await Promise.all([
         this.loadSignals(),
         this.loadWatchlist(),
-        this.loadRecentAlerts()
+        this.loadRecentAlerts(),
+        this.loadUserValueSummary()
       ]);
       await this.loadPushSubscriptionState();
       this.applyFilter();
       this.renderTopOpportunities();
+      this.renderUserImpact();
       this.showNotification('✅ Signals updated', 'success');
     } catch (error) {
       console.warn('API signals load failed, falling back to RSS feed:', error);
@@ -197,7 +202,79 @@ class Dashboard {
     this.updateLiveStatusBadge(this.signalSourceEndpoint);
   }
 
-  updateLiveStatusBadge(endpoint) {
+  async loadUserValueSummary() {
+    if (!this.authToken || !this.impactSummaryContainer) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/user/value-summary', {
+        headers: {
+          Authorization: `Bearer ${this.authToken}`
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load value summary');
+      }
+
+      this.userValueSummary = data;
+      this.renderUserImpact();
+    } catch (error) {
+      console.warn('Failed to load user value summary:', error);
+      this.userValueSummary = null;
+      this.renderUserImpact();
+    }
+  }
+
+  renderUserImpact() {
+    if (!this.impactSummaryContainer) {
+      return;
+    }
+
+    const summary = this.userValueSummary || {};
+    const premium = this.userTier === 'PAID' || this.userTier === 'YEARLY';
+
+    this.impactSummaryContainer.innerHTML = `
+      <div class="impact-card">
+        <strong>💰 Estimated Savings</strong>
+        <div class="impact-value">$${(summary.totalEstimatedSavings || 0).toFixed(2)}</div>
+      </div>
+      <div class="impact-card">
+        <strong>📈 Opportunities Seen</strong>
+        <div class="impact-value">${summary.totalSignalsViewed || 0}</div>
+      </div>
+      <div class="impact-card">
+        <strong>⭐ Engagement Score</strong>
+        <div class="impact-value">${summary.engagementScore || 0}/100</div>
+      </div>
+      ${premium ? `<div class="impact-card">
+        <strong>🚀 Projected Earnings</strong>
+        <div class="impact-value">$${(summary.premiumInsights?.projectedEarnings || 0).toFixed(2)}</div>
+      </div>` : ''}
+    `;
+
+    if (!this.topDealsEngagedContainer) {
+      return;
+    }
+
+    if (!Array.isArray(summary.topPerformingSignals) || !summary.topPerformingSignals.length) {
+      this.topDealsEngagedContainer.innerHTML = '<div style="color: var(--gray);">No deals engaged yet. Start viewing and saving signals to populate your impact report.</div>';
+      return;
+    }
+
+    this.topDealsEngagedContainer.innerHTML = summary.topPerformingSignals.map(signal => `
+      <div class="opportunity-card">
+        <div>
+          <div class="opportunity-badge">${this.escapeHTML(signal.actionType || 'Engaged')}</div>
+          <h3>${this.escapeHTML(signal.title || 'Signal')}</h3>
+          <div class="opportunity-score">Value: $${(signal.value || 0).toFixed(2)}</div>
+          <div class="opportunity-score">Store: ${this.escapeHTML(signal.store || 'Unknown')}</div>
+        </div>
+      </div>
+    `).join('');
+  }
     if (!this.liveStatusBadge) return;
 
     const isLive = endpoint === '/api/signals/live';

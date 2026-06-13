@@ -3,15 +3,20 @@ const router = express.Router();
 const { optionalAuthentication } = require('../middleware/authMiddleware');
 const runSignalEngine = require('../services/signalEngine');
 const { getLiveSignals } = require('../services/signalPipeline');
+const { recordSignalView } = require('../services/userValueEngine');
 const Signal = require('../models/Signal');
 
 // GET /api/signals - Get all active signals
-router.get('/', async (req, res) => {
+router.get('/', optionalAuthentication, async (req, res) => {
   try {
     const signals = await Signal.find({ status: 'active' })
       .populate('productId', 'name price retailer')
       .sort({ score: -1, createdAt: -1 })
       .limit(50);
+
+    if (req.user) {
+      await recordSignalView(req.user._id, signals);
+    }
 
     res.json({
       success: true,
@@ -56,6 +61,10 @@ router.get('/live', optionalAuthentication, async (req, res) => {
   try {
     const isPremium = req.user && req.user.subscriptionStatus === 'premium';
     const signals = await getLiveSignals(isPremium, 50);
+
+    if (req.user) {
+      await recordSignalView(req.user._id, signals);
+    }
 
     res.json({
       success: true,

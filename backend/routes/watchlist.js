@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/authMiddleware');
 const Watchlist = require('../models/Watchlist');
+const { recordInteraction } = require('../services/userValueEngine');
 
 // GET /api/watchlist - Current user's watchlist keywords
 router.get('/', authenticateToken, async (req, res) => {
@@ -43,6 +44,13 @@ router.post('/', authenticateToken, async (req, res) => {
     const item = await Watchlist.create({
       userId: req.user._id,
       keyword
+    });
+
+    await recordInteraction({
+      userId: req.user._id,
+      actionType: 'save',
+      estimatedValue: 1.0,
+      metadata: { keyword }
     });
 
     res.status(201).json({ success: true, watchlist: item });
