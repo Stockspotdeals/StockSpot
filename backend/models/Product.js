@@ -6,6 +6,19 @@ const productSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  // Link back to TrackedProduct (source of truth)
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TrackedProduct',
+    unique: true,
+    index: true,
+    sparse: true
+  },
+  // Optional display title
+  title: {
+    type: String,
+    trim: true
+  },
   price: {
     type: Number,
     required: true,
@@ -28,6 +41,10 @@ const productSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  image: {
+    type: String,
+    trim: true
+  },
   category: {
     type: String,
     trim: true
@@ -39,6 +56,13 @@ const productSchema = new mongoose.Schema({
   inStock: {
     type: Boolean,
     default: false
+  },
+  // Numeric stock and lastStock used by signalEngine
+  stock: {
+    type: Number,
+    default: 0,
+    min: 0,
+    index: true
   },
   discount: {
     type: Number,
@@ -72,5 +96,9 @@ const productSchema = new mongoose.Schema({
 productSchema.index({ stock: 1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ retailer: 1, inStock: 1 });
+productSchema.index({ productId: 1 });
+productSchema.index({ retailer: 1 });
+productSchema.index({ category: 1 });
+productSchema.index({ updatedAt: -1 });
 
 module.exports = mongoose.model('Product', productSchema);

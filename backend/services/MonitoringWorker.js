@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const { ProductMonitor } = require('./ProductMonitor');
 const { NotificationService } = require('./NotificationService');
 const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
+const { upsertProduct } = require('./productUpsert');
 
 class MonitoringWorker {
   constructor() {
@@ -136,6 +137,18 @@ class MonitoringWorker {
           totalSuccessful += successful;
           totalFailed += failed;
           
+          // Upsert products for signal engine consumption (non-blocking per-item)
+          for (const r of results) {
+            if (r && r.success && r.result && r.result.trackedProduct) {
+              try {
+                // Keep this operation safe: failures should not stop monitoring
+                await upsertProduct(r.result.trackedProduct);
+              } catch (err) {
+                console.warn('⚠️  Product upsert failed for', r.productId, err && err.message);
+              }
+            }
+          }
+
           // Log significant events
           await this.logSignificantEvents(results);
           
