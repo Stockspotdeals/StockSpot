@@ -6,10 +6,10 @@
  * Required env var:  BESTBUY_API_KEY
  * Optional env var:  BESTBUY_MAX_PRODUCTS  (default 10 — products checked per run)
  *
- * If BESTBUY_API_KEY is not set this module returns [] and logs a warning.
- * The pipeline degrades gracefully — no change to existing behaviour.
+ * If BESTBUY_API_KEY is not set this module degrades gracefully.
  *
- * Plugs into signalIngestion via addSource('bestbuy_api', loadBestBuySignals).
+ * The primary integration path is now ProductMonitor for Best Buy tracked
+ * products. This module supplies the official API client used by that path.
  */
 
 const https = require('https');
@@ -205,4 +205,7 @@ async function loadBestBuySignals() {
   return signals;
 }
 
-module.exports = { loadBestBuySignals };
+module.exports = {
+  loadBestBuySignals,
+  fetchBestBuyProduct
+};

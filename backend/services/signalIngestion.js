@@ -2,7 +2,6 @@ const cron = require('node-cron');
 const Product = require('../models/Product');
 const { processSignal } = require('./signalPipeline');
 const { loadAIOpportunities } = require('./signalSourcer');
-const { loadBestBuySignals } = require('./BestBuyConnector');
 
 const sources = {};
 let schedulerStarted = false;
@@ -139,12 +138,6 @@ async function registerDefaultSources() {
   addSource('placeholder', async () => {
     // Future placeholder for external ingestion sources like API, scraper, or affiliate feeds.
     return [];
-  });
-
-  // Real retailer: Best Buy Products API (requires BESTBUY_API_KEY env var).
-  // Silently skips if the key is not configured.
-  addSource('bestbuy_api', async () => {
-    return loadBestBuySignals();
   });
 }
 

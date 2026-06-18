@@ -2,6 +2,7 @@ const axios = require('axios');
 const { RetailerDetector, RETAILER_TYPES } = require('./RetailerDetector');
 const { CategoryDetector } = require('./CategoryDetector');
 const { AffiliateEngine } = require('./AffiliateEngine');
+const { fetchBestBuyProduct } = require('./BestBuyConnector');
 
 // Lazy load cheerio - only loaded when actually needed
 let cheerio = null;
@@ -34,7 +35,7 @@ class ProductMonitor {
   async monitorProduct(trackedProduct) {
     try {
       const retailerConfig = RetailerDetector.getRetailerConfig(trackedProduct.retailer);
-      const productData = await this.scrapeProduct(trackedProduct.url, retailerConfig);
+      const productData = await this.scrapeProduct(trackedProduct, retailerConfig);
       
       const changes = this.detectChanges(trackedProduct, productData);
       
@@ -79,8 +80,10 @@ class ProductMonitor {
   /**
    * Scrape product data from retailer website
    */
-  async scrapeProduct(url, config) {
+  async scrapeProduct(trackedProduct, config) {
     try {
+      const url = trackedProduct.url;
+
       // Return mock data in dry-run mode
       if (this.isDryRun) {
         return {
@@ -91,6 +94,34 @@ class ProductMonitor {
           category: 'Electronics',
           affiliateLink: url
         };
+      }
+
+      if (trackedProduct.retailer === RETAILER_TYPES.BESTBUY && process.env.BESTBUY_API_KEY) {
+        const sku = RetailerDetector.extractProductId(url, RETAILER_TYPES.BESTBUY);
+        if (sku) {
+          try {
+            const apiProduct = await fetchBestBuyProduct(sku, process.env.BESTBUY_API_KEY);
+            if (apiProduct) {
+              const title = apiProduct.name || trackedProduct.title || 'Unknown Product';
+              const price = apiProduct.salePrice || apiProduct.regularPrice || null;
+              const availabilityText = apiProduct.onlineAvailabilityText || (apiProduct.onlineAvailability ? 'Available online' : 'Unavailable online');
+              const isAvailable = !!apiProduct.onlineAvailability;
+              const category = CategoryDetector.detectCategory(title, url, '');
+
+              return {
+                title,
+                price,
+                availability: availabilityText,
+                isAvailable,
+                category,
+                affiliateLink: trackedProduct.affiliateLink || url,
+                scrapedAt: new Date()
+              };
+            }
+          } catch (apiError) {
+            console.warn('[ProductMonitor] Best Buy API failed, falling back to HTML scrape:', apiError.message);
+          }
+        }
       }
 
       const response = await this.axiosInstance.get(url, {
