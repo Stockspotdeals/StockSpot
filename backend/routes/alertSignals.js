@@ -7,7 +7,7 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const user = req.user;
-    const isPremium = user && user.subscriptionStatus === 'active';
+    const isPremium = user && user.subscriptionStatus === 'premium';
 
     // Build query based on user status
     const query = {
