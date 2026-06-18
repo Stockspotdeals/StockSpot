@@ -38,7 +38,12 @@ class RetailerDetector {
       if (hostname.includes('bestbuy.com')) {
         return RETAILER_TYPES.BESTBUY;
       }
-      
+
+      // Pokémon Center detection
+      if (hostname.includes('pokemoncenter.com')) {
+        return RETAILER_TYPES.POKEMONCENTER;
+      }
+
       return RETAILER_TYPES.UNKNOWN;
     } catch (error) {
       return RETAILER_TYPES.UNKNOWN;
@@ -61,6 +66,8 @@ class RetailerDetector {
           return this.extractTargetProductId(parsedUrl);
         case RETAILER_TYPES.BESTBUY:
           return this.extractBestBuyProductId(parsedUrl);
+        case RETAILER_TYPES.POKEMONCENTER:
+          return this.extractPokemonCenterProductId(parsedUrl);
         default:
           return null;
       }
@@ -108,6 +115,14 @@ class RetailerDetector {
     
     // Pattern: /site/product-name/SKU.p
     const match = pathname.match(/\/site\/[^\/]+\/(\d+)\.p/);
+    return match ? match[1] : null;
+  }
+
+  static extractPokemonCenterProductId(parsedUrl) {
+    // Patterns:
+    //   /en-us/product/{id}/{slug}
+    //   /product/{id}/{slug}
+    const match = parsedUrl.pathname.match(/\/(?:en-us\/)?product\/([\w-]+)/);
     return match ? match[1] : null;
   }
 
@@ -291,6 +306,36 @@ class RetailerDetector {
             'unavailable nearby'
           ]
         }
+      },
+
+      // Pokémon Center — conservative polling, standard HTML selectors.
+      // Price and availability are server-rendered on their product pages.
+      [RETAILER_TYPES.POKEMONCENTER]: {
+        name: 'Pokémon Center',
+        baseDelay: 4000,    // conservative — 4 s between requests
+        maxDelay: 20000,
+        timeout: 30000,
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache'
+        },
+        selectors: {
+          // Product pages render title in h1 and <title> tag
+          title: ['h1', 'h1[class*="product"]', 'title'],
+          // Price is rendered in a span with a data attribute or class containing "price"
+          price: ['[data-testid="product-price"]', '[class*="productPrice"]', '[class*="product-price"]', '[itemprop="price"]', '.price'],
+          // Availability: Pokémon Center renders an out-of-stock notice or add-to-cart button
+          availability: ['[class*="availability"]', '[class*="stock"]', '[class*="addToCart"]', '[data-testid="add-to-cart"]'],
+          outOfStock: [
+            'out of stock',
+            'sold out',
+            'currently unavailable',
+            'notify me',
+            'oos'
+          ]
+        }
       }
     };
     
@@ -345,7 +390,7 @@ class RetailerDetector {
   static getSupportedRetailers() {
     return [
       'amazon',
-      'bestbuy', 
+      'bestbuy',
       'walmart',
       'target',
       'gamestop',
