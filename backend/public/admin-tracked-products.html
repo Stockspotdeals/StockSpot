@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockSpot Admin - Tracked Products</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 2rem; background: #f4f6fb; color: #1f2937; }
+    h1 { margin-bottom: 1rem; }
+    .panel { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+    .field { display: flex; flex-direction: column; margin-bottom: 1rem; }
+    .field label { font-weight: 600; margin-bottom: 0.5rem; }
+    .field input, .field select { padding: 0.75rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+    button { cursor: pointer; border: none; border-radius: 6px; padding: 0.85rem 1.25rem; background: #2563eb; color: white; font-size: 1rem; }
+    button:disabled { opacity: 0.65; cursor: not-allowed; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 0.9rem 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
+    th { background: #f8fafc; font-weight: 700; }
+    .danger { background: #ef4444; }
+    .message { margin-bottom: 1rem; padding: 0.9rem 1rem; border-radius: 6px; }
+    .success { background: #d1fae5; color: #065f46; }
+    .error { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <h1>Tracked Product Admin</h1>
+  <div class="panel">
+    <div id="message"></div>
+    <form id="product-form">
+      <div class="field">
+        <label for="title">Title</label>
+        <input id="title" name="title" required />
+      </div>
+      <div class="field">
+        <label for="retailer">Retailer</label>
+        <input id="retailer" name="retailer" required />
+      </div>
+      <div class="field">
+        <label for="category">Category</label>
+        <input id="category" name="category" required />
+      </div>
+      <div class="field">
+        <label for="url">URL</label>
+        <input id="url" name="url" type="url" required />
+      </div>
+      <button type="submit">Add Tracked Product</button>
+    </form>
+  </div>
+  <div class="panel">
+    <h2>Existing Tracked Products</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Retailer</th>
+          <th>Category</th>
+          <th>URL</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="product-list">
+      </tbody>
+    </table>
+  </div>
+  <script src="/admin/js/admin-tracked-products.js"></script>
+</body>
+</html>

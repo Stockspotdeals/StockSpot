@@ -19,9 +19,11 @@ async function upsertProduct(trackedProduct) {
     // Load existing product to compute previousPrice / preserve lastStock
     const existing = await Product.findOne(filter).exec();
 
+    const name = trackedProduct.title || trackedProduct.productName || trackedProduct.name || 'Unknown Product';
     const update = {
       $set: {
         productId: trackedProduct._id,
+        name,
         title: trackedProduct.title || trackedProduct.productName || trackedProduct.name || '',
         retailer: trackedProduct.retailer || '',
         category: trackedProduct.category || '',

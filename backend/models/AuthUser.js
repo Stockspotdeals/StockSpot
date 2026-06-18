@@ -53,11 +53,10 @@ const AuthUserSchema = new mongoose.Schema({
   }
 });
 
-AuthUserSchema.pre('save', function(next) {
+AuthUserSchema.pre('save', function() {
   if (!this.plan) {
     this.plan = this.subscriptionStatus === 'premium' ? 'premium' : 'free';
   }
-  next();
 });
 
 AuthUserSchema.virtual('id').get(function() {

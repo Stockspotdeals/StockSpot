@@ -41,6 +41,11 @@ async function runSignalEngine() {
     const signalsCreated = [];
 
     for (const product of products) {
+      // Heal legacy records so validation does not fail when saving tracking fields.
+      if (!product.name) {
+        product.name = product.title || product.productName || 'Unknown Product';
+      }
+
       // Example logic for restock detection
       if (product.stock > 0 && (!product.lastStock || product.lastStock === 0)) {
         // Check if we already have an active restock signal for this product

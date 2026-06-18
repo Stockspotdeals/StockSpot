@@ -115,11 +115,10 @@ signalSchema.index({ signalType: 1, status: 1 });
 signalSchema.index({ score: -1, createdAt: -1 });
 signalSchema.index({ createdAt: -1 });
 
-signalSchema.pre('save', function(next) {
+signalSchema.pre('save', function() {
   if (this.isNew) {
     this.score = calculateSignalScore(this);
   }
-  next();
 });
 
 // Pre-save middleware to set expiration

@@ -3,6 +3,7 @@ console.log('Connecting to MongoDB...');
 
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
@@ -10,6 +11,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeSignalScheduler } = require('./services/signalIngestion');
 const { initializeAISourcingScheduler } = require('./services/signalSourcer');
 const { initializeConnectorScheduler } = require('./services/dataConnectors');
+const { authenticateToken, requireAdmin } = require('./middleware/authMiddleware');
 require('dotenv').config();
 
 // Load MongoDB URI from standard env var
@@ -207,6 +209,18 @@ try {
   app.use('/auth', authRoutes);
 } catch (err) {
   console.warn('Auth route not mounted:', err.message);
+}
+
+// Admin UI route for tracked product management
+try {
+  const trackedProductRoutes = require('./routes/trackedProducts');
+  app.use('/api/tracked-products', trackedProductRoutes);
+  app.use('/admin/js', express.static(path.join(__dirname, 'public', 'js')));
+  app.get('/admin/tracked-products', authenticateToken, requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-tracked-products.html'));
+  });
+} catch (err) {
+  console.warn('Tracked product admin route not mounted:', err.message);
 }
 
 // Stripe checkout session creation

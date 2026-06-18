@@ -183,7 +183,7 @@ class MonitoringWorker {
    */
   groupProductsByUser(products) {
     return products.reduce((groups, product) => {
-      const userId = product.userId.toString();
+      const userId = product.userId ? product.userId.toString() : 'system';
       if (!groups[userId]) {
         groups[userId] = [];
       }
