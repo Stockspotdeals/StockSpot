@@ -385,7 +385,7 @@
     // ============================================
     async function loadSignals(token) {
       try {
-        const res = await fetch(`${BACKEND_URL}/alert-signals`, {
+        const res = await fetch(`${BACKEND_URL}/api/alert-signals`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
