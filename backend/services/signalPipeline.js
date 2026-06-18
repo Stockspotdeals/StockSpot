@@ -4,6 +4,7 @@ const Signal = require('../models/Signal');
 const { processSignalWatchlistAlerts } = require('./watchlistAlertMatcher');
 const { calculateSignalScore } = require('./signalScoring');
 const { enrichSignalWithAffiliateData, calculateMonetizationBoost } = require('./affiliateEnricher');
+const { upsertAlertSignalFromSignal } = require('./signalToAlertBridge');
 
 const signalEmitter = new EventEmitter();
 const duplicateCache = new Map();
@@ -105,6 +106,14 @@ function startDelayedProcessing() {
 
 async function saveSignal(payload) {
   const signal = await Signal.create(payload);
+
+  // Keep dashboard-facing alert signals in sync with core signals.
+  try {
+    await upsertAlertSignalFromSignal(signal);
+  } catch (error) {
+    console.error('[SignalPipeline] AlertSignal bridge failed:', error.message);
+  }
+
   signalEmitter.emit('signal:created', signal.toObject ? signal.toObject() : signal);
   signalEmitter.emit('signal:scored', {
     signalId: signal._id,

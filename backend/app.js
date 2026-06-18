@@ -11,8 +11,11 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeSignalScheduler } = require('./services/signalIngestion');
 const { initializeAISourcingScheduler } = require('./services/signalSourcer');
 const { initializeConnectorScheduler } = require('./services/dataConnectors');
+const { MonitoringWorker } = require('./services/MonitoringWorker');
 const { authenticateToken, requireAdmin } = require('./middleware/authMiddleware');
 require('dotenv').config();
+
+let monitoringWorkerInstance = null;
 
 // Load MongoDB URI from standard env var
 const mongoUri = process.env.MONGO_URI;
@@ -414,6 +417,19 @@ const startServer = async () => {
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📊 Database: ${mongoose.connection.readyState === 1 ? mongoose.connection.host : 'pending'}`);
       console.log('📡 Multi-retailer monitoring active (Amazon, Walmart, Target, Best Buy, etc)');
+
+      // Start monitoring worker once, but never block backend startup on worker errors.
+      try {
+        if (!monitoringWorkerInstance) {
+          monitoringWorkerInstance = new MonitoringWorker();
+          monitoringWorkerInstance.start();
+          console.log('✅ MonitoringWorker initialized and started');
+        } else {
+          console.log('ℹ️ MonitoringWorker already initialized, skipping duplicate startup');
+        }
+      } catch (err) {
+        console.error('⚠️ MonitoringWorker failed to start. Backend will continue running:', err.message);
+      }
       
       // Start Layer 2 Smart Signal Engine
       try {

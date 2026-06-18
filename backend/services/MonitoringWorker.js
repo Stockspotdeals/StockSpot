@@ -9,7 +9,9 @@ class MonitoringWorker {
     this.productMonitor = new ProductMonitor();
     this.notificationService = new NotificationService();
     this.isRunning = false;
+    this.isStarted = false;
     this.currentJob = null;
+    this.jobs = [];
     this.stats = {
       totalChecks: 0,
       successfulChecks: 0,
@@ -24,7 +26,13 @@ class MonitoringWorker {
    * Start the monitoring worker
    */
   start() {
+    if (this.isStarted) {
+      console.log('ℹ️ Monitoring worker already started, skipping duplicate initialization');
+      return;
+    }
+
     console.log('🚀 Starting StockSpot monitoring worker...');
+    this.isStarted = true;
     
     // Main monitoring job - runs every 5 minutes
     this.currentJob = cron.schedule('*/5 * * * *', async () => {
@@ -38,9 +46,10 @@ class MonitoringWorker {
       scheduled: true,
       timezone: "America/New_York"
     });
+    this.jobs.push(this.currentJob);
 
     // Notification delivery job - runs every 2 minutes
-    cron.schedule('*/2 * * * *', async () => {
+    const notificationJob = cron.schedule('*/2 * * * *', async () => {
       try {
         const results = await this.notificationService.deliverPendingNotifications();
         if (results.length > 0) {
@@ -55,22 +64,25 @@ class MonitoringWorker {
       scheduled: true,
       timezone: "America/New_York"
     });
+    this.jobs.push(notificationJob);
 
     // Cleanup job - runs daily at 2 AM
-    cron.schedule('0 2 * * *', async () => {
+    const cleanupJob = cron.schedule('0 2 * * *', async () => {
       await this.cleanup();
     }, {
       scheduled: true,
       timezone: "America/New_York"
     });
+    this.jobs.push(cleanupJob);
 
     // Stats logging - runs every 30 minutes
-    cron.schedule('*/30 * * * *', () => {
+    const statsJob = cron.schedule('*/30 * * * *', () => {
       this.logStats();
     }, {
       scheduled: true,
       timezone: "America/New_York"
     });
+    this.jobs.push(statsJob);
 
     console.log('✅ Monitoring worker started successfully');
     console.log('📅 Main job schedule: Every 5 minutes');
@@ -85,11 +97,18 @@ class MonitoringWorker {
   stop() {
     console.log('🛑 Stopping monitoring worker...');
     
-    if (this.currentJob) {
-      this.currentJob.stop();
-      this.currentJob.destroy();
-      this.currentJob = null;
+    for (const job of this.jobs) {
+      try {
+        job.stop();
+        job.destroy();
+      } catch (error) {
+        console.warn('⚠️ Failed stopping monitoring job:', error.message);
+      }
     }
+
+    this.jobs = [];
+    this.currentJob = null;
+    this.isStarted = false;
     
     console.log('✅ Monitoring worker stopped');
   }

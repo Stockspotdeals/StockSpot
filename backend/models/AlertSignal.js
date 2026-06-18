@@ -41,6 +41,15 @@ const alertSignalSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  sourceSignalId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Signal',
+    index: true
+  },
+  dedupeWindowStart: {
+    type: Date,
+    index: true
+  },
   expiresAt: {
     type: Date,
     default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
@@ -55,6 +64,7 @@ alertSignalSchema.index({ signalType: 1, premiumOnly: 1 });
 alertSignalSchema.index({ store: 1 });
 alertSignalSchema.index({ createdAt: -1 });
 alertSignalSchema.index({ expiresAt: 1 });
+alertSignalSchema.index({ productName: 1, store: 1, signalType: 1, dedupeWindowStart: 1 }, { unique: true });
 
 // Virtual for discount percentage
 alertSignalSchema.virtual('discountPercent').get(function() {
