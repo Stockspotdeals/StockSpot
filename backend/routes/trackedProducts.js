@@ -1,8 +1,30 @@
 const express = require('express');
 const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
 const { TrackedProduct } = require('../models/TrackedProduct');
+const Product = require('../models/Product');
+const Signal = require('../models/Signal');
+const AlertSignal = require('../models/AlertSignal');
 
 const router = express.Router();
+
+/**
+ * GET /api/tracked-products/status
+ * Pipeline counts for owner dashboard status panel
+ */
+router.get('/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const [trackedProductCount, productCount, signalCount, alertSignalCount] = await Promise.all([
+      TrackedProduct.countDocuments(),
+      Product.countDocuments(),
+      Signal.countDocuments(),
+      AlertSignal.countDocuments({ expiresAt: { $gt: new Date() } })
+    ]);
+    res.json({ trackedProductCount, productCount, signalCount, alertSignalCount });
+  } catch (error) {
+    console.error('Error fetching pipeline status:', error);
+    res.status(500).json({ error: 'Failed to fetch pipeline status' });
+  }
+});
 
 /**
  * GET /api/tracked-products

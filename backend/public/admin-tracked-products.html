@@ -6,62 +6,143 @@
   <title>StockSpot Admin - Tracked Products</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 2rem; background: #f4f6fb; color: #1f2937; }
-    h1 { margin-bottom: 1rem; }
-    .panel { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+    h1 { margin-bottom: 1.5rem; }
+    h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+    .panel { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.25rem; }
     .field { display: flex; flex-direction: column; margin-bottom: 1rem; }
-    .field label { font-weight: 600; margin-bottom: 0.5rem; }
-    .field input, .field select { padding: 0.75rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
-    button { cursor: pointer; border: none; border-radius: 6px; padding: 0.85rem 1.25rem; background: #2563eb; color: white; font-size: 1rem; }
-    button:disabled { opacity: 0.65; cursor: not-allowed; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th, td { padding: 0.9rem 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
+    .field label { font-weight: 600; margin-bottom: 0.4rem; font-size: 0.9rem; }
+    .field input, .field select { padding: 0.65rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
+    .btn { cursor: pointer; border: none; border-radius: 6px; padding: 0.75rem 1.25rem; background: #2563eb; color: white; font-size: 0.95rem; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-danger { background: #ef4444; }
+    .btn-secondary { background: #6b7280; }
+    .message { margin-bottom: 1rem; padding: 0.85rem 1rem; border-radius: 6px; }
+    .success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    th, td { padding: 0.8rem 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.9rem; }
     th { background: #f8fafc; font-weight: 700; }
-    .danger { background: #ef4444; }
-    .message { margin-bottom: 1rem; padding: 0.9rem 1rem; border-radius: 6px; }
-    .success { background: #d1fae5; color: #065f46; }
-    .error { background: #fee2e2; color: #991b1b; }
+    td a { color: #2563eb; }
+    /* Status grid */
+    .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .stat-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 1rem; text-align: center; }
+    .stat-card strong { display: block; font-size: 1.7rem; color: #0369a1; }
+    .stat-card span { font-size: 0.8rem; color: #64748b; }
+    .status-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot-green { background: #22c55e; }
+    .dot-gray  { background: #9ca3af; }
+    /* Login form */
+    #login-section { max-width: 420px; margin: 3rem auto; }
+    #login-section .field input { width: 100%; box-sizing: border-box; }
+    @media (max-width: 600px) { .status-grid { grid-template-columns: 1fr 1fr; } }
   </style>
 </head>
 <body>
-  <h1>Tracked Product Admin</h1>
-  <div class="panel">
-    <div id="message"></div>
-    <form id="product-form">
-      <div class="field">
-        <label for="title">Title</label>
-        <input id="title" name="title" required />
-      </div>
-      <div class="field">
-        <label for="retailer">Retailer</label>
-        <input id="retailer" name="retailer" required />
-      </div>
-      <div class="field">
-        <label for="category">Category</label>
-        <input id="category" name="category" required />
-      </div>
-      <div class="field">
-        <label for="url">URL</label>
-        <input id="url" name="url" type="url" required />
-      </div>
-      <button type="submit">Add Tracked Product</button>
-    </form>
+
+  <!-- Login gate — shown when no valid token found -->
+  <div id="login-section" style="display:none;">
+    <div class="panel">
+      <h2>Admin Login</h2>
+      <div id="login-message"></div>
+      <form id="login-form">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" required autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn">Login</button>
+      </form>
+    </div>
   </div>
-  <div class="panel">
-    <h2>Existing Tracked Products</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Retailer</th>
-          <th>Category</th>
-          <th>URL</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="product-list">
-      </tbody>
-    </table>
+
+  <!-- Main admin UI — shown after auth -->
+  <div id="admin-section" style="display:none;">
+    <h1>StockSpot Admin</h1>
+
+    <!-- Pipeline status panel -->
+    <div class="panel">
+      <div class="status-row">
+        <h2 style="margin:0;">Pipeline Status</h2>
+        <button id="refresh-status-btn" class="btn btn-secondary" style="padding:0.5rem 1rem;font-size:0.85rem;">Refresh Status</button>
+      </div>
+      <div class="status-row">
+        <span class="dot dot-green" id="worker-dot"></span>
+        <span id="worker-label" style="font-size:0.9rem;">MonitoringWorker: checking…</span>
+      </div>
+      <div class="status-grid" id="status-grid">
+        <div class="stat-card"><strong id="cnt-tracked">—</strong><span>Tracked Products</span></div>
+        <div class="stat-card"><strong id="cnt-products">—</strong><span>Products</span></div>
+        <div class="stat-card"><strong id="cnt-signals">—</strong><span>Signals</span></div>
+        <div class="stat-card"><strong id="cnt-alerts">—</strong><span>Live AlertSignals</span></div>
+      </div>
+    </div>
+
+    <!-- Add tracked product form -->
+    <div class="panel">
+      <h2>Add Tracked Product</h2>
+      <div id="form-message"></div>
+      <form id="product-form">
+        <div class="field">
+          <label for="title">Product Name</label>
+          <input id="title" name="title" placeholder="e.g. Pokémon 151 Booster Box" required />
+        </div>
+        <div class="field">
+          <label for="retailer">Retailer</label>
+          <select id="retailer" name="retailer" required>
+            <option value="">— select retailer —</option>
+            <option value="amazon">Amazon</option>
+            <option value="bestbuy">Best Buy</option>
+            <option value="walmart">Walmart</option>
+            <option value="target">Target</option>
+            <option value="gamestop">GameStop</option>
+            <option value="pokemoncenter">Pokémon Center</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category" name="category" required>
+            <option value="">— select category —</option>
+            <option value="pokemon_tcg">Pokémon TCG</option>
+            <option value="one_piece_tcg">One Piece TCG</option>
+            <option value="sports_cards">Sports Cards</option>
+            <option value="gaming">Gaming</option>
+            <option value="electronics">Electronics</option>
+            <option value="collectibles">Collectibles</option>
+            <option value="toys">Toys</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="url">Product URL</label>
+          <input id="url" name="url" type="url" placeholder="https://…" required />
+        </div>
+        <button type="submit" class="btn" id="add-btn">Add Tracked Product</button>
+      </form>
+    </div>
+
+    <!-- Tracked products table -->
+    <div class="panel">
+      <h2>Tracked Products</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Retailer</th>
+            <th>Category</th>
+            <th>URL</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="product-list"></tbody>
+      </table>
+    </div>
   </div>
+
   <script src="/admin/js/admin-tracked-products.js"></script>
 </body>
 </html>
