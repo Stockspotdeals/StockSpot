@@ -89,6 +89,22 @@ const TrackedProductSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  monitoringState: {
+    type: String,
+    default: 'active'
+  },
+  lastPageType: {
+    type: String,
+    default: 'unknown'
+  },
+  lastFetchStatus: {
+    type: Number,
+    default: null
+  },
+  lastFetchReason: {
+    type: String,
+    default: null
+  },
   nextCheck: {
     type: Date,
     default: Date.now,
@@ -148,6 +164,7 @@ TrackedProductSchema.post('init', function(doc) {
   } else {
     if (doc.flags.restock === undefined) doc.flags.restock = false;
     if (doc.flags.highDemand === undefined) doc.flags.highDemand = false;
+    if (doc.flags.restricted === undefined) doc.flags.restricted = false;
   }
 });
 TrackedProductSchema.index({ createdAt: -1 });

@@ -21,12 +21,18 @@ class ProductMonitor {
   constructor() {
     this.isDryRun = process.env.DRY_RUN === 'true';
     this.minRequestDelayMs = Number(process.env.UNIVERSAL_MONITOR_DELAY_MS) || 1500;
+    this.requestJitterMs = Number(process.env.UNIVERSAL_MONITOR_JITTER_MS) || 600;
     this.maxRetries = Number(process.env.UNIVERSAL_MONITOR_MAX_RETRIES) || 2;
     this.lastRequestAt = 0;
+    this.userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    ];
     this.axiosInstance = this.isDryRun ? null : axios.create({
       timeout: 30000,
       maxRedirects: 3,
-      validateStatus: (status) => status < 500 // Accept 4xx errors but not 5xx
+      validateStatus: (status) => status < 600
     });
     this.affiliateEngine = new AffiliateEngine();
   }
@@ -38,11 +44,33 @@ class ProductMonitor {
     try {
       const retailerConfig = RetailerDetector.getRetailerConfig(trackedProduct.retailer);
       const productData = await this.scrapeProduct(trackedProduct, retailerConfig);
-      
-      const changes = this.detectChanges(trackedProduct, productData);
-      
-      // Update product with new data
-      const updateData = {
+
+      const restrictedPage = productData.restricted || ['blocked', 'bot_interstitial'].includes(productData.pageType);
+      const shouldPersistProduct = !restrictedPage && ['product_page', 'redirect'].includes(productData.pageType);
+
+      if (restrictedPage) {
+        await trackedProduct.updateOne({
+          monitoringState: 'restricted',
+          lastPageType: productData.pageType,
+          lastFetchStatus: productData.fetchStatus,
+          lastFetchReason: productData.extractionReason,
+          lastError: productData.extractionReason,
+          lastCheckedAt: new Date(),
+          nextCheck: this.calculateNextCheck(trackedProduct, false, (trackedProduct.errorCount || 0) + 1)
+        });
+
+        console.warn(`[ProductMonitor] restricted url=${productData.url} pageType=${productData.pageType} status=${productData.fetchStatus} reason=${productData.extractionReason}`);
+        return {
+          success: true,
+          restricted: true,
+          pageType: productData.pageType,
+          changes: [],
+          productData,
+          trackedProduct: { ...trackedProduct.toObject(), monitoringState: 'restricted' }
+        };
+      }
+
+      const productUpdate = {
         title: productData.title || trackedProduct.title,
         lastCheckedAt: new Date(),
         price: productData.price,
@@ -50,28 +78,40 @@ class ProductMonitor {
         isAvailable: productData.inStock,
         category: productData.category || trackedProduct.category,
         affiliateLink: productData.affiliateLink || trackedProduct.affiliateLink,
-        errorCount: 0, // Reset on successful check
+        errorCount: 0,
         lastError: null,
+        monitoringState: 'active',
+        lastPageType: productData.pageType,
+        lastFetchStatus: productData.fetchStatus,
+        lastFetchReason: productData.extractionReason,
         nextCheck: this.calculateNextCheck(trackedProduct, true),
-        // carry forward any new flags, defaulting to existing values or false
         flags: {
           restock: (productData.flags && productData.flags.restock) || (trackedProduct.flags && trackedProduct.flags.restock) || false,
           highDemand: (productData.flags && productData.flags.highDemand) || (trackedProduct.flags && trackedProduct.flags.highDemand) || false
         }
       };
+
+      if (shouldPersistProduct) {
+        await trackedProduct.updateOne(productUpdate);
+      } else {
+        productUpdate.monitoringState = 'active';
+        productUpdate.lastPageType = productData.pageType;
+      }
       
-      await trackedProduct.updateOne(updateData);
+      const changes = this.detectChanges(trackedProduct, productData);
       
       // Create events for significant changes
-      if (changes.length > 0) {
+      if (changes.length > 0 && shouldPersistProduct) {
         await this.createChangeEvents(trackedProduct._id, changes, productData, trackedProduct);
       }
       
       return {
         success: true,
+        restricted: false,
+        pageType: productData.pageType,
         changes,
         productData,
-        trackedProduct: { ...trackedProduct.toObject(), ...updateData }
+        trackedProduct: { ...trackedProduct.toObject(), ...productUpdate }
       };
       
     } catch (error) {
@@ -96,17 +136,55 @@ class ProductMonitor {
           inStock: true,
           category: 'electronics',
           affiliateLink: url,
-          lastChecked: new Date()
+          lastChecked: new Date(),
+          pageType: 'product_page',
+          fetchStatus: 200,
+          extractionReason: 'dry-run mock payload',
+          restricted: false
         });
       }
 
-      const response = await this.fetchHtmlWithRetry(url, config);
+      const page = await this.fetchHtmlWithRetry(url, config);
+      console.info(`[ProductMonitor] url=${page.url} pageType=${page.pageType} status=${page.fetchStatus} reason=${page.extractionReason}`);
+
+      if (['blocked', 'bot_interstitial'].includes(page.pageType)) {
+        return this.buildNormalizedSnapshot(trackedProduct, {
+          title: trackedProduct.title || 'Restricted Page',
+          price: null,
+          availability: 'Restricted',
+          inStock: false,
+          category: trackedProduct.category,
+          affiliateLink: trackedProduct.affiliateLink || url,
+          lastChecked: new Date(),
+          pageType: page.pageType,
+          fetchStatus: page.fetchStatus,
+          extractionReason: page.extractionReason,
+          restricted: true
+        });
+      }
+
       const cheerioLib = getCheerio();
       if (!cheerioLib) {
         throw new Error('cheerio HTML parser is not available');
       }
 
-      const $ = cheerioLib.load(response.data);
+      if (page.pageType === 'not_found' || page.pageType === 'unknown') {
+        return this.buildNormalizedSnapshot(trackedProduct, {
+          title: trackedProduct.title || 'Unknown Product',
+          price: null,
+          availability: page.pageType === 'not_found' ? 'Not Found' : 'Unknown',
+          inStock: false,
+          category: trackedProduct.category,
+          affiliateLink: trackedProduct.affiliateLink || url,
+          lastChecked: new Date(),
+          pageType: page.pageType,
+          fetchStatus: page.fetchStatus,
+          extractionReason: page.extractionReason,
+          restricted: false
+        });
+      }
+
+      const $ = cheerioLib.load(page.html);
       const pageText = $('body').text().replace(/\s+/g, ' ').trim();
       const title = this.extractTitle($, trackedProduct, config);
       const price = this.extractPrice($, pageText, config);
@@ -119,15 +197,25 @@ class ProductMonitor {
         affiliateLink = this.affiliateEngine.generateAffiliateLink(url, trackedProduct.retailer);
       }
 
-      return this.buildNormalizedSnapshot(trackedProduct, {
+      const normalizedSnapshot = this.buildNormalizedSnapshot(trackedProduct, {
         title: title || trackedProduct.title || 'Unknown Product',
         price,
         availability: availabilityText || (inStock ? 'Available' : 'Unavailable'),
         inStock,
         category,
         affiliateLink,
-        lastChecked: new Date()
+        lastChecked: new Date(),
+        pageType: page.pageType,
+        fetchStatus: page.fetchStatus,
+        extractionReason: title || price !== null || availabilityText ? 'extracted product page' : 'missing product signals',
+        restricted: false
       });
+
+      if (normalizedSnapshot.pageType === 'redirect') {
+        normalizedSnapshot.extractionReason = page.extractionReason || 'redirected product page';
+      }
+
+      return normalizedSnapshot;
 
     } catch (error) {
       if (error.code === 'ECONNABORTED') {
@@ -150,31 +238,30 @@ class ProductMonitor {
     let lastError = null;
     for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
       try {
-        await this.enforceRequestDelay();
+        await this.enforceRequestDelay(attempt);
 
         const response = await this.axiosInstance.get(url, {
           timeout: config.timeout,
+          maxRedirects: config.maxRedirects || 3,
           headers: {
-            'User-Agent': config.userAgent,
+            ...this.buildBrowserHeaders(url, attempt, config),
             ...config.headers
           }
         });
 
         this.lastRequestAt = Date.now();
+        const classified = this.classifyPageResponse(url, response, config);
+        console.info(`[ProductMonitor] url=${classified.url} pageType=${classified.pageType} status=${classified.fetchStatus} reason=${classified.extractionReason}`);
 
-        if (response.status === 404) {
-          return {
-            status: 404,
-            data: '',
-            statusText: 'Not Found'
-          };
+        const shouldRetry = attempt < this.maxRetries && this.shouldRetryPage(classified);
+        if (shouldRetry) {
+          const backoffMs = this.computeBackoffMs(attempt, classified);
+          console.warn(`[ProductMonitor] Retry ${attempt + 1}/${this.maxRetries} in ${backoffMs}ms: url=${url} pageType=${classified.pageType} status=${classified.fetchStatus}`);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
         }
 
-        if (response.status >= 400) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        return response;
+        return classified;
       } catch (error) {
         lastError = error;
         const shouldRetry = attempt < this.maxRetries && this.isRetryableError(error);
@@ -182,7 +269,7 @@ class ProductMonitor {
           throw error;
         }
 
-        const backoffMs = this.computeBackoffMs(attempt);
+        const backoffMs = this.computeBackoffMs(attempt, null);
         console.warn(`[ProductMonitor] Retry ${attempt + 1}/${this.maxRetries} in ${backoffMs}ms: ${error.message}`);
         await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
@@ -191,15 +278,24 @@ class ProductMonitor {
     throw lastError || new Error('HTML fetch failed');
   }
 
-  async enforceRequestDelay() {
+  async enforceRequestDelay(attempt = 0) {
     const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < this.minRequestDelayMs) {
-      await new Promise(resolve => setTimeout(resolve, this.minRequestDelayMs - elapsed));
+    const jitter = this.computeJitterMs(attempt);
+    const targetDelay = this.minRequestDelayMs + jitter;
+    if (elapsed < targetDelay) {
+      await new Promise(resolve => setTimeout(resolve, targetDelay - elapsed));
     }
   }
 
-  computeBackoffMs(attempt) {
-    return Math.min(1000 * Math.pow(2, attempt), 5000);
+  computeJitterMs(attempt = 0) {
+    const baseJitter = Math.floor(Math.random() * this.requestJitterMs);
+    return Math.min(this.requestJitterMs, baseJitter + attempt * 150);
+  }
+
+  computeBackoffMs(attempt, page = null) {
+    const base = Math.min(1000 * Math.pow(2, attempt), 5000);
+    const pagePenalty = page && ['blocked', 'bot_interstitial'].includes(page.pageType) ? 500 : 0;
+    return base + pagePenalty + this.computeJitterMs(attempt);
   }
 
   isRetryableError(error) {
@@ -208,6 +304,146 @@ class ProductMonitor {
       return true;
     }
     return ['ECONNABORTED', 'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN'].includes(error.code);
+  }
+
+  shouldRetryPage(page) {
+    return page && ['blocked', 'bot_interstitial'].includes(page.pageType);
+  }
+
+  getRandomUserAgent(attempt = 0) {
+    const index = (Date.now() + attempt) % this.userAgents.length;
+    return this.userAgents[index];
+  }
+
+  buildBrowserHeaders(url, attempt = 0, config = {}) {
+    const parsedUrl = new URL(url);
+    const referer = config.referer || `${parsedUrl.protocol}//${parsedUrl.host}/`;
+
+    return {
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-User': '?1',
+      Referer: referer,
+      'User-Agent': this.getRandomUserAgent(attempt)
+    };
+  }
+
+  classifyPageResponse(requestedUrl, response, config = {}) {
+    const html = typeof response.data === 'string' ? response.data : '';
+    const statusCode = response.status;
+    const finalUrl = this.getFinalResponseUrl(response) || requestedUrl;
+    const normalizedFinalUrl = String(finalUrl).trim();
+    const normalizedRequestedUrl = String(requestedUrl).trim();
+    const bodyText = html.replace(/\s+/g, ' ').trim();
+    const pageSignals = this.inspectPageSignals(html, bodyText, config);
+    const redirectDetected = normalizedFinalUrl && normalizedRequestedUrl && normalizedFinalUrl !== normalizedRequestedUrl;
+
+    let pageType = 'unknown';
+    let extractionReason = 'no page signals matched';
+
+    if ([403, 429, 503].includes(statusCode) || pageSignals.blocked) {
+      pageType = 'blocked';
+      extractionReason = pageSignals.blockReason || `HTTP ${statusCode}`;
+    } else if (statusCode === 404 || pageSignals.notFound) {
+      pageType = 'not_found';
+      extractionReason = pageSignals.notFoundReason || `HTTP ${statusCode}`;
+    } else if (pageSignals.botInterstitial) {
+      pageType = 'bot_interstitial';
+      extractionReason = pageSignals.botReason || 'bot protection interstitial detected';
+    } else if (redirectDetected) {
+      pageType = 'redirect';
+      extractionReason = `redirected to ${normalizedFinalUrl}`;
+    } else if (pageSignals.productSignals) {
+      pageType = 'product_page';
+      extractionReason = pageSignals.productReason || 'product signals detected';
+    }
+
+    return {
+      url: normalizedFinalUrl,
+      requestedUrl: normalizedRequestedUrl,
+      fetchStatus: statusCode,
+      status: statusCode,
+      finalUrl: normalizedFinalUrl,
+      pageType,
+      extractionReason,
+      html,
+      responseHeaders: response.headers || {},
+      restricted: ['blocked', 'bot_interstitial'].includes(pageType)
+    };
+  }
+
+  inspectPageSignals(html, bodyText, config = {}) {
+    const lowerHtml = String(html || '').toLowerCase();
+    const lowerText = String(bodyText || '').toLowerCase();
+    const combined = `${lowerHtml} ${lowerText}`;
+    const titleMatch = /<title[^>]*>(.*?)<\/title>/i.exec(html || '');
+    const titleText = titleMatch ? titleMatch[1].toLowerCase() : '';
+
+    const blockedPatterns = [
+      'access denied',
+      'request denied',
+      'forbidden',
+      'not authorized',
+      'temporarily unavailable',
+      'service unavailable'
+    ];
+
+    const botPatterns = [
+      'pardon our interruption',
+      'verify you are human',
+      'are you a robot',
+      'robot check',
+      'captcha',
+      'cloudflare',
+      'just a moment',
+      'please stand by',
+      'enable javascript',
+      'bot protection',
+      'incapsula'
+    ];
+
+    const notFoundPatterns = [
+      'page not found',
+      '404',
+      'not found',
+      'product not found',
+      'item not found'
+    ];
+
+    const productPatterns = [
+      'add to cart',
+      'out of stock',
+      'sold out',
+      'in stock',
+      'available now',
+      'price'
+    ];
+
+    const blocked = blockedPatterns.some(pattern => combined.includes(pattern));
+    const botInterstitial = botPatterns.some(pattern => combined.includes(pattern) || titleText.includes(pattern));
+    const notFound = notFoundPatterns.some(pattern => combined.includes(pattern) || titleText.includes(pattern));
+    const productSignals = productPatterns.some(pattern => combined.includes(pattern));
+
+    return {
+      blocked,
+      blockReason: blocked ? 'blocked response content detected' : null,
+      botInterstitial,
+      botReason: botInterstitial ? 'bot interstitial content detected' : null,
+      notFound,
+      notFoundReason: notFound ? 'not found content detected' : null,
+      productSignals,
+      productReason: productSignals ? 'product keywords detected' : null
+    };
+  }
+
+  getFinalResponseUrl(response) {
+    return response?.request?.res?.responseUrl || response?.config?.url || response?.request?.responseURL || null;
   }
 
   buildNormalizedSnapshot(trackedProduct, data) {
@@ -220,7 +456,11 @@ class ProductMonitor {
       lastChecked: data.lastChecked || new Date(),
       availability: data.availability || (data.inStock ? 'Available' : 'Unavailable'),
       category: data.category || CategoryDetector.detectCategory(data.title || trackedProduct.title || '', trackedProduct.url, ''),
-      affiliateLink: data.affiliateLink || trackedProduct.affiliateLink || trackedProduct.url
+      affiliateLink: data.affiliateLink || trackedProduct.affiliateLink || trackedProduct.url,
+      pageType: data.pageType || 'unknown',
+      fetchStatus: data.fetchStatus || null,
+      extractionReason: data.extractionReason || 'unknown',
+      restricted: !!data.restricted
     };
   }
 
@@ -514,7 +754,8 @@ class ProductMonitor {
       errorCount,
       lastError: error.message,
       nextCheck,
-      lastCheckedAt: new Date()
+      lastCheckedAt: new Date(),
+      monitoringState: trackedProduct.monitoringState || 'active'
     };
     
     // If too many errors, mark as inactive

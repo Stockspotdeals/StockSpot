@@ -159,6 +159,11 @@ class UniversalMonitoringWorker {
           // Upsert products for signal engine consumption (non-blocking per-item)
           for (const r of results) {
             if (r && r.success && r.result && r.result.trackedProduct) {
+              const pageType = r.result.pageType || (r.result.productData && r.result.productData.pageType);
+              if (pageType && pageType !== 'product_page') {
+                console.log('⚠️  Skipping product upsert for non-product page', r.productId, pageType);
+                continue;
+              }
               try {
                 // Keep this operation safe: failures should not stop monitoring
                 await upsertProduct(r.result.trackedProduct);
