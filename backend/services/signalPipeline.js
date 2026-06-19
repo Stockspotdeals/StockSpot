@@ -5,6 +5,7 @@ const { processSignalWatchlistAlerts } = require('./watchlistAlertMatcher');
 const { calculateSignalScore } = require('./signalScoring');
 const { enrichSignalWithAffiliateData, calculateMonetizationBoost } = require('./affiliateEnricher');
 const { upsertAlertSignalFromSignal } = require('./signalToAlertBridge');
+const { enrichSignal, shouldCreateAlertSignal } = require('./SignalEnricher');
 
 const signalEmitter = new EventEmitter();
 const duplicateCache = new Map();
@@ -68,6 +69,9 @@ function addLiveSignal(signal, matchedCount = 0) {
     signalType: signal.signalType,
     premiumOnly: signal.premiumOnly,
     score: signal.score,
+    tier: signal.tier,
+    confidence: signal.confidence,
+    reasoning: signal.reasoning,
     priority: signal.priority,
     status: signal.status,
     matchStatus: matchedCount > 0,
@@ -108,17 +112,23 @@ async function saveSignal(payload) {
   const signal = await Signal.create(payload);
 
   // Keep dashboard-facing alert signals in sync with core signals.
-  try {
-    await upsertAlertSignalFromSignal(signal);
-  } catch (error) {
-    console.error('[SignalPipeline] AlertSignal bridge failed:', error.message);
+  if (shouldCreateAlertSignal(signal)) {
+    try {
+      await upsertAlertSignalFromSignal(signal);
+    } catch (error) {
+      console.error('[SignalPipeline] AlertSignal bridge failed:', error.message);
+    }
+  } else {
+    console.log(`[SignalPipeline] AlertSignal suppressed for LOW tier signal ${signal._id}`);
   }
 
   signalEmitter.emit('signal:created', signal.toObject ? signal.toObject() : signal);
   signalEmitter.emit('signal:scored', {
     signalId: signal._id,
     score: signal.score,
-    priority: signal.priority
+    priority: signal.priority,
+    tier: signal.tier,
+    confidence: signal.confidence
   });
 
   let matchedCount = 0;
@@ -156,21 +166,38 @@ async function processSignal(payload) {
 
     const enrichedPayload = enrichSignalWithAffiliateData(payload);
     const monetizationBoost = calculateMonetizationBoost(enrichedPayload.estimatedCommission);
-    const scoredSignal = {
+    const fallbackScore = Math.min(100, Math.max(0, calculateSignalScore(enrichedPayload) + monetizationBoost));
+    const intelligentSignal = enrichSignal({
       ...enrichedPayload,
-      score: Math.min(100, Math.max(0, calculateSignalScore(enrichedPayload) + monetizationBoost)),
       monetizationScore: enrichedPayload.monetizationScore || monetizationBoost,
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }, { fallbackScore });
+
+    const scoredSignal = {
+      ...intelligentSignal,
+      score: typeof intelligentSignal.score === 'number' ? intelligentSignal.score : fallbackScore,
+      tier: intelligentSignal.tier || 'MEDIUM',
+      confidence: typeof intelligentSignal.confidence === 'number' ? intelligentSignal.confidence : 0.5,
+      reasoning: intelligentSignal.reasoning || 'enrichment fallback',
+      monetizationScore: intelligentSignal.monetizationScore || monetizationBoost,
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
-    if (scoredSignal.score >= LOW_SCORE_THRESHOLD || scoredSignal.priority >= 2) {
-      console.log(`[SignalPipeline] Processing high priority signal immediately: ${signalLabel}`);
+    if (scoredSignal.tier === 'HIGH') {
+      console.log(`[SignalPipeline] Processing HIGH tier signal immediately: ${signalLabel}`);
       return await saveSignal(scoredSignal);
     }
 
-    console.log(`[SignalPipeline] Queuing low priority signal for batched processing: ${signalLabel}`);
+    if (scoredSignal.tier === 'MEDIUM') {
+      console.log(`[SignalPipeline] Processing MEDIUM tier signal through normal alert path: ${signalLabel}`);
+      return await saveSignal(scoredSignal);
+    }
+
+    console.log(`[SignalPipeline] Queuing LOW tier signal for storage without default alerting: ${signalLabel}`);
     delayedQueue.push(scoredSignal);
     startDelayedProcessing();
     return null;
@@ -226,6 +253,9 @@ async function getLiveSignals(isPremium = false, limit = 50) {
       signalType: signal.signalType,
       premiumOnly: signal.premiumOnly,
       score: signal.score,
+      tier: signal.tier,
+      confidence: signal.confidence,
+      reasoning: signal.reasoning,
       priority: signal.priority,
       estimatedCommission: signal.estimatedCommission || 0,
       monetizationScore: signal.monetizationScore || 0,

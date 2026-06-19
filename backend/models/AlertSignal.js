@@ -37,6 +37,30 @@ const alertSignalSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  score: {
+    type: Number,
+    default: 50,
+    min: 0,
+    max: 100,
+    index: true
+  },
+  tier: {
+    type: String,
+    enum: ['HIGH', 'MEDIUM', 'LOW'],
+    default: 'MEDIUM',
+    index: true
+  },
+  confidence: {
+    type: Number,
+    default: 0.5,
+    min: 0,
+    max: 1
+  },
+  reasoning: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   imageUrl: {
     type: String,
     trim: true

@@ -1,4 +1,5 @@
 const AlertSignal = require('../models/AlertSignal');
+const { shouldCreateAlertSignal } = require('./SignalEnricher');
 
 const WINDOW_MS = 15 * 60 * 1000;
 
@@ -74,6 +75,10 @@ async function upsertAlertSignalFromSignal(signal) {
     return null;
   }
 
+  if (!shouldCreateAlertSignal(signal)) {
+    return null;
+  }
+
   // Skip signal types that have no valid AlertSignal mapping.
   const normalizedSignalType = SIGNAL_TYPE_MAP[signal.signalType];
   if (!normalizedSignalType) {
@@ -104,6 +109,10 @@ async function upsertAlertSignalFromSignal(signal) {
       affiliateUrl: signal.affiliateUrl || '',
       premiumOnly: !!signal.premiumOnly,
       description: signal.description || '',
+      score: typeof signal.score === 'number' ? signal.score : 50,
+      tier: signal.tier || 'MEDIUM',
+      confidence: typeof signal.confidence === 'number' ? signal.confidence : 0.5,
+      reasoning: signal.reasoning || '',
       imageUrl: signal.imageUrl || '',
       expiresAt: signal.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000),
       updatedAt: new Date()

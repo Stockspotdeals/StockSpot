@@ -72,6 +72,23 @@ const signalSchema = new mongoose.Schema({
     max: 100,
     index: true
   },
+  tier: {
+    type: String,
+    enum: ['HIGH', 'MEDIUM', 'LOW'],
+    default: 'MEDIUM',
+    index: true
+  },
+  confidence: {
+    type: Number,
+    default: 0.5,
+    min: 0,
+    max: 1
+  },
+  reasoning: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   priority: {
     type: Number,
     enum: [0, 1, 2, 3], // 0=standard, 1=heavy discount, 2=restock high demand, 3=manual
@@ -113,10 +130,11 @@ signalSchema.index({ productId: 1 });
 signalSchema.index({ userId: 1, createdAt: -1 });
 signalSchema.index({ signalType: 1, status: 1 });
 signalSchema.index({ score: -1, createdAt: -1 });
+signalSchema.index({ tier: 1, createdAt: -1 });
 signalSchema.index({ createdAt: -1 });
 
 signalSchema.pre('save', function() {
-  if (this.isNew) {
+  if (this.isNew && (!this.reasoning || !String(this.reasoning).trim()) && (!Number.isFinite(this.score) || this.score <= 0)) {
     this.score = calculateSignalScore(this);
   }
 });
