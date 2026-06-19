@@ -2,6 +2,7 @@ const axios = require('axios');
 const { RetailerDetector, RETAILER_TYPES } = require('./RetailerDetector');
 const { CategoryDetector } = require('./CategoryDetector');
 const { AffiliateEngine } = require('./AffiliateEngine');
+const { SmartFetchRouter } = require('./SmartFetchRouter');
 
 // Lazy load cheerio - only loaded when actually needed
 let cheerio = null;
@@ -35,6 +36,13 @@ class ProductMonitor {
       validateStatus: (status) => status < 600
     });
     this.affiliateEngine = new AffiliateEngine();
+    this.fetchRouter = new SmartFetchRouter({
+      httpFetch: async (url, config) => this.fetchHtmlWithRetry(url, config),
+      classifyPage: (url, response, config) => this.classifyPageResponse(url, response, config),
+      headlessCooldownMs: Number(process.env.HEADLESS_FETCH_COOLDOWN_MS) || 5000,
+      headlessTimeoutMs: Number(process.env.HEADLESS_FETCH_TIMEOUT_MS) || 45000,
+      headlessEnabled: process.env.HEADLESS_FETCH_ENABLED !== 'false'
+    });
   }
 
   /**
@@ -144,8 +152,8 @@ class ProductMonitor {
         });
       }
 
-      const page = await this.fetchHtmlWithRetry(url, config);
-      console.info(`[ProductMonitor] url=${page.url} pageType=${page.pageType} status=${page.fetchStatus} reason=${page.extractionReason}`);
+      const page = await this.fetchRouter.fetchDocument(url, config);
+      console.info(`[ProductMonitor] url=${page.url} mode=${page.fetchMode || 'http'} pageType=${page.pageType} status=${page.fetchStatus} reason=${page.extractionReason}`);
 
       if (['blocked', 'bot_interstitial'].includes(page.pageType)) {
         return this.buildNormalizedSnapshot(trackedProduct, {
@@ -159,7 +167,8 @@ class ProductMonitor {
           pageType: page.pageType,
           fetchStatus: page.fetchStatus,
           extractionReason: page.extractionReason,
-          restricted: true
+          restricted: true,
+          fetchMode: page.fetchMode || 'http'
         });
       }
 
@@ -180,7 +189,8 @@ class ProductMonitor {
           pageType: page.pageType,
           fetchStatus: page.fetchStatus,
           extractionReason: page.extractionReason,
-          restricted: false
+          restricted: false,
+          fetchMode: page.fetchMode || 'http'
         });
       }
 
@@ -208,7 +218,8 @@ class ProductMonitor {
         pageType: page.pageType,
         fetchStatus: page.fetchStatus,
         extractionReason: title || price !== null || availabilityText ? 'extracted product page' : 'missing product signals',
-        restricted: false
+        restricted: false,
+        fetchMode: page.fetchMode || 'http'
       });
 
       if (normalizedSnapshot.pageType === 'redirect') {
@@ -460,8 +471,13 @@ class ProductMonitor {
       pageType: data.pageType || 'unknown',
       fetchStatus: data.fetchStatus || null,
       extractionReason: data.extractionReason || 'unknown',
-      restricted: !!data.restricted
+      restricted: !!data.restricted,
+      fetchMode: data.fetchMode || 'http'
     };
+  }
+
+  getFetchRouterStats() {
+    return this.fetchRouter.getStats();
   }
 
   extractTitle($, trackedProduct, config) {
