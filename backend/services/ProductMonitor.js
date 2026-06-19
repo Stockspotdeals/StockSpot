@@ -3,6 +3,7 @@ const { RetailerDetector, RETAILER_TYPES } = require('./RetailerDetector');
 const { CategoryDetector } = require('./CategoryDetector');
 const { AffiliateEngine } = require('./AffiliateEngine');
 const { fetchBestBuyProduct } = require('./BestBuyConnector');
+const { fetchWalmartProduct } = require('./WalmartConnector');
 
 // Lazy load cheerio - only loaded when actually needed
 let cheerio = null;
@@ -120,6 +121,31 @@ class ProductMonitor {
             }
           } catch (apiError) {
             console.warn('[ProductMonitor] Best Buy API failed, falling back to HTML scrape:', apiError.message);
+          }
+        }
+      }
+
+      if (trackedProduct.retailer === RETAILER_TYPES.WALMART && process.env.WALMART_API_KEY) {
+        const itemId = RetailerDetector.extractProductId(url, RETAILER_TYPES.WALMART);
+        if (itemId) {
+          try {
+            const apiProduct = await fetchWalmartProduct(itemId, process.env.WALMART_API_KEY);
+            if (apiProduct) {
+              const title = apiProduct.title || trackedProduct.title || 'Unknown Product';
+              const category = CategoryDetector.detectCategory(title, url, '');
+
+              return {
+                title,
+                price: apiProduct.price,
+                availability: apiProduct.availability || 'Unknown',
+                isAvailable: !!apiProduct.isAvailable,
+                category,
+                affiliateLink: trackedProduct.affiliateLink || url,
+                scrapedAt: new Date()
+              };
+            }
+          } catch (apiError) {
+            console.warn('[ProductMonitor] Walmart API failed, falling back to HTML scrape:', apiError.message);
           }
         }
       }
