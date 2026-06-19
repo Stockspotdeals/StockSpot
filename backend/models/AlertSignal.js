@@ -76,9 +76,26 @@ const alertSignalSchema = new mongoose.Schema({
     default: null,
     index: true
   },
+  plan: {
+    type: String,
+    enum: ['free', 'premium', 'enterprise'],
+    default: 'free',
+    index: true
+  },
+  queueLane: {
+    type: String,
+    enum: ['high', 'medium', 'low', 'none'],
+    default: 'none',
+    index: true
+  },
+  deliveryMode: {
+    type: String,
+    enum: ['immediate', 'batched', 'suppressed'],
+    default: 'batched'
+  },
   dispatchStatus: {
     type: String,
-    enum: ['pending', 'dispatched', 'suppressed', 'failed'],
+    enum: ['pending', 'processing', 'dispatched', 'suppressed', 'failed'],
     default: 'pending',
     index: true
   },
@@ -100,6 +117,27 @@ const alertSignalSchema = new mongoose.Schema({
     trim: true,
     default: null
   },
+  dispatchAttemptCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  lastDispatchKey: {
+    type: String,
+    trim: true,
+    default: null,
+    index: true
+  },
+  dispatchLockedAt: {
+    type: Date,
+    default: null,
+    index: true
+  },
+  dispatchLeaseExpiresAt: {
+    type: Date,
+    default: null,
+    index: true
+  },
   dedupeWindowStart: {
     type: Date,
     index: true
@@ -119,6 +157,8 @@ alertSignalSchema.index({ store: 1 });
 alertSignalSchema.index({ createdAt: -1 });
 alertSignalSchema.index({ expiresAt: 1 });
 alertSignalSchema.index({ dispatchStatus: 1, nextDispatchAt: 1 });
+alertSignalSchema.index({ queueLane: 1, dispatchStatus: 1, nextDispatchAt: 1 });
+alertSignalSchema.index({ userId: 1, plan: 1, createdAt: -1 });
 alertSignalSchema.index({ productName: 1, store: 1, signalType: 1, dedupeWindowStart: 1 }, { unique: true });
 
 // Virtual for discount percentage

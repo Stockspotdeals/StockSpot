@@ -115,6 +115,7 @@ async function upsertAlertSignalFromSignal(signal) {
       confidence: typeof signal.confidence === 'number' ? signal.confidence : 0.5,
       reasoning: signal.reasoning || '',
       userId: signal.userId || null,
+      plan: AlertDispatcher.normalizePlan(signal.plan, signal.subscriptionStatus),
       imageUrl: signal.imageUrl || '',
       expiresAt: signal.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000),
       updatedAt: new Date()
@@ -124,7 +125,8 @@ async function upsertAlertSignalFromSignal(signal) {
       ...AlertDispatcher.getInitialDeliveryState({
         tier: signal.tier || 'MEDIUM',
         premiumOnly: !!signal.premiumOnly,
-        userId: signal.userId || null
+        userId: signal.userId || null,
+        plan: AlertDispatcher.normalizePlan(signal.plan, signal.subscriptionStatus)
       }),
       createdAt: signal.createdAt || new Date()
     }

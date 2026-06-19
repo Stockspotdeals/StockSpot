@@ -43,7 +43,13 @@ router.get('/', authenticateToken, async (req, res) => {
       confidence: signal.confidence,
       reasoning: signal.reasoning,
       imageUrl: signal.imageUrl,
+      plan: signal.plan,
+      queueLane: signal.queueLane,
+      deliveryMode: signal.deliveryMode,
       dispatchStatus: signal.dispatchStatus,
+      dispatchAttemptCount: signal.dispatchAttemptCount,
+      lastDispatchedAt: signal.lastDispatchedAt,
+      nextDispatchAt: signal.nextDispatchAt,
       discountPercent: signal.originalPrice ?
         Math.round(((signal.originalPrice - signal.price) / signal.originalPrice) * 100) : 0,
       createdAt: signal.createdAt
