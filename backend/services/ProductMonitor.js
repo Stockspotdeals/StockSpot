@@ -2,8 +2,6 @@ const axios = require('axios');
 const { RetailerDetector, RETAILER_TYPES } = require('./RetailerDetector');
 const { CategoryDetector } = require('./CategoryDetector');
 const { AffiliateEngine } = require('./AffiliateEngine');
-const { fetchBestBuyProduct } = require('./BestBuyConnector');
-const { fetchWalmartProduct } = require('./WalmartConnector');
 
 // Lazy load cheerio - only loaded when actually needed
 let cheerio = null;
@@ -22,6 +20,9 @@ function getCheerio() {
 class ProductMonitor {
   constructor() {
     this.isDryRun = process.env.DRY_RUN === 'true';
+    this.minRequestDelayMs = Number(process.env.UNIVERSAL_MONITOR_DELAY_MS) || 1500;
+    this.maxRetries = Number(process.env.UNIVERSAL_MONITOR_MAX_RETRIES) || 2;
+    this.lastRequestAt = 0;
     this.axiosInstance = this.isDryRun ? null : axios.create({
       timeout: 30000,
       maxRedirects: 3,
@@ -42,10 +43,11 @@ class ProductMonitor {
       
       // Update product with new data
       const updateData = {
+        title: productData.title || trackedProduct.title,
         lastCheckedAt: new Date(),
         price: productData.price,
         availability: productData.availability,
-        isAvailable: productData.isAvailable,
+        isAvailable: productData.inStock,
         category: productData.category || trackedProduct.category,
         affiliateLink: productData.affiliateLink || trackedProduct.affiliateLink,
         errorCount: 0, // Reset on successful check
@@ -83,129 +85,50 @@ class ProductMonitor {
    */
   async scrapeProduct(trackedProduct, config) {
     try {
-      const url = trackedProduct.url;
+      const url = RetailerDetector.normalizeUrl(trackedProduct.url, trackedProduct.retailer);
 
       // Return mock data in dry-run mode
       if (this.isDryRun) {
-        return {
+        return this.buildNormalizedSnapshot(trackedProduct, {
           title: 'Mock Product (Dry-Run)',
           price: 49.99,
           availability: 'In Stock',
-          isAvailable: true,
-          category: 'Electronics',
-          affiliateLink: url
-        };
+          inStock: true,
+          category: 'electronics',
+          affiliateLink: url,
+          lastChecked: new Date()
+        });
       }
 
-      if (trackedProduct.retailer === RETAILER_TYPES.BESTBUY && process.env.BESTBUY_API_KEY) {
-        const sku = RetailerDetector.extractProductId(url, RETAILER_TYPES.BESTBUY);
-        if (sku) {
-          try {
-            const apiProduct = await fetchBestBuyProduct(sku, process.env.BESTBUY_API_KEY);
-            if (apiProduct) {
-              const title = apiProduct.name || trackedProduct.title || 'Unknown Product';
-              const price = apiProduct.salePrice || apiProduct.regularPrice || null;
-              const availabilityText = apiProduct.onlineAvailabilityText || (apiProduct.onlineAvailability ? 'Available online' : 'Unavailable online');
-              const isAvailable = !!apiProduct.onlineAvailability;
-              const category = CategoryDetector.detectCategory(title, url, '');
-
-              return {
-                title,
-                price,
-                availability: availabilityText,
-                isAvailable,
-                category,
-                affiliateLink: trackedProduct.affiliateLink || url,
-                scrapedAt: new Date()
-              };
-            }
-          } catch (apiError) {
-            console.warn('[ProductMonitor] Best Buy API failed, falling back to HTML scrape:', apiError.message);
-          }
-        }
-      }
-
-      if (trackedProduct.retailer === RETAILER_TYPES.WALMART && process.env.WALMART_API_KEY) {
-        const itemId = RetailerDetector.extractProductId(url, RETAILER_TYPES.WALMART);
-        if (itemId) {
-          try {
-            const apiProduct = await fetchWalmartProduct(itemId, process.env.WALMART_API_KEY);
-            if (apiProduct) {
-              const title = apiProduct.title || trackedProduct.title || 'Unknown Product';
-              const category = CategoryDetector.detectCategory(title, url, '');
-
-              return {
-                title,
-                price: apiProduct.price,
-                availability: apiProduct.availability || 'Unknown',
-                isAvailable: !!apiProduct.isAvailable,
-                category,
-                affiliateLink: trackedProduct.affiliateLink || url,
-                scrapedAt: new Date()
-              };
-            }
-          } catch (apiError) {
-            console.warn('[ProductMonitor] Walmart API failed, falling back to HTML scrape:', apiError.message);
-          }
-        }
-      }
-
-      const response = await this.axiosInstance.get(url, {
-        timeout: config.timeout,
-        headers: {
-          'User-Agent': config.userAgent,
-          ...config.headers
-        }
-      });
-
-      if (response.status === 404) {
-        return {
-          title: null,
-          price: null,
-          availability: 'Product not found',
-          isAvailable: false,
-          error: 'Product page not found'
-        };
-      }
-
-      if (response.status >= 400) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
+      const response = await this.fetchHtmlWithRetry(url, config);
       const cheerioLib = getCheerio();
       if (!cheerioLib) {
         throw new Error('cheerio HTML parser is not available');
       }
-      
+
       const $ = cheerioLib.load(response.data);
-      
-      // Extract product data using selectors
-      const title = this.extractText($, config.selectors.title);
-      const priceText = this.extractText($, config.selectors.price);
-      const availabilityText = this.extractText($, config.selectors.availability);
-      
-      const price = this.parsePrice(priceText);
-      const isAvailable = this.parseAvailability(availabilityText, config.selectors.outOfStock);
-      
-      // Detect product category
-      const category = CategoryDetector.detectCategory(title || '', url, '');
-      
-      // Generate affiliate link if it's Amazon
+      const pageText = $('body').text().replace(/\s+/g, ' ').trim();
+      const title = this.extractTitle($, trackedProduct, config);
+      const price = this.extractPrice($, pageText, config);
+      const availabilityText = this.extractAvailability($, pageText, config);
+      const inStock = this.parseAvailability(availabilityText || pageText, config.selectors?.outOfStock || []);
+      const category = CategoryDetector.detectCategory(title || trackedProduct.title || '', url, pageText);
+
       let affiliateLink = url;
       if (trackedProduct.retailer === RETAILER_TYPES.AMAZON) {
         affiliateLink = this.affiliateEngine.generateAffiliateLink(url, trackedProduct.retailer);
       }
-      
-      return {
-        title: title || 'Unknown Product',
+
+      return this.buildNormalizedSnapshot(trackedProduct, {
+        title: title || trackedProduct.title || 'Unknown Product',
         price,
-        availability: availabilityText || 'Unknown',
-        isAvailable,
+        availability: availabilityText || (inStock ? 'Available' : 'Unavailable'),
+        inStock,
         category,
         affiliateLink,
-        scrapedAt: new Date()
-      };
-      
+        lastChecked: new Date()
+      });
+
     } catch (error) {
       if (error.code === 'ECONNABORTED') {
         throw new Error('Request timeout - website took too long to respond');
@@ -217,6 +140,165 @@ class ProductMonitor {
         throw new Error(`Scraping failed: ${error.message}`);
       }
     }
+  }
+
+  async fetchHtmlWithRetry(url, config) {
+    if (!this.axiosInstance) {
+      throw new Error('HTTP client is not available');
+    }
+
+    let lastError = null;
+    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      try {
+        await this.enforceRequestDelay();
+
+        const response = await this.axiosInstance.get(url, {
+          timeout: config.timeout,
+          headers: {
+            'User-Agent': config.userAgent,
+            ...config.headers
+          }
+        });
+
+        this.lastRequestAt = Date.now();
+
+        if (response.status === 404) {
+          return {
+            status: 404,
+            data: '',
+            statusText: 'Not Found'
+          };
+        }
+
+        if (response.status >= 400) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return response;
+      } catch (error) {
+        lastError = error;
+        const shouldRetry = attempt < this.maxRetries && this.isRetryableError(error);
+        if (!shouldRetry) {
+          throw error;
+        }
+
+        const backoffMs = this.computeBackoffMs(attempt);
+        console.warn(`[ProductMonitor] Retry ${attempt + 1}/${this.maxRetries} in ${backoffMs}ms: ${error.message}`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+
+    throw lastError || new Error('HTML fetch failed');
+  }
+
+  async enforceRequestDelay() {
+    const elapsed = Date.now() - this.lastRequestAt;
+    if (elapsed < this.minRequestDelayMs) {
+      await new Promise(resolve => setTimeout(resolve, this.minRequestDelayMs - elapsed));
+    }
+  }
+
+  computeBackoffMs(attempt) {
+    return Math.min(1000 * Math.pow(2, attempt), 5000);
+  }
+
+  isRetryableError(error) {
+    if (!error) return false;
+    if (error.response && [429, 500, 502, 503, 504].includes(error.response.status)) {
+      return true;
+    }
+    return ['ECONNABORTED', 'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN'].includes(error.code);
+  }
+
+  buildNormalizedSnapshot(trackedProduct, data) {
+    return {
+      url: RetailerDetector.normalizeUrl(trackedProduct.url, trackedProduct.retailer),
+      title: data.title || trackedProduct.title || 'Unknown Product',
+      price: data.price !== undefined ? data.price : trackedProduct.price || null,
+      inStock: !!data.inStock,
+      previousPrice: trackedProduct.price || null,
+      lastChecked: data.lastChecked || new Date(),
+      availability: data.availability || (data.inStock ? 'Available' : 'Unavailable'),
+      category: data.category || CategoryDetector.detectCategory(data.title || trackedProduct.title || '', trackedProduct.url, ''),
+      affiliateLink: data.affiliateLink || trackedProduct.affiliateLink || trackedProduct.url
+    };
+  }
+
+  extractTitle($, trackedProduct, config) {
+    const selectorCandidates = [
+      config.selectors && config.selectors.title,
+      'meta[property="og:title"]',
+      'meta[name="twitter:title"]',
+      'title',
+      'h1',
+      '[itemprop="name"]',
+      '[data-testid*="title"]',
+      '[class*="title"]'
+    ].filter(Boolean);
+
+    for (const candidate of selectorCandidates) {
+      const text = this.extractTextOrMeta($, candidate);
+      if (text) {
+        return text;
+      }
+    }
+
+    return trackedProduct.title || null;
+  }
+
+  extractPrice($, pageText, config) {
+    const selectorCandidates = [
+      config.selectors && config.selectors.price,
+      'meta[property="product:price:amount"]',
+      'meta[property="og:price:amount"]',
+      '[itemprop="price"]',
+      '[data-testid*="price"]',
+      '[class*="price"]'
+    ].filter(Boolean);
+
+    for (const candidate of selectorCandidates) {
+      const text = this.extractTextOrMeta($, candidate);
+      const price = this.parsePrice(text);
+      if (price !== null) {
+        return price;
+      }
+    }
+
+    const fallbackPrice = this.parsePrice(pageText);
+    return fallbackPrice !== null ? fallbackPrice : null;
+  }
+
+  extractAvailability($, pageText, config) {
+    const selectorCandidates = [
+      config.selectors && config.selectors.availability,
+      '[data-testid*="availability"]',
+      '[class*="availability"]',
+      '[class*="stock"]',
+      '[id*="availability"]'
+    ].filter(Boolean);
+
+    for (const candidate of selectorCandidates) {
+      const text = this.extractTextOrMeta($, candidate);
+      if (text) {
+        return text;
+      }
+    }
+
+    return pageText;
+  }
+
+  extractTextOrMeta($, selector) {
+    const element = $(selector).first();
+    if (!element.length) {
+      return null;
+    }
+
+    const tagName = String(element.get(0).tagName || '').toLowerCase();
+    if (tagName === 'meta') {
+      return element.attr('content') || element.attr('value') || null;
+    }
+
+    return element.text().trim() || element.attr('content') || element.attr('value') || null;
   }
 
   /**
@@ -295,14 +377,23 @@ class ProductMonitor {
    */
   detectChanges(trackedProduct, newData) {
     const changes = [];
+
+    if (trackedProduct.title && newData.title && trackedProduct.title !== newData.title) {
+      changes.push({
+        type: 'title_change',
+        oldValue: trackedProduct.title,
+        newValue: newData.title,
+        description: `Title changed from "${trackedProduct.title}" to "${newData.title}"`
+      });
+    }
     
     // Stock status change
-    if (trackedProduct.isAvailable !== newData.isAvailable) {
+    if (trackedProduct.isAvailable !== newData.inStock) {
       changes.push({
-        type: newData.isAvailable ? 'restock' : 'out_of_stock',
+        type: newData.inStock ? 'restock' : 'out_of_stock',
         oldValue: trackedProduct.isAvailable,
-        newValue: newData.isAvailable,
-        description: newData.isAvailable ? 'Product is back in stock!' : 'Product went out of stock'
+        newValue: newData.inStock,
+        description: newData.inStock ? 'Product is back in stock!' : 'Product went out of stock'
       });
     }
     
@@ -338,7 +429,9 @@ class ProductMonitor {
   async createChangeEvents(productId, changes, productData, trackedProduct) {
     const { ProductEvent } = require('../models/TrackedProduct');
     
-    const events = changes.map(change => ({
+    const events = changes
+      .filter(change => change.type !== 'title_change')
+      .map(change => ({
       productId,
       eventType: change.type,
       oldValue: change.oldValue,
@@ -350,8 +443,15 @@ class ProductMonitor {
         category: productData.category
       }
     }));
-    
-    await ProductEvent.insertMany(events);
+
+    if (events.length > 0) {
+      await ProductEvent.insertMany(events);
+    }
+
+    const titleChange = changes.find(change => change.type === 'title_change');
+    if (titleChange) {
+      console.log(`[ProductMonitor] Title change detected for ${trackedProduct._id}: ${titleChange.oldValue} -> ${titleChange.newValue}`);
+    }
     
     for (const change of changes) {
       try {
@@ -388,6 +488,10 @@ class ProductMonitor {
               productData
             };
             break;
+        }
+
+        if (!eventType) {
+          continue;
         }
         
         // Note: Event notifications (email, RSS) can be implemented here

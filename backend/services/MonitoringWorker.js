@@ -4,7 +4,7 @@ const { NotificationService } = require('./NotificationService');
 const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
 const { upsertProduct } = require('./productUpsert');
 
-class MonitoringWorker {
+class UniversalMonitoringWorker {
   constructor() {
     this.productMonitor = new ProductMonitor();
     this.notificationService = new NotificationService();
@@ -342,9 +342,11 @@ let workerInstance = null;
 
 function getMonitoringWorker() {
   if (!workerInstance) {
-    workerInstance = new MonitoringWorker();
+    workerInstance = new UniversalMonitoringWorker();
   }
   return workerInstance;
 }
 
-module.exports = { MonitoringWorker, getMonitoringWorker };
+const MonitoringWorker = UniversalMonitoringWorker;
+
+module.exports = { MonitoringWorker, UniversalMonitoringWorker, getMonitoringWorker };
