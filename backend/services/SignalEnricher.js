@@ -220,11 +220,16 @@ function enrichSignal(signal, options = {}) {
 }
 
 function shouldCreateAlertSignal(signal) {
-  return signal && signal.tier !== 'LOW';
+  return !!signal;
+}
+
+function shouldExternallyDispatchAlert(signal) {
+  return !!signal && signal.tier !== 'LOW';
 }
 
 module.exports = {
   enrichSignal,
   shouldCreateAlertSignal,
+  shouldExternallyDispatchAlert,
   getTier
 };

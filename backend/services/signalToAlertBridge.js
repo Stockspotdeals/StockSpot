@@ -1,5 +1,6 @@
 const AlertSignal = require('../models/AlertSignal');
 const { shouldCreateAlertSignal } = require('./SignalEnricher');
+const { AlertDispatcher, getAlertDispatcher } = require('./AlertDispatcher');
 
 const WINDOW_MS = 15 * 60 * 1000;
 
@@ -113,21 +114,35 @@ async function upsertAlertSignalFromSignal(signal) {
       tier: signal.tier || 'MEDIUM',
       confidence: typeof signal.confidence === 'number' ? signal.confidence : 0.5,
       reasoning: signal.reasoning || '',
+      userId: signal.userId || null,
       imageUrl: signal.imageUrl || '',
       expiresAt: signal.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000),
       updatedAt: new Date()
     },
     $setOnInsert: {
       dedupeWindowStart,
+      ...AlertDispatcher.getInitialDeliveryState({
+        tier: signal.tier || 'MEDIUM',
+        premiumOnly: !!signal.premiumOnly,
+        userId: signal.userId || null
+      }),
       createdAt: signal.createdAt || new Date()
     }
   };
 
-  return AlertSignal.findOneAndUpdate(filter, update, {
+  const alertSignal = await AlertSignal.findOneAndUpdate(filter, update, {
     upsert: true,
     new: true,
     setDefaultsOnInsert: true
   });
+
+  try {
+    await getAlertDispatcher().handleNewAlertSignal(alertSignal);
+  } catch (error) {
+    console.error('[signalToAlertBridge] Alert dispatch failed:', error.message);
+  }
+
+  return alertSignal;
 }
 
 module.exports = {

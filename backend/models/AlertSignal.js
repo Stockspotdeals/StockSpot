@@ -70,6 +70,36 @@ const alertSignalSchema = new mongoose.Schema({
     ref: 'Signal',
     index: true
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true
+  },
+  dispatchStatus: {
+    type: String,
+    enum: ['pending', 'dispatched', 'suppressed', 'failed'],
+    default: 'pending',
+    index: true
+  },
+  dispatchedChannels: [{
+    type: String,
+    enum: ['email', 'dashboard', 'webhook']
+  }],
+  lastDispatchedAt: {
+    type: Date,
+    default: null
+  },
+  nextDispatchAt: {
+    type: Date,
+    default: null,
+    index: true
+  },
+  lastDispatchError: {
+    type: String,
+    trim: true,
+    default: null
+  },
   dedupeWindowStart: {
     type: Date,
     index: true
@@ -88,6 +118,7 @@ alertSignalSchema.index({ signalType: 1, premiumOnly: 1 });
 alertSignalSchema.index({ store: 1 });
 alertSignalSchema.index({ createdAt: -1 });
 alertSignalSchema.index({ expiresAt: 1 });
+alertSignalSchema.index({ dispatchStatus: 1, nextDispatchAt: 1 });
 alertSignalSchema.index({ productName: 1, store: 1, signalType: 1, dedupeWindowStart: 1 }, { unique: true });
 
 // Virtual for discount percentage

@@ -11,7 +11,8 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Build query based on user status
     const query = {
-      expiresAt: { $gt: new Date() } // Only non-expired signals
+      expiresAt: { $gt: new Date() }, // Only non-expired signals
+      tier: { $in: ['HIGH', 'MEDIUM'] }
     };
 
     // If not premium, only show non-premium signals
@@ -37,7 +38,12 @@ router.get('/', authenticateToken, async (req, res) => {
       affiliateUrl: signal.affiliateUrl,
       premiumOnly: signal.premiumOnly,
       description: signal.description,
+      score: signal.score,
+      tier: signal.tier,
+      confidence: signal.confidence,
+      reasoning: signal.reasoning,
       imageUrl: signal.imageUrl,
+      dispatchStatus: signal.dispatchStatus,
       discountPercent: signal.originalPrice ?
         Math.round(((signal.originalPrice - signal.price) / signal.originalPrice) * 100) : 0,
       createdAt: signal.createdAt

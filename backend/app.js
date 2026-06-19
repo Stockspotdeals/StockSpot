@@ -343,6 +343,14 @@ try {
   console.error('Failed to initialize external data connector scheduler:', err.message);
 }
 
+// Initialize alert dispatcher scheduler after routes are mounted
+try {
+  const { initializeAlertDispatcher } = require('./services/AlertDispatcher');
+  initializeAlertDispatcher();
+} catch (err) {
+  console.error('Failed to initialize alert dispatcher scheduler:', err.message);
+}
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
