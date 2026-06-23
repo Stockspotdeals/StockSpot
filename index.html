@@ -3,1542 +3,331 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="StockSpot sends real-time alerts for product restocks and price drops so resellers and deal hunters never miss profitable opportunities.">
-  <meta name="theme-color" content="#2563EB">
-  <meta name="og:title" content="StockSpot - Real-Time Product Alerts">
-  <meta name="og:description" content="Never miss a restock or price drop. Get instant alerts for products you're watching.">
-  <title>StockSpot - Real-Time Product Alerts</title>
-  
-  <!-- Google Fonts -->
+  <meta name="description" content="StockSpot helps shoppers discover trending deals today while building the future of intelligent deal and restock alerts.">
+  <meta name="theme-color" content="#0f766e">
+  <meta property="og:title" content="StockSpot | Trending Deals Today">
+  <meta property="og:description" content="Discover trending deals now and see what StockSpot Premium is building next.">
+  <title>StockSpot | Trending Deals Today</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <script src="https://js.stripe.com/v3/"></script>
-  <style>
-    /* ============================================================================
-       ROOT VARIABLES & RESET
-       ============================================================================ */
-    :root {
-      --primary: #2563EB;
-      --primary-dark: #1d4ed8;
-      --primary-light: #3b82f6;
-      --background: #0F172A;
-      --accent: #22C55E;
-      --accent-dark: #16a34a;
-      --text-primary: #F8FAFC;
-      --text-secondary: #cbd5e1;
-      --border-color: #334155;
-      --card-bg: #1e293b;
-      --input-bg: #0f172a;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--background);
-      color: var(--text-primary);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-
-    /* ============================================================================
-       LAYOUT & SPACING
-       ============================================================================ */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
-
-    section {
-      padding: 6rem 0;
-    }
-
-    section.alt {
-      background-color: rgba(30, 41, 59, 0.5);
-    }
-
-    /* ============================================================================
-       TYPOGRAPHY
-       ============================================================================ */
-    h1 {
-      font-size: clamp(2.5rem, 8vw, 4rem);
-      font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 1.5rem;
-      letter-spacing: -0.02em;
-    }
-
-    h2 {
-      font-size: clamp(1.875rem, 5vw, 2.5rem);
-      font-weight: 700;
-      line-height: 1.2;
-      margin-bottom: 1rem;
-    }
-
-    h3 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 0.75rem;
-    }
-
-    p {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      margin-bottom: 1rem;
-    }
-
-    .subtitle {
-      font-size: clamp(1rem, 2vw, 1.25rem);
-      color: var(--text-secondary);
-      line-height: 1.8;
-      max-width: 800px;
-    }
-
-    /* ============================================================================
-       BUTTONS
-       ============================================================================ */
-    button, .btn {
-      font-family: inherit;
-      font-weight: 600;
-      padding: 0.75rem 1.75rem;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: var(--transition);
-      font-size: 1rem;
-      text-decoration: none;
-      display: inline-block;
-      white-space: nowrap;
-    }
-
-    .btn-primary {
-      background-color: var(--primary);
-      color: white;
-      box-shadow: var(--shadow-md);
-    }
-
-    .btn-primary:hover {
-      background-color: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .btn-secondary {
-      background-color: transparent;
-      color: var(--primary);
-      border: 2px solid var(--primary);
-    }
-
-    .btn-secondary:hover {
-      background-color: var(--primary);
-      color: white;
-      transform: translateY(-2px);
-    }
-
-    .btn-accent {
-      background-color: var(--accent);
-      color: #000;
-      font-weight: 600;
-      box-shadow: var(--shadow-md);
-    }
-
-    .btn-accent:hover {
-      background-color: var(--accent-dark);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    /* ============================================================================
-       HERO SECTION
-       ============================================================================ */
-    .hero-section {
-      position: relative;
-      height: 90vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: white;
-      overflow: hidden;
-    }
-
-    .hero-section::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 1400px;
-      height: 1400px;
-      background-image: url("./assets/images/stockspot-logo.png");
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      opacity: 0.06;
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    .hero-content {
-      position: relative;
-      z-index: 1;
-      max-width: 800px;
-      padding: 0 2rem;
-    }
-
-    .hero-title {
-      font-size: 4rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-
-    .hero-subtitle {
-      font-size: 1.5rem;
-      margin-bottom: 2rem;
-      opacity: 0.9;
-      line-height: 1.4;
-    }
-
-    .hero-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .cta-section {
-      text-align: center;
-      padding: 80px 20px;
-      background: #020617;
-    }
-
-    .cta-section h2 {
-      font-size: 2.2rem;
-      color: #F8FAFC;
-      margin-bottom: 16px;
-    }
-
-    .cta-section p {
-      color: #94A3B8;
-      max-width: 600px;
-      margin: 0 auto 30px;
-    }
-
-    .cta-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .cta-primary {
-      background: #22C55E;
-      color: #020617;
-      padding: 12px 24px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .cta-secondary {
-      background: transparent;
-      border: 1px solid #334155;
-      color: #F8FAFC;
-      padding: 12px 24px;
-      border-radius: 6px;
-      text-decoration: none;
-    }
-
-    .cta-primary:hover {
-      opacity: 0.9;
-    }
-
-    .cta-secondary:hover {
-      border-color: #22C55E;
-    }
-
-    .social-proof {
-      text-align: center;
-      padding: 60px 20px;
-      background: #0B1220;
-      border-top: 1px solid rgba(255,255,255,0.05);
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .trust-text {
-      color: #94A3B8;
-      font-size: 1rem;
-      margin-bottom: 30px;
-    }
-
-    .logos {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-bottom: 30px;
-    }
-
-    .logo-box {
-      padding: 12px 18px;
-      border: 1px solid #1F2937;
-      border-radius: 8px;
-      color: #CBD5E1;
-      font-weight: 500;
-      background: #0F172A;
-    }
-
-    .stats {
-      color: #64748B;
-      font-size: 0.95rem;
-      max-width: 700px;
-      margin: 0 auto;
-    }
-
-    .features {
-      padding: 80px 20px;
-      background: #0F172A;
-      text-align: center;
-    }
-
-    .features h2 {
-      color: #F8FAFC;
-      font-size: 2rem;
-      margin-bottom: 40px;
-    }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .feature-card {
-      background: #0B1220;
-      padding: 24px;
-      border-radius: 10px;
-      border: 1px solid #1F2937;
-      text-align: left;
-    }
-
-    .feature-card h3 {
-      color: #22C55E;
-      margin-bottom: 10px;
-    }
-
-    .feature-card p {
-      color: #94A3B8;
-      font-size: 0.95rem;
-    }
-
-    .primary-btn {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 1rem 2rem;
-      font-size: 1.1rem;
-      font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-    }
-
-    .primary-btn:hover {
-      background: #1d4ed8;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-    }
-
-    .secondary-btn {
-      background: transparent;
-      color: white;
-      border: 2px solid white;
-      padding: 1rem 2rem;
-      font-size: 1.1rem;
-      font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .secondary-btn:hover {
-      background: white;
-      color: var(--background);
-      transform: translateY(-2px);
-    }
-
-    @media (max-width: 768px) {
-      .hero-section::before {
-        width: 700px;
-        height: 700px;
-      }
-
-      .hero-title {
-        font-size: 2.5rem;
-      }
-
-      .hero-subtitle {
-        font-size: 1.2rem;
-      }
-
-      .hero-buttons {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .primary-btn,
-      .secondary-btn {
-        width: 200px;
-      }
-    }
-
-    /* ============================================================================
-       FEATURES SECTION
-       ============================================================================ */
-    .features {
-      padding: 6rem 0;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 4rem;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2.5rem;
-      margin-top: 3rem;
-    }
-
-    .feature-card {
-      background: var(--card-bg);
-      padding: 2.5rem;
-      border-radius: 0.75rem;
-      border: 1px solid var(--border-color);
-      transition: var(--transition);
-      box-shadow: var(--shadow-md);
-    }
-
-    .feature-card:hover {
-      transform: translateY(-6px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--primary);
-    }
-
-    .feature-icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      display: inline-block;
-    }
-
-    .feature-card h3 {
-      color: var(--text-primary);
-      margin-bottom: 0.75rem;
-    }
-
-    .feature-card p {
-      font-size: 0.95rem;
-      color: var(--text-secondary);
-    }
-
-    /* ============================================================================
-       PRICING SECTION
-       ============================================================================ */
-    .pricing {
-      padding: 6rem 0;
-    }
-
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 2.5rem;
-      max-width: 1000px;
-      margin: 3rem auto 0;
-    }
-
-    .pricing-card {
-      background: var(--card-bg);
-      border: 2px solid var(--border-color);
-      border-radius: 0.75rem;
-      padding: 2.5rem;
-      transition: var(--transition);
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .pricing-card:hover {
-      border-color: var(--primary);
-      box-shadow: var(--shadow-xl);
-      transform: translateY(-4px);
-    }
-
-    .pricing-card.featured {
-      border-color: var(--primary);
-      box-shadow: var(--shadow-xl);
-      transform: scale(1.05);
-    }
-
-    .pricing-card.featured::before {
-      content: "Most Popular";
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent);
-      color: #000;
-      padding: 0.375rem 1rem;
-      border-radius: 2rem;
-      font-weight: 600;
-      font-size: 0.875rem;
-    }
-
-    .plan-name {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
-    .plan-price {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: var(--accent);
-      margin: 1rem 0;
-    }
-
-    .plan-price-period {
-      font-size: 0.95rem;
-      color: var(--text-secondary);
-      font-weight: 400;
-    }
-
-    .plan-description {
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      margin-bottom: 1.75rem;
-    }
-
-    .plan-features {
-      list-style: none;
-      margin-bottom: 2rem;
-      flex-grow: 1;
-    }
-
-    .plan-features li {
-      padding: 0.75rem 0;
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-    }
-
-    .plan-features li:last-child {
-      border-bottom: none;
-    }
-
-    .plan-features li::before {
-      content: "✓";
-      color: var(--accent);
-      font-weight: 700;
-      margin-right: 0.75rem;
-    }
-
-    .plan-button {
-      width: 100%;
-      padding: 0.875rem 1.5rem;
-      border: none;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-      font-size: 1rem;
-      text-decoration: none;
-      display: block;
-      text-align: center;
-    }
-
-    .pricing-card:not(.featured) .plan-button {
-      background-color: var(--primary);
-      color: white;
-    }
-
-    .pricing-card:not(.featured) .plan-button:hover {
-      background-color: var(--primary-dark);
-      transform: translateY(-2px);
-    }
-
-    .pricing-card.featured .plan-button {
-      background-color: var(--accent);
-      color: #000;
-      font-weight: 700;
-    }
-
-    .pricing-card.featured .plan-button:hover {
-      background-color: var(--accent-dark);
-      transform: translateY(-2px);
-    }
-
-    /* ============================================================================
-       AVAILABILITY SECTION
-       ============================================================================ */
-    .availability {
-      text-align: center;
-      padding: 6rem 0;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);
-    }
-
-    .availability h2 {
-      margin-bottom: 1.5rem;
-    }
-
-    .availability-message {
-      font-size: 1.125rem;
-      color: var(--text-secondary);
-      max-width: 600px;
-      margin: 0 auto 2.5rem;
-      line-height: 1.8;
-    }
-
-    /* ============================================================================
-       FOOTER
-       ============================================================================ */
-    footer {
-      background-color: rgba(15, 23, 42, 0.8);
-      border-top: 1px solid var(--border-color);
-      padding: 3rem 0;
-      margin-top: 6rem;
-    }
-
-    .footer-content {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-      text-align: center;
-    }
-
-    .footer-disclosure {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-
-    .footer-disclosure a {
-      color: var(--primary);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-
-    .footer-disclosure a:hover {
-      color: var(--primary-light);
-      text-decoration: underline;
-    }
-
-    /* ============================================================================
-       RESPONSIVE DESIGN
-       ============================================================================ */
-    @media (max-width: 768px) {
-      section {
-        padding: 4rem 0;
-      }
-
-      .hero {
-        min-height: auto;
-        padding: 3rem 1rem;
-      }
-
-      .hero h1 {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-      }
-
-      .subtitle {
-        font-size: 1rem;
-      }
-
-      .hero-buttons {
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .hero-buttons button {
-        width: 100%;
-      }
-
-      .features-grid {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-      }
-
-      .pricing-grid {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-      }
-
-      .pricing-card.featured {
-        transform: scale(1);
-      }
-
-      h2 {
-        font-size: 1.75rem;
-      }
-
-      .plan-price {
-        font-size: 2rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 0 1rem;
-      }
-
-      section {
-        padding: 3rem 0;
-      }
-
-      h1 {
-        font-size: 1.75rem;
-        margin-bottom: 1rem;
-      }
-
-      h2 {
-        font-size: 1.5rem;
-      }
-
-      .feature-card {
-        padding: 1.75rem;
-      }
-
-      .pricing-card {
-        padding: 1.75rem;
-      }
-
-      button, .btn {
-        padding: 0.75rem 1.5rem;
-        font-size: 0.95rem;
-      }
-
-      .plan-price {
-        font-size: 1.75rem;
-      }
-    }
-
-    /* ============================================================================
-       ANIMATIONS
-       ============================================================================ */
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .fade-in {
-      animation: fadeInUp 0.6s ease-out forwards;
-    }
-
-    /* ============================================================================
-       UTILITY CLASSES
-       ============================================================================ */
-    .text-center {
-      text-align: center;
-    }
-
-    .text-muted {
-      color: var(--text-secondary);
-    }
-
-    /* header logo */
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 1rem 0;
-    }
-
-    .site-logo {
-      height: 48px;
-      width: auto;
-      object-fit: contain;
-    }
-
-    .site-title {
-      color: #6B85A6;
-      font-weight: 700;
-      font-size: 1.8rem;
-      margin: 0;
-    }
-
-    /* ============================================================================
-       PREMIUM LOCK UI
-       ============================================================================ */
-    .premium-lock {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-      color: #94A3B8;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      transition: var(--transition);
-    }
-
-    .premium-lock p {
-      margin: 0 0 12px 0;
-      font-size: 0.95rem;
-    }
-
-    .premium-lock-cta {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .premium-lock-cta:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-    }
-
-    /* ============================================================================
-       NAVBAR
-       ============================================================================ */
-    .navbar {
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      background-color: #0F172A;
-      border-bottom: 1px solid var(--border-color);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    .navbar-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 72px;
-    }
-
-    .navbar .logo-container {
-      padding: 0;
-    }
-
-    .navbar-right {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-    }
-
-    .nav-link {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.2s ease;
-    }
-
-    .nav-link:hover {
-      color: #22C55E;
-    }
-
-    .nav-btn-upgrade {
-      background-color: #2563EB;
-      color: white;
-      padding: 0.6rem 1.25rem;
-      border-radius: 0.5rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: var(--transition);
-    }
-
-    .nav-btn-upgrade:hover {
-      background-color: var(--primary-dark);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-md);
-    }
-
-    @media (max-width: 768px) {
-      .navbar-right {
-        gap: 1rem;
-      }
-      .nav-link.hide-mobile {
-        display: none;
-      }
-      .site-title {
-        font-size: 1.4rem;
-      }
-      .site-logo {
-        height: 32px;
-      }
-    }
-
-    /* ============================================================================
-       MODAL
-       ============================================================================ */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.9);
-      z-index: 2000;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .modal-content {
-      background: #0F172A;
-      padding: 40px;
-    }
-
-    .auth-form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .auth-form input {
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 10px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: #0F172A;
-      color: #F8FAFC;
-      font-size: 1rem;
-    }
-
-    .auth-form button {
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 10px;
-      border: none;
-      background: #2563EB;
-      color: white;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .auth-form button:hover {
-      background: #1d4ed8;
-    }
-
-    .auth-form .auth-toggle {
-      color: var(--primary);
-      cursor: pointer;
-      text-decoration: underline;
-      background: transparent;
-      border: none;
-      padding: 0;
-      font: inherit;
-    }
-
-    .user-status {
-      color: #94A3B8;
-      margin-left: 1rem;
-    }
-
-      border-radius: 10px;
-      text-align: center;
-      color: white;
-      max-width: 500px;
-      border: 1px solid #334155;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-    }
-
-    .modal-content h2 {
-      color: #F8FAFC;
-      margin-bottom: 20px;
-      font-size: 1.75rem;
-    }
-
-    .modal-content p {
-      color: #94A3B8;
-      margin-bottom: 30px;
-      line-height: 1.6;
-    }
-
-    .modal-close-btn {
-      background: #2563EB;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .modal-close-btn:hover {
-      background: #1d4ed8;
-      transform: translateY(-2px);
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="./assets/images/stockspot-logo.png">
+  <link rel="stylesheet" href="./css/public-home.css">
 </head>
 <body>
-  <!-- ========================================================================
-       NAVBAR
-       ======================================================================== -->
-  <nav class="navbar">
-    <div class="navbar-container">
-      <div class="logo-container">
-        <img src="./assets/images/stockspot-logo.png" alt="StockSpot" class="site-logo">
-        <span class="site-title">StockSpot</span>
-      </div>
-      <div class="navbar-right">
-        <a href="#pricing" class="nav-link hide-mobile">Pricing</a>
-        <a href="dashboard.html" class="nav-link hide-mobile">Launch App</a>
-        <a href="javascript:void(0);" class="nav-link" id="loginNav">Login</a>
-        <a href="javascript:void(0);" class="nav-link" id="logoutNav" style="display:none;">Logout</a>
-        <span class="user-status" id="userStatus" style="display:none;"></span>
-        <a href="#pricing" class="nav-btn-upgrade">Upgrade</a>
-      </div>
-    </div>
-  </nav>
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="container header-bar">
+        <a class="brand" href="#home" aria-label="StockSpot home">
+          <img src="./assets/images/stockspot-logo.png" alt="StockSpot logo" class="brand-logo">
+          <span class="brand-wordmark">StockSpot</span>
+        </a>
 
-  <!-- ========================================================================
-       HERO SECTION
-       ======================================================================== -->
-  <section class="hero-section">
-    <div class="hero-content">
-      <h1 class="hero-title">StockSpot</h1>
-      <p class="hero-subtitle">
-        Real-time product restock and price drop alerts for resellers and deal hunters
-      </p>
-    </div>
-  </section>
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="primaryNav" aria-label="Toggle navigation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
 
-  <section class="cta-section" id="app">
-    <div class="container">
-      <h2>Never Miss a Profitable Restock Again</h2>
-      <p>StockSpot tracks price drops and restocks in real-time so you can flip products faster than everyone else.</p>
+        <nav class="primary-nav" id="primaryNav" aria-label="Primary">
+          <a href="#home">Home</a>
+          <a href="#deals">Deals</a>
+          <a href="#coming-soon">Coming Soon</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#install-app">Install App</a>
+        </nav>
 
-      <div class="cta-buttons">
-        <a href="dashboard.html" class="cta-primary">Start Free</a>
-        <a href="#pricing" class="cta-secondary">View Pricing</a>
-      </div>
-    </div>
-  </section>
-
-  <section class="social-proof">
-    <div class="container">
-      <p class="trust-text">Trusted by resellers, flippers, and deal hunters</p>
-
-      <div class="logos">
-        <div class="logo-box">Resell Hub</div>
-        <div class="logo-box">Flip Cartel</div>
-        <div class="logo-box">Deal Tracker Pro</div>
-        <div class="logo-box">Stock Alerts</div>
-      </div>
-
-      <p class="stats">
-        Tracking thousands of products daily • Real-time restock alerts • AI-powered deal signals
-      </p>
-    </div>
-  </section>
-
-  <section class="features">
-    <div class="container">
-      <h2>Everything You Need to Find Profitable Deals</h2>
-
-      <div class="feature-grid">
-        <div class="feature-card">
-          <h3>Real-Time Restock Alerts</h3>
-          <p>Get notified instantly when high-demand products come back in stock.</p>
-        </div>
-
-        <div class="feature-card">
-          <h3>Price Drop Tracking</h3>
-          <p>Monitor price changes across major retailers and catch deals early.</p>
-        </div>
-
-        <div class="feature-card">
-          <h3>AI Flip Suggestions</h3>
-          <p>AI identifies profitable resale opportunities automatically.</p>
-        </div>
-
-        <div class="feature-card">
-          <h3>Affiliate-Ready Links</h3>
-          <p>Automatically generate monetized links for every deal.</p>
+        <div class="utility-actions">
+          <a class="utility-link" href="dashboard.html">Dashboard</a>
+          <button class="utility-button" id="loginNav" type="button">Login</button>
+          <button class="utility-button utility-button-hidden" id="logoutNav" type="button">Logout</button>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- ========================================================================
-       FEATURES SECTION
-       ======================================================================== -->
-  <section class="features alt">
-    <div class="container">
-      <div class="section-header">
-        <h2>Powerful Features</h2>
-        <p class="text-muted" style="margin-top: 0.75rem;">Everything you need to track products and maximize profits</p>
+      <div class="container mobile-status-row">
+        <span class="user-status" id="userStatus"></span>
       </div>
-      
-      <div class="features-grid">
-        <div class="feature-card fade-in">
-          <div class="feature-icon">⚡</div>
-          <h3>Real-Time Alerts</h3>
-          <p>Detect restocks and price drops instantly. Never miss an opportunity again with our lightning-fast notifications.</p>
-        </div>
+    </header>
 
-        <div class="feature-card fade-in">
-          <div class="feature-icon">🧠</div>
-          <h3>Smart Signals</h3>
-          <p>AI-powered product opportunity detection. Our system learns what matters to you and surfaces the best deals.</p>
-        </div>
+    <main>
+      <section class="hero" id="home">
+        <div class="hero-backdrop"></div>
+        <div class="container hero-grid">
+          <div class="hero-copy reveal">
+            <p class="eyebrow">Deal discovery, reworked</p>
+            <h1>Trending Deals Today. Smarter Alerts Tomorrow.</h1>
+            <p class="hero-text">StockSpot helps shoppers discover trending deals today while building the future of intelligent deal and restock alerts.</p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#deals">Browse Deals</a>
+              <button class="button button-secondary" id="pwaHeroButton" type="button">PWA Coming Soon</button>
+            </div>
+            <div class="hero-meta">
+              <div>
+                <strong>8 curated sample drops</strong>
+                <span>Preview the public experience without touching live product systems.</span>
+              </div>
+              <div>
+                <strong>Dashboard preserved</strong>
+                <span>Existing app access, auth flow, and backend integrations remain intact.</span>
+              </div>
+            </div>
+          </div>
 
-        <div class="feature-card fade-in premium-feature-lock">
-          <div class="feature-icon">📝</div>
-          <h3>Flip Templates</h3>
-          <p>Prewritten resale listings to help you sell faster. Save time and boost resale velocity with our templates.</p>
-          <div class="premium-lock" style="margin-top: 12px; display: none;">
-            <p>🔒 Premium Feature</p>
-            <button class="premium-lock-cta" onclick="scrollToPricing()">Upgrade Now</button>
+          <aside class="hero-panel reveal">
+            <div class="hero-panel-card spotlight-card">
+              <div class="spotlight-chip">Today&apos;s focus</div>
+              <h2>Public deal feed preview</h2>
+              <p>Clean cards, category-first browsing, and a more editorial storefront for affiliate-safe discovery.</p>
+              <ul class="spotlight-list">
+                <li>Modern mobile-first browsing</li>
+                <li>Dark-mode friendly visual system</li>
+                <li>Clear separation from premium app functions</li>
+              </ul>
+            </div>
+            <div class="hero-panel-card stats-card">
+              <div class="stat-block">
+                <span class="stat-value">5</span>
+                <span class="stat-label">Premium features previewed</span>
+              </div>
+              <div class="stat-block">
+                <span class="stat-value">2</span>
+                <span class="stat-label">Live access points kept active</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section section-muted" id="deals">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Featured deals</p>
+            <h2>Sample cards for the public storefront</h2>
+            <p>These are static placeholders for the temporary public homepage. They do not pull from Amazon or any backend feed.</p>
+          </div>
+
+          <div class="deals-grid">
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-audio"><span>Audio</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Tech</p>
+                <h3>Apple AirPods Pro</h3>
+                <p>Wireless audio pick for commuters, workouts, and everyday listening.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
+
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-storage"><span>Storage</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Electronics</p>
+                <h3>Samsung SSD</h3>
+                <p>Fast external storage option for creators, backups, and portable workflows.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
+
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-reader"><span>Reading</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Books &amp; Media</p>
+                <h3>Kindle Paperwhite</h3>
+                <p>Lightweight e-reader built for travel, bedtime reading, and long battery life.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
+
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-kitchen"><span>Kitchen</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Home</p>
+                <h3>Ninja Air Fryer</h3>
+                <p>Countertop kitchen upgrade for quick weekday meals and crisp snacks.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
+
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-collectibles"><span>Collectibles</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Toys</p>
+                <h3>LEGO Star Wars Set</h3>
+                <p>Display-ready building set aimed at collectors and gift shoppers alike.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
+
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-cards"><span>TCG</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Trading Cards</p>
+                <h3>Pokemon Elite Trainer Box</h3>
+                <p>Community favorite sealed product for collectors, rip-and-ship, and gifting.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
+
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-gaming"><span>Gaming</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Gaming</p>
+                <h3>Gaming Headset</h3>
+                <p>Comfort-focused accessory for multiplayer sessions, streaming, and console play.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
+
+            <article class="deal-card reveal">
+              <div class="deal-thumb thumb-cooking"><span>Cooking</span></div>
+              <div class="deal-body">
+                <p class="deal-category">Kitchen</p>
+                <h3>Instant Pot</h3>
+                <p>Popular multicooker for meal prep, one-pot dinners, and small-space kitchens.</p>
+                <a class="deal-link" href="#affiliate-disclosure">View Deal</a>
+              </div>
+            </article>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
+      </section>
 
-  <!-- ========================================================================
-       PRICING SECTION
-       ======================================================================== -->
-  <section class="pricing" id="pricing">
-    <div class="container">
-      <div class="section-header">
-        <h2>Simple, Transparent Pricing</h2>
-        <p class="text-muted" style="margin-top: 0.75rem;">Choose the plan that works for you. Scale up anytime.</p>
-      </div>
-      
-      <div class="pricing-grid">
-        <!-- Free Plan -->
-        <div class="pricing-card">
-          <h3 class="plan-name">Free</h3>
-          <div class="plan-price">$0<span class="plan-price-period">/month</span></div>
-          <p class="plan-description">Perfect for getting started</p>
-          <ul class="plan-features">
-            <li>Basic restock alerts</li>
-            <li>Limited smart signals</li>
-            <li>Community templates</li>
-          </ul>
-          <a href="dashboard.html" class="plan-button" data-plan="free">Start Free</a>
+      <section class="section" id="coming-soon">
+        <div class="container feature-layout">
+          <div class="section-heading reveal align-left">
+            <p class="eyebrow">StockSpot Premium Features</p>
+            <h2>Coming soon to the next phase of the product</h2>
+            <p>The public site stays focused on browsing. Premium capabilities remain preview-only here while the core app continues separately.</p>
+          </div>
+
+          <div class="coming-soon-grid">
+            <div class="future-card reveal"><span>01</span><h3>Instant Restock Alerts</h3></div>
+            <div class="future-card reveal"><span>02</span><h3>Premium Dashboard</h3></div>
+            <div class="future-card reveal"><span>03</span><h3>Collectible Tracking</h3></div>
+            <div class="future-card reveal"><span>04</span><h3>Members Only Signals</h3></div>
+            <div class="future-card reveal"><span>05</span><h3>Mobile PWA</h3></div>
+          </div>
         </div>
+      </section>
 
-        <!-- Premium Plan -->
-        <div class="pricing-card featured">
-          <h3 class="plan-name">Premium</h3>
-          <div class="plan-price">$20<span class="plan-price-period">/month</span></div>
-          <p class="plan-description">For serious resellers</p>
-          <ul class="plan-features">
-            <li>Instant restock alerts</li>
-            <li>Price-drop alerts</li>
-            <li>Unlimited smart signals</li>
-            <li>AI resale templates</li>
-            <li>Priority alerts</li>
-          </ul>
-          <button class="plan-button" id="upgradeBtn" data-plan="premium" data-stripe="premium_monthly">Upgrade to Premium</button>
+      <section class="section section-muted" id="pricing">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Pricing preview</p>
+            <h2>Simple public positioning while premium access is in progress</h2>
+            <p>Pricing is displayed for roadmap clarity only. Premium checkout is not exposed from this temporary public homepage.</p>
+          </div>
+
+          <div class="pricing-grid">
+            <article class="pricing-card reveal">
+              <p class="pricing-tier">Free</p>
+              <h3>$0</h3>
+              <p class="pricing-caption">Always available</p>
+              <ul>
+                <li>Trending products</li>
+                <li>Delayed alerts</li>
+                <li>Basic access</li>
+              </ul>
+              <a class="button button-tertiary" href="dashboard.html">Open Dashboard</a>
+            </article>
+
+            <article class="pricing-card pricing-card-featured reveal">
+              <div class="pricing-badge">Coming Soon</div>
+              <p class="pricing-tier">Premium</p>
+              <h3>$9.99<span>/mo</span></h3>
+              <p class="pricing-caption">Preview only</p>
+              <ul>
+                <li>Instant alerts</li>
+                <li>Premium dashboard</li>
+                <li>Unlimited access</li>
+              </ul>
+              <button class="button button-primary" id="premiumPreviewButton" type="button">Coming Soon</button>
+            </article>
+          </div>
         </div>
+      </section>
+
+      <section class="section install-section" id="install-app">
+        <div class="container install-panel reveal">
+          <div>
+            <p class="eyebrow">Install app</p>
+            <h2>Public install messaging without altering the existing PWA stack</h2>
+            <p>If install support is available in your browser, StockSpot will prompt you. Otherwise, this homepage keeps the experience marked as coming soon.</p>
+          </div>
+          <div class="install-actions">
+            <button class="button button-primary" id="installAppButton" type="button">Install App</button>
+            <button class="button button-secondary" id="installPreviewButton" type="button">PWA Coming Soon</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-top">
+          <a class="brand brand-footer" href="#home" aria-label="StockSpot home">
+            <img src="./assets/images/stockspot-logo.png" alt="StockSpot logo" class="brand-logo">
+            <span class="brand-wordmark">StockSpot</span>
+          </a>
+          <nav class="footer-nav" aria-label="Footer">
+            <a href="website/privacy.html">Privacy Policy</a>
+            <a href="website/terms.html">Terms</a>
+            <a href="contact.html">Contact</a>
+          </nav>
+        </div>
+        <p class="affiliate-disclosure" id="affiliate-disclosure">As an Amazon Associate, StockSpot may earn from qualifying purchases. Product availability and pricing are subject to change.</p>
+        <p class="copyright">&copy; <span id="currentYear"></span> StockSpot</p>
       </div>
-    </div>
-  </section>
+    </footer>
+  </div>
 
-  <!-- ========================================================================
-       AVAILABILITY SECTION
-       ======================================================================== -->
-  <section class="availability">
-    <div class="container">
-      <h2>Access Anywhere</h2>
-      <p class="availability-message">
-        <strong>StockSpot is a web app.</strong><br>
-        No downloads required.<br>
-        Access instantly from your browser.
-      </p>
-      <a href="dashboard.html" class="btn btn-accent">Launch App</a>
-    </div>
-  </section>
-
-  <!-- ========================================================================
-       FOOTER
-       ======================================================================== -->
-  <footer>
-    <div class="footer-content">
-      <p class="footer-disclosure">
-        Disclosure: As an Amazon Associate, StockSpot may earn commissions from qualifying purchases made through affiliate links. <a href="https://stockspotdeals.github.io/StockSpot/website/affiliates.html">Learn more about our affiliate partnerships</a>.
-      </p>
-    </div>
-  </footer>
-
-  <!-- ========================================================================
-       APP PREVIEW MODAL
-       ======================================================================== -->
-  <div id="appModal" class="modal">
-    <div class="modal-content">
-      <h2>StockSpot App (Preview)</h2>
-      <p>This is a live preview environment. Full app launching coming soon.</p>
-      <p>Sign up above to get early access to the complete StockSpot application.</p>
-      <button class="modal-close-btn" onclick="closeModal()">Close</button>
+  <div class="modal" id="comingSoonModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="comingSoonTitle">
+      <h2 id="comingSoonTitle">Coming Soon</h2>
+      <p>This temporary public homepage keeps premium and PWA messaging visible without changing the underlying backend or app systems.</p>
+      <button class="button button-primary modal-close" type="button" data-close-modal>Close</button>
     </div>
   </div>
 
-  <!-- ========================================================================
-       UPGRADE MODAL
-       ======================================================================== -->
-  <div id="upgradeModal" class="modal">
-    <div class="modal-content">
-      <h2>Upgrade to Premium</h2>
-      <p>Premium access is coming soon. You'll get real-time alerts, AI flip signals, and early deal access.</p>
-      <button class="modal-close-btn" onclick="closeUpgradeModal()">Close</button>
-    </div>
-  </div>
-
-  <div id="loginModal" class="modal">
-    <div class="modal-content">
-      <h2>Login</h2>
+  <div class="modal" id="loginModal" aria-hidden="true">
+    <div class="modal-card auth-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <h2 id="loginTitle">Login</h2>
       <form id="loginForm" class="auth-form">
-        <input id="loginEmail" type="email" placeholder="Email" required>
-        <input id="loginPassword" type="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-        <p style="color: #94A3B8;">Don't have an account? <button type="button" class="auth-toggle" onclick="switchToRegister()">Register</button></p>
+        <label>
+          <span>Email</span>
+          <input id="loginEmail" type="email" placeholder="you@example.com" required>
+        </label>
+        <label>
+          <span>Password</span>
+          <input id="loginPassword" type="password" placeholder="Password" required>
+        </label>
+        <button class="button button-primary" type="submit">Login</button>
       </form>
-      <button class="modal-close-btn" onclick="closeLoginModal()">Close</button>
+      <p class="auth-switch-copy">Need an account? <button class="text-button" id="showRegister" type="button">Register</button></p>
+      <button class="button button-secondary modal-close" type="button" data-close-modal>Close</button>
     </div>
   </div>
 
-  <div id="registerModal" class="modal">
-    <div class="modal-content">
-      <h2>Register</h2>
+  <div class="modal" id="registerModal" aria-hidden="true">
+    <div class="modal-card auth-card" role="dialog" aria-modal="true" aria-labelledby="registerTitle">
+      <h2 id="registerTitle">Register</h2>
       <form id="registerForm" class="auth-form">
-        <input id="registerEmail" type="email" placeholder="Email" required>
-        <input id="registerPassword" type="password" placeholder="Password" required>
-        <input id="registerConfirmPassword" type="password" placeholder="Confirm Password" required>
-        <button type="submit">Register</button>
-        <p style="color: #94A3B8;">Already have an account? <button type="button" class="auth-toggle" onclick="switchToLogin()">Login</button></p>
+        <label>
+          <span>Email</span>
+          <input id="registerEmail" type="email" placeholder="you@example.com" required>
+        </label>
+        <label>
+          <span>Password</span>
+          <input id="registerPassword" type="password" placeholder="Password" required>
+        </label>
+        <label>
+          <span>Confirm Password</span>
+          <input id="registerConfirmPassword" type="password" placeholder="Confirm Password" required>
+        </label>
+        <button class="button button-primary" type="submit">Create Account</button>
       </form>
-      <button class="modal-close-btn" onclick="closeRegisterModal()">Close</button>
+      <p class="auth-switch-copy">Already registered? <button class="text-button" id="showLogin" type="button">Login</button></p>
+      <button class="button button-secondary modal-close" type="button" data-close-modal>Close</button>
     </div>
   </div>
 
-  <script>
-    const stripe = Stripe("pk_test_51TS748LZ30FLlixpHFG6aI4GpjWCjVB2bNU5DNWNcJDWhFkg6qj3MMTB1f4T6MEu50CZCX1hM7rms6ln7YKdAvAL00V0Vpvk8z");
-    const BACKEND_URL = 'https://stockspot.onrender.com';
-    const appState = {
-      accessToken: localStorage.getItem('stockspotAccessToken'),
-      user: null
-    };
-
-    function openModal() {
-      document.getElementById('appModal').style.display = 'flex';
-    }
-
-    function closeModal() {
-      document.getElementById('appModal').style.display = 'none';
-    }
-
-    function openUpgradeModal() {
-      document.getElementById('upgradeModal').style.display = 'flex';
-    }
-
-    function closeUpgradeModal() {
-      document.getElementById('upgradeModal').style.display = 'none';
-    }
-
-    function openLoginModal() {
-      document.getElementById('loginModal').style.display = 'flex';
-    }
-
-    function closeLoginModal() {
-      document.getElementById('loginModal').style.display = 'none';
-    }
-
-    function openRegisterModal() {
-      document.getElementById('registerModal').style.display = 'flex';
-    }
-
-    function closeRegisterModal() {
-      document.getElementById('registerModal').style.display = 'none';
-    }
-
-    function switchToRegister() {
-      closeLoginModal();
-      openRegisterModal();
-    }
-
-    function switchToLogin() {
-      closeRegisterModal();
-      openLoginModal();
-    }
-
-    function scrollToPricing() {
-      document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    // Close modal when clicking outside of it
-    window.onclick = function(event) {
-      const appModal = document.getElementById('appModal');
-      const upgradeModal = document.getElementById('upgradeModal');
-      const loginModal = document.getElementById('loginModal');
-      const registerModal = document.getElementById('registerModal');
-      if (event.target === appModal) {
-        closeModal();
-      }
-      if (event.target === upgradeModal) {
-        closeUpgradeModal();
-      }
-      if (event.target === loginModal) {
-        closeLoginModal();
-      }
-      if (event.target === registerModal) {
-        closeRegisterModal();
-      }
-    };
-
-    const authHeaders = () => {
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-      if (appState.accessToken) {
-        headers.Authorization = `Bearer ${appState.accessToken}`;
-      }
-      return headers;
-    };
-
-    const apiFetch = async (path, options = {}) => {
-      const response = await fetch(`${BACKEND_URL}${path}`, {
-        ...options,
-        headers: {
-          ...authHeaders(),
-          ...(options.headers || {})
-        }
-      });
-
-      const body = await response.json().catch(() => null);
-      if (!response.ok) {
-        const errorMessage = body?.message || body?.error || `Request failed with status ${response.status}`;
-        throw new Error(errorMessage);
-      }
-
-      return body;
-    };
-
-    const setAccessToken = (token) => {
-      appState.accessToken = token || null;
-      if (token) {
-        localStorage.setItem('stockspotAccessToken', token);
-      } else {
-        localStorage.removeItem('stockspotAccessToken');
-      }
-    };
-
-    const updateAuthDisplay = () => {
-      const loginNav = document.getElementById('loginNav');
-      const logoutNav = document.getElementById('logoutNav');
-      const userStatus = document.getElementById('userStatus');
-
-      if (appState.user) {
-        if (loginNav) loginNav.style.display = 'none';
-        if (logoutNav) logoutNav.style.display = 'inline-block';
-        if (userStatus) {
-          userStatus.textContent = `Logged in as ${appState.user.email}`;
-          userStatus.style.display = 'inline-block';
-        }
-      } else {
-        if (loginNav) loginNav.style.display = 'inline-block';
-        if (logoutNav) logoutNav.style.display = 'none';
-        if (userStatus) userStatus.style.display = 'none';
-      }
-
-      const premiumLocked = !appState.user || appState.user.subscriptionStatus !== 'premium';
-      document.querySelectorAll('.premium-feature-lock .premium-lock').forEach(lock => {
-        lock.style.display = premiumLocked ? 'block' : 'none';
-      });
-    };
-
-    const logout = () => {
-      setAccessToken(null);
-      appState.user = null;
-      updateAuthDisplay();
-      closeLoginModal();
-      closeRegisterModal();
-    };
-
-    const loadCurrentUser = async () => {
-      if (!appState.accessToken) {
-        updateAuthDisplay();
-        return;
-      }
-
-      try {
-        const data = await apiFetch('/auth/me');
-        appState.user = data.user;
-      } catch (error) {
-        console.warn('Failed to load current user:', error);
-        setAccessToken(null);
-        appState.user = null;
-      } finally {
-        updateAuthDisplay();
-      }
-    };
-
-    const handleLoginSubmit = async (event) => {
-      event.preventDefault();
-      try {
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
-
-        const data = await apiFetch('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password })
-        });
-
-        setAccessToken(data.accessToken);
-        appState.user = data.user;
-        updateAuthDisplay();
-        closeLoginModal();
-        window.location.href = 'dashboard.html';
-      } catch (error) {
-        console.error('Login error:', error);
-        alert(error.message || 'Login failed');
-      }
-    };
-
-    const handleRegisterSubmit = async (event) => {
-      event.preventDefault();
-      try {
-        const email = document.getElementById('registerEmail').value.trim();
-        const password = document.getElementById('registerPassword').value.trim();
-        const confirmPassword = document.getElementById('registerConfirmPassword').value.trim();
-
-        const data = await apiFetch('/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ email, password, confirmPassword })
-        });
-
-        setAccessToken(data.accessToken);
-        appState.user = data.user;
-        updateAuthDisplay();
-        closeRegisterModal();
-        window.location.href = 'dashboard.html';
-      } catch (error) {
-        console.error('Registration error:', error);
-        alert(error.message || 'Registration failed');
-      }
-    };
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const loginNav = document.getElementById('loginNav');
-      const logoutNav = document.getElementById('logoutNav');
-
-      if (loginNav) {
-        loginNav.addEventListener('click', (e) => {
-          e.preventDefault();
-          openLoginModal();
-        });
-      }
-
-      if (logoutNav) {
-        logoutNav.addEventListener('click', (e) => {
-          e.preventDefault();
-          logout();
-        });
-      }
-
-      document.getElementById('loginForm')?.addEventListener('submit', handleLoginSubmit);
-      document.getElementById('registerForm')?.addEventListener('submit', handleRegisterSubmit);
-
-      loadCurrentUser();
-    });
-
-    // Add fade-in animation on scroll
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('fade-in');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.feature-card').forEach(card => {
-      observer.observe(card);
-    });
-
-    // ========================================================================
-    // STRIPE WEBHOOK INTEGRATION
-    // ========================================================================
-    const upgradeBtn = document.getElementById('upgradeBtn');
-    if (upgradeBtn) {
-      upgradeBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-
-        if (!appState.accessToken) {
-          openLoginModal();
-          return;
-        }
-
-        try {
-          const data = await apiFetch('/create-checkout-session', {
-            method: 'POST',
-            body: JSON.stringify({
-              plan: 'premium_monthly'
-            })
-          });
-
-          if (data.url) {
-            window.location.href = data.url;
-          } else {
-            console.error('No checkout URL received:', data);
-            alert('Unable to start checkout. Please try again.');
-          }
-        } catch (err) {
-          console.error('Stripe checkout error:', err);
-          alert('Checkout error. Please try again later.');
-        }
-      });
-    }
-
-    const navUpgradeBtn = document.querySelector('.nav-btn-upgrade');
-    if (navUpgradeBtn) {
-      navUpgradeBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        scrollToPricing();
-      });
-    }
-  </script>
+  <script src="./js/public-home.js"></script>
 </body>
 </html>
