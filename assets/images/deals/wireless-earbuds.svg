@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Generic wireless earbuds</title>
+  <desc id="desc">Illustrated generic wireless earbuds on a soft teal background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#dff8f4"/>
+      <stop offset="100%" stop-color="#b7ddff"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" rx="36" fill="url(#bg)"/>
+  <circle cx="240" cy="182" r="78" fill="#0f2c48" opacity="0.08"/>
+  <circle cx="560" cy="338" r="110" fill="#35b3a8" opacity="0.12"/>
+  <rect x="258" y="116" width="78" height="188" rx="36" fill="#f8fcff"/>
+  <rect x="464" y="150" width="78" height="188" rx="36" fill="#f8fcff"/>
+  <rect x="280" y="254" width="34" height="116" rx="17" fill="#d4ebf6"/>
+  <rect x="486" y="288" width="34" height="116" rx="17" fill="#d4ebf6"/>
+  <circle cx="297" cy="176" r="22" fill="#35b3a8"/>
+  <circle cx="503" cy="210" r="22" fill="#4ea4ff"/>
+</svg>

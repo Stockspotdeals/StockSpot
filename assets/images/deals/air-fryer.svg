@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Generic air fryer</title>
+  <desc id="desc">Illustrated generic countertop air fryer.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e7fbf6"/>
+      <stop offset="100%" stop-color="#d2e8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" rx="36" fill="url(#bg)"/>
+  <rect x="246" y="92" width="308" height="332" rx="72" fill="#152a44"/>
+  <rect x="286" y="136" width="228" height="88" rx="24" fill="#203c5f"/>
+  <circle cx="400" cy="182" r="24" fill="#35b3a8"/>
+  <rect x="282" y="258" width="236" height="126" rx="28" fill="#0f1b2e"/>
+  <rect x="320" y="292" width="160" height="58" rx="18" fill="#d7ecf9"/>
+  <rect x="356" y="378" width="88" height="18" rx="9" fill="#8dbfe6"/>
+</svg>

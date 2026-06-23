@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Generic trading card box</title>
+  <desc id="desc">Illustrated generic trading card storage box.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e5f7ff"/>
+      <stop offset="100%" stop-color="#d8fff1"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" rx="36" fill="url(#bg)"/>
+  <path d="M220 186h360l74 76v156H146V262z" fill="#15314f"/>
+  <path d="M220 186l74 76h360l-74-76z" fill="#1d4266"/>
+  <rect x="230" y="280" width="150" height="102" rx="18" fill="#f0fbff"/>
+  <rect x="400" y="280" width="214" height="24" rx="12" fill="#35b3a8"/>
+  <rect x="400" y="320" width="176" height="18" rx="9" fill="#9ed4ff"/>
+  <rect x="400" y="352" width="138" height="18" rx="9" fill="#c4f3ee"/>
+</svg>

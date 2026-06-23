@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Generic gaming headset</title>
+  <desc id="desc">Illustrated generic over-ear gaming headset.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e3f6ff"/>
+      <stop offset="100%" stop-color="#d7fff5"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" rx="36" fill="url(#bg)"/>
+  <path d="M264 294c0-94 61-168 136-168s136 74 136 168" fill="none" stroke="#122944" stroke-width="34" stroke-linecap="round"/>
+  <rect x="206" y="250" width="78" height="142" rx="34" fill="#1d4266"/>
+  <rect x="516" y="250" width="78" height="142" rx="34" fill="#1d4266"/>
+  <rect x="226" y="278" width="38" height="86" rx="18" fill="#35b3a8"/>
+  <rect x="536" y="278" width="38" height="86" rx="18" fill="#4ea4ff"/>
+  <path d="M550 360c22 12 34 26 34 44" fill="none" stroke="#122944" stroke-width="12" stroke-linecap="round"/>
+</svg>

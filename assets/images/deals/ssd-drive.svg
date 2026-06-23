@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Generic SSD drive</title>
+  <desc id="desc">Illustrated generic solid state drive on a blue gradient background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e3f5ff"/>
+      <stop offset="100%" stop-color="#b9e7ea"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" rx="36" fill="url(#bg)"/>
+  <rect x="150" y="140" width="500" height="240" rx="26" fill="#15314f"/>
+  <rect x="188" y="182" width="160" height="120" rx="18" fill="#24486f"/>
+  <rect x="372" y="182" width="238" height="30" rx="15" fill="#35b3a8" opacity="0.92"/>
+  <rect x="372" y="230" width="166" height="20" rx="10" fill="#d7f8f4" opacity="0.92"/>
+  <rect x="372" y="266" width="204" height="20" rx="10" fill="#9bd2ff" opacity="0.85"/>
+  <rect x="372" y="304" width="132" height="20" rx="10" fill="#d7f8f4" opacity="0.85"/>
+  <circle cx="252" cy="242" r="42" fill="#4ea4ff" opacity="0.65"/>
+  <rect x="222" y="210" width="60" height="64" rx="10" fill="#eaf8ff"/>
+</svg>
