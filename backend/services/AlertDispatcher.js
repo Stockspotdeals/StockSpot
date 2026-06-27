@@ -59,6 +59,9 @@ class AlertDispatcher {
     this.processingLeaseMs = Number(process.env.ALERT_DISPATCH_LEASE_MS) || (5 * 60 * 1000);
     this.retryBaseMinutes = Number(process.env.ALERT_RETRY_BASE_MINUTES) || 2;
     this.retryMaxMinutes = Number(process.env.ALERT_RETRY_MAX_MINUTES) || 30;
+    this.notificationLimitFree = Number(process.env.NOTIFICATION_LIMIT_FREE) || 10;
+    this.notificationLimitPaid = Number(process.env.NOTIFICATION_LIMIT_PAID) || 100;
+    this.notificationLimitAdmin = Number(process.env.NOTIFICATION_LIMIT_ADMIN) || 1000;
     this.schedulerStarted = false;
     this.stats = {
       dispatched: 0,
@@ -205,7 +208,7 @@ class AlertDispatcher {
           plan: normalizedPlan,
           userSegment,
           queueLane,
-          channels: [DELIVERY_CHANNELS.DASHBOARD],
+          channels: [DELIVERY_CHANNELS.DASHBOARD, DELIVERY_CHANNELS.EMAIL],
           nextDispatchAt,
           expectedLatency: `${this.freeHighDelayMinutes} minutes`
         };
@@ -236,7 +239,7 @@ class AlertDispatcher {
         plan: normalizedPlan,
         userSegment,
         queueLane,
-        channels: [DELIVERY_CHANNELS.DASHBOARD],
+        channels: [DELIVERY_CHANNELS.DASHBOARD, DELIVERY_CHANNELS.EMAIL],
         nextDispatchAt,
         expectedLatency: `${this.freeDelayMinutes} minutes`
       };
@@ -415,6 +418,16 @@ class AlertDispatcher {
           channels.push(channel);
           this.stats.dashboard += 1;
         } else if (channel === DELIVERY_CHANNELS.EMAIL) {
+          const canSendEmail = await this.canDispatchEmailForPlan(claimedAlertSignal, dispatchPlan);
+          if (!canSendEmail.allowed) {
+            console.log('[AlertDispatcher] EMAIL skipped', JSON.stringify({
+              alertId: String(claimedAlertSignal._id),
+              plan: dispatchPlan.plan,
+              reason: canSendEmail.reason
+            }));
+            continue;
+          }
+
           await this.dispatchToEmail(claimedAlertSignal, dispatchPlan);
           channels.push(channel);
           this.stats.email += 1;
@@ -467,6 +480,76 @@ class AlertDispatcher {
     }
   }
 
+  getDailyEmailLimitForPlan(plan) {
+    if (plan === SUBSCRIPTION_PLANS.ENTERPRISE) {
+      return this.notificationLimitAdmin;
+    }
+    if (plan === SUBSCRIPTION_PLANS.PREMIUM) {
+      return this.notificationLimitPaid;
+    }
+    return this.notificationLimitFree;
+  }
+
+  async canDispatchEmailForPlan(alertSignal, plan) {
+    if (!alertSignal || !alertSignal.userId) {
+      return { allowed: true, reason: 'no-user-limit-applied' };
+    }
+
+    const limit = this.getDailyEmailLimitForPlan(plan.plan);
+    if (limit < 0) {
+      return { allowed: true, reason: 'unlimited' };
+    }
+
+    const dayStart = new Date();
+    dayStart.setUTCHours(0, 0, 0, 0);
+
+    const sentToday = await AlertSignal.countDocuments({
+      userId: alertSignal.userId,
+      plan: plan.plan,
+      dispatchStatus: DISPATCH_STATUS.DISPATCHED,
+      dispatchedChannels: DELIVERY_CHANNELS.EMAIL,
+      lastDispatchedAt: { $gte: dayStart }
+    });
+
+    if (sentToday >= limit) {
+      return { allowed: false, reason: `daily limit reached (${sentToday}/${limit})` };
+    }
+
+    return { allowed: true, reason: `within daily limit (${sentToday}/${limit})` };
+  }
+
+  parseFallbackRecipients() {
+    const fallback = process.env.ALERT_DISPATCH_EMAIL || '';
+    return fallback
+      .split(',')
+      .map(email => String(email || '').trim())
+      .filter(Boolean);
+  }
+
+  async resolveEmailRecipients(alertSignal) {
+    const recipients = [];
+
+    if (alertSignal && alertSignal.userId) {
+      try {
+        const authUser = await AuthUserModel.findById(alertSignal.userId).lean();
+        if (authUser && authUser.email) {
+          recipients.push({
+            email: String(authUser.email).trim().toLowerCase(),
+            plan: AlertDispatcher.normalizePlan(authUser.plan, authUser.subscriptionStatus)
+          });
+        }
+      } catch (error) {
+        console.warn('[AlertDispatcher] Failed to resolve AuthUser for alert email:', error.message);
+      }
+    }
+
+    if (recipients.length) {
+      return recipients;
+    }
+
+    return this.parseFallbackRecipients().map(email => ({ email, plan: SUBSCRIPTION_PLANS.FREE }));
+  }
+
   computeRetryAt(attemptCount) {
     const safeAttemptCount = Math.max(1, Number(attemptCount) || 1);
     const delayMinutes = Math.min(this.retryMaxMinutes, this.retryBaseMinutes * (2 ** (safeAttemptCount - 1)));
@@ -503,24 +586,49 @@ class AlertDispatcher {
   }
 
   async dispatchToEmail(alertSignal, plan) {
-    const email = process.env.ALERT_DISPATCH_EMAIL || 'alerts@stockspot.local';
-    return this.emailService.sendAlertEmail(
-      { email },
-      {
-        productName: alertSignal.productName,
-        title: alertSignal.productName,
-        description: alertSignal.description,
-        affiliateUrl: alertSignal.affiliateUrl,
-        price: alertSignal.price,
-        originalPrice: alertSignal.originalPrice,
-        signalType: alertSignal.signalType,
-        plan: plan.plan,
-        tier: alertSignal.tier,
-        score: alertSignal.score,
-        reasoning: alertSignal.reasoning
-      },
-      `${plan.tier} ${alertSignal.store}`
-    );
+    const recipients = await this.resolveEmailRecipients(alertSignal);
+    if (!recipients.length) {
+      throw new Error('No email recipients available for alert dispatch');
+    }
+
+    const payload = {
+      productName: alertSignal.productName,
+      title: alertSignal.productName,
+      description: alertSignal.description,
+      affiliateUrl: alertSignal.affiliateUrl,
+      price: alertSignal.price,
+      originalPrice: alertSignal.originalPrice,
+      signalType: alertSignal.signalType,
+      store: alertSignal.store,
+      plan: plan.plan,
+      tier: alertSignal.tier,
+      score: alertSignal.score,
+      confidence: alertSignal.confidence,
+      reasoning: alertSignal.reasoning,
+      timestamp: alertSignal.createdAt || new Date()
+    };
+
+    const keyword = `${alertSignal.signalType || 'signal'}:${alertSignal.store || 'unknown-store'}`;
+    const outcomes = [];
+
+    for (const recipient of recipients) {
+      const result = await this.emailService.sendAlertEmail({
+        email: recipient.email,
+        plan: recipient.plan || plan.plan
+      }, payload, keyword);
+
+      outcomes.push({ email: recipient.email, provider: result.provider || 'unknown', success: !!result.success });
+    }
+
+    console.log('[AlertDispatcher] EMAIL', JSON.stringify({
+      alertId: String(alertSignal._id),
+      tier: alertSignal.tier,
+      plan: plan.plan,
+      recipients: outcomes.length,
+      outcomes
+    }));
+
+    return { success: true, provider: outcomes[0] ? outcomes[0].provider : 'unknown', outcomes };
   }
 
   async dispatchToWebhook(alertSignal, plan) {
