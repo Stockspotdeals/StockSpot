@@ -7,13 +7,16 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
+require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeSignalScheduler } = require('./services/signalIngestion');
 const { initializeAISourcingScheduler } = require('./services/signalSourcer');
 const { initializeConnectorScheduler } = require('./services/dataConnectors');
 const { MonitoringWorker } = require('./services/MonitoringWorker');
 const { authenticateToken, requireAdmin } = require('./middleware/authMiddleware');
-require('dotenv').config();
+
+const CANONICAL_PREMIUM_MONTHLY_PRICE_ID = 'price_1TmoLXLZ30FLlixp8FiDIju7';
+const STRIPE_PREMIUM_MONTHLY_PRICE_ID = process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PREMIUM_MONTHLY_PRICE_ID;
 
 let monitoringWorkerInstance = null;
 
@@ -89,6 +92,18 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
 
   console.log(`📨 Stripe webhook received: ${event.type}`);
 
+  const activeSubscriptionStates = new Set(['active', 'trialing', 'past_due']);
+
+  const setPremiumForCustomer = async (customerId, updates = {}) => {
+    const { AuthUserModel } = require('./models/AuthUser');
+    const user = await AuthUserModel.findOne({ stripeCustomerId: customerId });
+    if (!user) {
+      return null;
+    }
+
+    return AuthUserModel.updateById(user.id, updates);
+  };
+
   // Handle checkout.session.completed
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
@@ -139,6 +154,39 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
     } catch (err) {
       console.error('❌ Failed to cancel subscription:', err.message);
     }
+  }
+
+  // Handle customer.subscription.created and customer.subscription.updated
+  if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+    const subscription = event.data.object;
+    const isPremium = activeSubscriptionStates.has(subscription.status);
+    try {
+      const updatedUser = await setPremiumForCustomer(subscription.customer, {
+        subscriptionStatus: isPremium ? 'premium' : 'free',
+        plan: isPremium ? 'premium' : 'free',
+        subscriptionEndDate: subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null
+      });
+
+      if (updatedUser) {
+        console.log(`✅ Subscription ${event.type} processed for user ${updatedUser.email}: ${subscription.status}`);
+      } else {
+        console.warn('⚠️ Stripe webhook: no matching auth user for subscription event', subscription.customer);
+      }
+    } catch (err) {
+      console.error('❌ Failed to process subscription update:', err.message);
+      return res.status(500).json({ error: 'Failed to process subscription update' });
+    }
+  }
+
+  // Handle invoice events for payment state visibility
+  if (event.type === 'invoice.paid') {
+    const invoice = event.data.object;
+    console.log(`✅ Invoice paid: ${invoice.id} (${invoice.customer})`);
+  }
+
+  if (event.type === 'invoice.payment_failed') {
+    const invoice = event.data.object;
+    console.warn(`⚠️ Invoice payment failed: ${invoice.id} (${invoice.customer})`);
   }
 
   res.json({ received: true });
@@ -229,11 +277,15 @@ try {
 // Stripe checkout session creation
 app.post('/create-checkout-session', require('./middleware/authMiddleware').authenticateToken, async (req, res) => {
   try {
+    if (!STRIPE_PREMIUM_MONTHLY_PRICE_ID) {
+      return res.status(500).json({ error: 'Stripe monthly price ID is not configured' });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_PREMIUM_MONTHLY,
+          price: STRIPE_PREMIUM_MONTHLY_PRICE_ID,
           quantity: 1
         }
       ],

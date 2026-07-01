@@ -13,6 +13,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { UserModel } = require('../models/User');
 const crypto = require('crypto');
 
+const CANONICAL_PREMIUM_MONTHLY_PRICE_ID = 'price_1TmoLXLZ30FLlixp8FiDIju7';
+
 class StripeManager {
   /**
    * Create a checkout session for subscription
@@ -61,7 +63,7 @@ class StripeManager {
    */
   getPriceIdForTier(tier) {
     const tiers = {
-      'PAID': process.env.STRIPE_PRICE_MONTHLY_ID,
+      'PAID': process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PREMIUM_MONTHLY_PRICE_ID,
       'YEARLY': process.env.STRIPE_PRICE_YEARLY_ID,
     };
     return tiers[tier];
@@ -90,8 +92,16 @@ class StripeManager {
           await this.handleSubscriptionUpdate(event.data.object);
           break;
 
+        case 'customer.subscription.created':
+          await this.handleSubscriptionUpdate(event.data.object);
+          break;
+
         case 'customer.subscription.deleted':
           await this.handleSubscriptionCancelled(event.data.object);
+          break;
+
+        case 'invoice.paid':
+          await this.handlePaymentSuccess(event.data.object);
           break;
 
         case 'invoice.payment_succeeded':
@@ -244,7 +254,7 @@ class StripeManager {
    * Get tier from price ID
    */
   getTierFromPriceId(priceId) {
-    if (priceId === process.env.STRIPE_PRICE_MONTHLY_ID) {
+    if (priceId === (process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PREMIUM_MONTHLY_PRICE_ID)) {
       return 'PAID';
     }
     if (priceId === process.env.STRIPE_PRICE_YEARLY_ID) {

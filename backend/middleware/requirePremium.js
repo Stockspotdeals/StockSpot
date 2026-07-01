@@ -3,7 +3,7 @@
  * Checks if user has active Stripe subscription in MongoDB
  */
 
-const { UserModel } = require('../models/User');
+const { AuthUserModel } = require('../models/AuthUser');
 
 const requirePremium = async (req, res, next) => {
   try {
@@ -18,7 +18,7 @@ const requirePremium = async (req, res, next) => {
     }
 
     // Look up user in MongoDB
-    const user = await UserModel.findById(userId);
+    const user = await AuthUserModel.findById(userId);
     if (!user) {
       return res.status(404).json({
         error: 'User not found',
@@ -26,18 +26,20 @@ const requirePremium = async (req, res, next) => {
       });
     }
 
-    // Check subscription status
-    if (user.subscriptionStatus !== 'active') {
+    // Premium access is modeled as plan=premium/admin or subscriptionStatus=premium.
+    const hasPremiumAccess = user.plan === 'premium' || user.plan === 'admin' || user.subscriptionStatus === 'premium';
+
+    if (!hasPremiumAccess) {
       return res.status(403).json({
         error: 'Premium subscription required',
         message: 'This feature requires an active premium subscription',
         upgradeUrl: '/upgrade',
-        currentStatus: user.subscriptionStatus || 'inactive'
+        currentStatus: user.subscriptionStatus || 'free'
       });
     }
 
     // User has active subscription, continue
-    req.user = { ...req.user, subscriptionStatus: user.subscriptionStatus };
+    req.user = { ...req.user, subscriptionStatus: user.subscriptionStatus, plan: user.plan };
     next();
 
   } catch (error) {
