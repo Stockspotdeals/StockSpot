@@ -7,31 +7,28 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { initializeSignalScheduler } = require('./services/signalIngestion');
-const { initializeAISourcingScheduler } = require('./services/signalSourcer');
-const { initializeConnectorScheduler } = require('./services/dataConnectors');
-const { MonitoringWorker } = require('./services/MonitoringWorker');
-const { authenticateToken, requireAdmin } = require('./middleware/authMiddleware');
+const { initializeSignalScheduler } = require('./src/services/signalIngestion');
+const { initializeAISourcingScheduler } = require('./src/services/signalSourcer');
+const { initializeConnectorScheduler } = require('./src/services/dataConnectors');
+const { MonitoringWorker } = require('./src/services/MonitoringWorker');
+const { authenticateToken, requireAdmin } = require('./src/middleware/authMiddleware');
+const { getLiveSignals } = require('./src/services/signalPipeline');
 
 const CANONICAL_PREMIUM_MONTHLY_PRICE_ID = 'price_1TmoLXLZ30FLlixp8FiDIju7';
-const STRIPE_PREMIUM_MONTHLY_PRICE_ID = process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PREMIUM_MONTHLY_PRICE_ID;
 
 let monitoringWorkerInstance = null;
+let activeServerPort = 'not-listening';
+let mongoConnectionStatus = 'pending';
 
-// Load MongoDB URI from standard env var
-const mongoUri = process.env.MONGO_URI;
-const mongooseOptions = {
-  serverSelectionTimeoutMS: 10000
-};
+function logStartupStatus() {
+  console.log(
+    `[StartupStatus] Loaded MONGO_URI: ${Boolean(process.env.MONGO_URI)} | Active server port: ${activeServerPort} | Mongo connection: ${mongoConnectionStatus}`
+  );
+}
 
-if (!mongoUri) {
-  console.error('MongoDB connection error: MONGO_URI is not set');
-} else {
-  mongoose.connect(mongoUri, mongooseOptions)
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error('MongoDB connection error:', err));
+function setMongoConnectionStatus(status) {
+  mongoConnectionStatus = status;
 }
 
 const app = express();
@@ -95,7 +92,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
   const activeSubscriptionStates = new Set(['active', 'trialing', 'past_due']);
 
   const setPremiumForCustomer = async (customerId, updates = {}) => {
-    const { AuthUserModel } = require('./models/AuthUser');
+    const { AuthUserModel } = require('./src/models/AuthUser');
     const user = await AuthUserModel.findOne({ stripeCustomerId: customerId });
     if (!user) {
       return null;
@@ -108,7 +105,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     try {
-      const { AuthUserModel } = require('./models/AuthUser');
+      const { AuthUserModel } = require('./src/models/AuthUser');
       const customerEmail = session.customer_details?.email || session.customer_email || session.metadata?.email;
       let user = null;
 
@@ -141,7 +138,7 @@ app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (re
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object;
     try {
-      const { AuthUserModel } = require('./models/AuthUser');
+      const { AuthUserModel } = require('./src/models/AuthUser');
       const user = await AuthUserModel.findOne({ stripeCustomerId: subscription.customer });
       if (user) {
         await AuthUserModel.updateById(user.id, {
@@ -254,9 +251,73 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// Production compatibility feed endpoint used by the current frontend app.
+app.get('/api/feed', async (req, res) => {
+  try {
+    const tier = String(req.query.tier || 'free').toLowerCase();
+    const retailerFilter = req.query.retailer ? String(req.query.retailer).toLowerCase() : null;
+    const categoryFilter = req.query.category ? String(req.query.category).toLowerCase() : null;
+    const isPremium = tier === 'paid' || tier === 'yearly' || tier === 'premium' || tier === 'admin';
+
+    const signals = await getLiveSignals(isPremium, 50);
+    const items = signals
+      .filter((signal) => {
+        if (retailerFilter && String(signal.store || '').toLowerCase() !== retailerFilter) {
+          return false;
+        }
+
+        if (categoryFilter && categoryFilter !== 'all') {
+          const categoryValue = String(signal.category || signal.store || '').toLowerCase().replace(/\s+/g, '-');
+          return categoryValue === categoryFilter;
+        }
+
+        return true;
+      })
+      .map((signal) => ({
+        id: signal.id,
+        name: signal.productName || signal.title || 'Unnamed product',
+        title: signal.title || signal.productName || 'Unnamed product',
+        description: signal.description || '',
+        retailer: signal.store || 'unknown',
+        category: (signal.category || signal.store || 'general').toLowerCase().replace(/\s+/g, '-'),
+        price: signal.metadata?.currentPrice ?? signal.currentPrice ?? null,
+        originalPrice: signal.metadata?.previousPrice ?? signal.previousPrice ?? null,
+        discountPercent: signal.metadata?.percentChange ?? 0,
+        affiliateLink: signal.affiliateUrl || '',
+        image: signal.imageUrl || '',
+        inStock: signal.signalType !== 'out-of-stock',
+        confidence: Math.round(Number(signal.confidence || 0) * 100),
+        detectedAt: signal.createdAt || new Date().toISOString(),
+        visible: true,
+        delayMinutes: 0,
+        classification: signal.signalType || 'deal',
+        link: {
+          affiliate: signal.affiliateUrl || '',
+          raw: signal.affiliateUrl || ''
+        },
+        flags: {
+          restock: signal.signalType === 'restock'
+        },
+        timestamps: {
+          createdAt: signal.createdAt || new Date().toISOString()
+        }
+      }));
+
+    res.json({
+      tier,
+      totalItems: items.length,
+      items,
+      products: items
+    });
+  } catch (error) {
+    console.error('Feed compatibility route failed:', error.message);
+    res.status(500).json({ error: 'Failed to fetch feed' });
+  }
+});
+
 // Auth routes
 try {
-  const authRoutes = require('./routes/authRoutes');
+  const authRoutes = require('./src/routes/authRoutes');
   app.use('/auth', authRoutes);
 } catch (err) {
   console.warn('Auth route not mounted:', err.message);
@@ -264,7 +325,7 @@ try {
 
 // Admin UI route for tracked product management
 try {
-  const trackedProductRoutes = require('./routes/trackedProducts');
+  const trackedProductRoutes = require('./src/routes/trackedProducts');
   app.use('/api/tracked-products', trackedProductRoutes);
   app.use('/admin/js', express.static(path.join(__dirname, 'public', 'js')));
   app.get('/admin/tracked-products', authenticateToken, requireAdmin, (req, res) => {
@@ -275,24 +336,33 @@ try {
 }
 
 // Stripe checkout session creation
-app.post('/create-checkout-session', require('./middleware/authMiddleware').authenticateToken, async (req, res) => {
+app.post('/create-checkout-session', authenticateToken, async (req, res) => {
   try {
-    if (!STRIPE_PREMIUM_MONTHLY_PRICE_ID) {
-      return res.status(500).json({ error: 'Stripe monthly price ID is not configured' });
-    }
-
-    const session = await stripe.checkout.sessions.create({
+    const frontendUrl = String(process.env.FRONTEND_URL || 'https://stockspotdeals.com').replace(/\/$/, '');
+    const sessionConfig = {
       mode: 'subscription',
       line_items: [
         {
-          price: STRIPE_PREMIUM_MONTHLY_PRICE_ID,
+          price: CANONICAL_PREMIUM_MONTHLY_PRICE_ID,
           quantity: 1
         }
       ],
-      customer_email: req.user.email,
-      success_url: 'https://stockspotdeals.com/success',
-      cancel_url: 'https://stockspotdeals.com/cancel'
-    });
+      client_reference_id: req.user.id,
+      metadata: {
+        userId: req.user.id,
+        email: req.user.email
+      },
+      success_url: `${frontendUrl}/success`,
+      cancel_url: `${frontendUrl}/cancel`
+    };
+
+    if (req.user.stripeCustomerId) {
+      sessionConfig.customer = req.user.stripeCustomerId;
+    } else {
+      sessionConfig.customer_email = req.user.email;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     console.log('Stripe checkout session created');
 
@@ -309,7 +379,7 @@ app.post('/create-checkout-session', require('./middleware/authMiddleware').auth
 
 // AI Templates (premium-only utilities)
 try {
-  const aiTemplates = require('./routes/aiTemplates');
+  const aiTemplates = require('./src/routes/aiTemplates');
   app.use('/api/ai', aiTemplates);
 } catch (err) {
   // If middleware or file missing, log and continue (non-breaking)
@@ -318,7 +388,7 @@ try {
 
 // Smart Signal Engine
 try {
-  const signalRoutes = require('./routes/signals');
+  const signalRoutes = require('./src/routes/signals');
   app.use('/api/signals', signalRoutes);
 } catch (err) {
   // If route file missing, log and continue (non-breaking)
@@ -327,7 +397,7 @@ try {
 
 // Alert Signals for Dashboard
 try {
-  const alertSignalRoutes = require('./routes/alertSignals');
+  const alertSignalRoutes = require('./src/routes/alertSignals');
   app.use('/api/alert-signals', alertSignalRoutes);
 } catch (err) {
   // If route file missing, log and continue (non-breaking)
@@ -336,7 +406,7 @@ try {
 
 // Watchlist Routes
 try {
-  const watchlistRoutes = require('./routes/watchlist');
+  const watchlistRoutes = require('./src/routes/watchlist');
   app.use('/api/watchlist', watchlistRoutes);
 } catch (err) {
   console.warn('Watchlist route not mounted:', err.message);
@@ -344,7 +414,7 @@ try {
 
 // Push notification subscription routes
 try {
-  const pushRoutes = require('./routes/pushSubscriptions');
+  const pushRoutes = require('./src/routes/pushSubscriptions');
   app.use('/api/push', pushRoutes);
 } catch (err) {
   console.warn('Push subscription route not mounted:', err.message);
@@ -352,7 +422,7 @@ try {
 
 // Alert history routes
 try {
-  const alertRoutes = require('./routes/alerts');
+  const alertRoutes = require('./src/routes/alerts');
   app.use('/api/alerts', alertRoutes);
 } catch (err) {
   console.warn('Alerts route not mounted:', err.message);
@@ -360,7 +430,7 @@ try {
 
 // Affiliate monetization click tracking
 try {
-  const affiliateRoutes = require('./routes/affiliateRoutes');
+  const affiliateRoutes = require('./src/routes/affiliateRoutes');
   app.use('/affiliate', affiliateRoutes);
 } catch (err) {
   console.warn('Affiliate route not mounted:', err.message);
@@ -368,7 +438,7 @@ try {
 
 // User profit dashboard and value summary
 try {
-  const userValueRoutes = require('./routes/userValueRoutes');
+  const userValueRoutes = require('./src/routes/userValueRoutes');
   app.use('/user', userValueRoutes);
 } catch (err) {
   console.warn('User value route not mounted:', err.message);
@@ -397,7 +467,7 @@ try {
 
 // Initialize alert dispatcher scheduler after routes are mounted
 try {
-  const { initializeAlertDispatcher } = require('./services/AlertDispatcher');
+  const { initializeAlertDispatcher } = require('./src/services/AlertDispatcher');
   initializeAlertDispatcher();
 } catch (err) {
   console.error('Failed to initialize alert dispatcher scheduler:', err.message);
@@ -467,16 +537,16 @@ process.on('SIGINT', async () => {
 // Start server
 const startServer = async () => {
   try {
-    // Connect to MongoDB
-    // connection already established above via MONGO_URI/MONGODB_URI
-    console.log('✅ MongoDB connection already initialized');
+    console.log('✅ MongoDB connection initialized');
 
     const PORT = Number(process.env.PORT) || 3000;
     const server = app.listen(PORT, '0.0.0.0', () => {
+      activeServerPort = PORT;
       console.log(`Server is running and listening on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📊 Database: ${mongoose.connection.readyState === 1 ? mongoose.connection.host : 'pending'}`);
       console.log('📡 Multi-retailer monitoring active (Amazon, Walmart, Target, Best Buy, etc)');
+      logStartupStatus();
 
       // Start monitoring worker once, but never block backend startup on worker errors.
       try {
@@ -493,7 +563,7 @@ const startServer = async () => {
       
       // Start Layer 2 Smart Signal Engine
       try {
-        const runSignalEngine = require('./services/signalEngine');
+        const runSignalEngine = require('./src/services/signalEngine');
         
         // Run signal engine every 5 minutes in production, every 30 minutes in development
         const intervalMinutes = process.env.NODE_ENV === 'production' ? 5 : 30;
@@ -530,17 +600,14 @@ const startServer = async () => {
     
   } catch (error) {
     console.error('❌ Failed to start server:', error);
-    console.error('💡 Make sure MongoDB is running and MONGODB_URI is set correctly');
+    console.error('💡 Make sure MongoDB is running and MONGO_URI is set correctly');
     process.exit(1);
   }
 };
 
-// Start if not being imported
-if (require.main === module) {
-  startServer();
-}
-
 module.exports = {
   app,
-  startServer
+  startServer,
+  setMongoConnectionStatus,
+  logStartupStatus
 };

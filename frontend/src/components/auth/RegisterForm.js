@@ -1,1 +1,292 @@
-import React, { useState } from 'react';\nimport { useAuth } from '../../hooks/useAuth';\n\nconst RegisterForm = ({ onSuccess }) => {\n  const { register, loading } = useAuth();\n  const [formData, setFormData] = useState({\n    email: '',\n    password: '',\n    confirmPassword: ''\n  });\n  const [errors, setErrors] = useState({});\n  const [serverError, setServerError] = useState('');\n  const [passwordStrength, setPasswordStrength] = useState({\n    score: 0,\n    feedback: []\n  });\n\n  const handleChange = (e) => {\n    const { name, value } = e.target;\n    setFormData(prev => ({ ...prev, [name]: value }));\n    \n    // Clear field error when user starts typing\n    if (errors[name]) {\n      setErrors(prev => ({ ...prev, [name]: '' }));\n    }\n    \n    // Clear server error\n    if (serverError) {\n      setServerError('');\n    }\n\n    // Check password strength for password field\n    if (name === 'password') {\n      checkPasswordStrength(value);\n    }\n  };\n\n  const checkPasswordStrength = (password) => {\n    const feedback = [];\n    let score = 0;\n\n    if (password.length < 8) {\n      feedback.push('At least 8 characters long');\n    } else {\n      score += 1;\n    }\n\n    if (!/[a-z]/.test(password)) {\n      feedback.push('At least one lowercase letter');\n    } else {\n      score += 1;\n    }\n\n    if (!/[A-Z]/.test(password)) {\n      feedback.push('At least one uppercase letter');\n    } else {\n      score += 1;\n    }\n\n    if (!/\\d/.test(password)) {\n      feedback.push('At least one number');\n    } else {\n      score += 1;\n    }\n\n    if (!/[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]/.test(password)) {\n      feedback.push('At least one special character');\n    } else {\n      score += 1;\n    }\n\n    setPasswordStrength({ score, feedback });\n  };\n\n  const getPasswordStrengthColor = () => {\n    if (passwordStrength.score <= 2) return 'bg-red-500';\n    if (passwordStrength.score <= 4) return 'bg-yellow-500';\n    return 'bg-green-500';\n  };\n\n  const getPasswordStrengthText = () => {\n    if (passwordStrength.score <= 2) return 'Weak';\n    if (passwordStrength.score <= 4) return 'Medium';\n    return 'Strong';\n  };\n\n  const validateForm = () => {\n    const newErrors = {};\n    \n    if (!formData.email) {\n      newErrors.email = 'Email is required';\n    } else if (!/\\S+@\\S+\\.\\S+/.test(formData.email)) {\n      newErrors.email = 'Please enter a valid email address';\n    }\n    \n    if (!formData.password) {\n      newErrors.password = 'Password is required';\n    } else if (formData.password.length < 8) {\n      newErrors.password = 'Password must be at least 8 characters long';\n    }\n    \n    if (!formData.confirmPassword) {\n      newErrors.confirmPassword = 'Please confirm your password';\n    } else if (formData.password !== formData.confirmPassword) {\n      newErrors.confirmPassword = 'Passwords do not match';\n    }\n    \n    return newErrors;\n  };\n\n  const handleSubmit = async (e) => {\n    e.preventDefault();\n    \n    const validationErrors = validateForm();\n    if (Object.keys(validationErrors).length > 0) {\n      setErrors(validationErrors);\n      return;\n    }\n\n    try {\n      setErrors({});\n      setServerError('');\n      const response = await register({\n        email: formData.email,\n        password: formData.password,\n        confirmPassword: formData.confirmPassword\n      });\n      \n      if (onSuccess) {\n        onSuccess(response);\n      }\n    } catch (error) {\n      console.error('Registration error:', error);\n      setServerError(error.message || 'Registration failed. Please try again.');\n      \n      // Handle specific field errors\n      if (error.details) {\n        const fieldErrors = {};\n        error.details.forEach(detail => {\n          if (detail.path) {\n            fieldErrors[detail.path] = detail.msg;\n          }\n        });\n        setErrors(fieldErrors);\n      }\n    }\n  };\n\n  return (\n    <div className=\"max-w-md mx-auto bg-white rounded-lg shadow-md p-6\">\n      <h2 className=\"text-2xl font-bold text-center text-gray-900 mb-6\">\n        Create Your StockSpot Account\n      </h2>\n      \n      {serverError && (\n        <div className=\"mb-4 p-3 bg-red-50 border border-red-200 rounded-md\">\n          <p className=\"text-red-600 text-sm\">{serverError}</p>\n        </div>\n      )}\n\n      <form onSubmit={handleSubmit} className=\"space-y-4\">\n        <div>\n          <label htmlFor=\"email\" className=\"block text-sm font-medium text-gray-700 mb-1\">\n            Email Address\n          </label>\n          <input\n            type=\"email\"\n            id=\"email\"\n            name=\"email\"\n            value={formData.email}\n            onChange={handleChange}\n            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${\n              errors.email ? 'border-red-300' : 'border-gray-300'\n            }`}\n            placeholder=\"Enter your email\"\n            disabled={loading}\n          />\n          {errors.email && (\n            <p className=\"mt-1 text-sm text-red-600\">{errors.email}</p>\n          )}\n        </div>\n\n        <div>\n          <label htmlFor=\"password\" className=\"block text-sm font-medium text-gray-700 mb-1\">\n            Password\n          </label>\n          <input\n            type=\"password\"\n            id=\"password\"\n            name=\"password\"\n            value={formData.password}\n            onChange={handleChange}\n            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${\n              errors.password ? 'border-red-300' : 'border-gray-300'\n            }`}\n            placeholder=\"Create a strong password\"\n            disabled={loading}\n          />\n          \n          {/* Password strength indicator */}\n          {formData.password && (\n            <div className=\"mt-2\">\n              <div className=\"flex items-center space-x-2\">\n                <div className=\"flex-1 bg-gray-200 rounded-full h-2\">\n                  <div\n                    className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}\n                    style={{ width: `${(passwordStrength.score / 5) * 100}%` }}\n                  ></div>\n                </div>\n                <span className=\"text-xs font-medium text-gray-600\">\n                  {getPasswordStrengthText()}\n                </span>\n              </div>\n              \n              {passwordStrength.feedback.length > 0 && (\n                <div className=\"mt-1\">\n                  <p className=\"text-xs text-gray-600\">Password must include:</p>\n                  <ul className=\"text-xs text-gray-500 list-disc list-inside\">\n                    {passwordStrength.feedback.map((item, index) => (\n                      <li key={index}>{item}</li>\n                    ))}\n                  </ul>\n                </div>\n              )}\n            </div>\n          )}\n          \n          {errors.password && (\n            <p className=\"mt-1 text-sm text-red-600\">{errors.password}</p>\n          )}\n        </div>\n\n        <div>\n          <label htmlFor=\"confirmPassword\" className=\"block text-sm font-medium text-gray-700 mb-1\">\n            Confirm Password\n          </label>\n          <input\n            type=\"password\"\n            id=\"confirmPassword\"\n            name=\"confirmPassword\"\n            value={formData.confirmPassword}\n            onChange={handleChange}\n            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${\n              errors.confirmPassword ? 'border-red-300' : 'border-gray-300'\n            }`}\n            placeholder=\"Confirm your password\"\n            disabled={loading}\n          />\n          {errors.confirmPassword && (\n            <p className=\"mt-1 text-sm text-red-600\">{errors.confirmPassword}</p>\n          )}\n        </div>\n\n        <div className=\"bg-blue-50 border border-blue-200 rounded-md p-3\">\n          <h4 className=\"text-sm font-medium text-blue-900 mb-1\">Free Plan Includes:</h4>\n          <ul className=\"text-xs text-blue-700 space-y-1\">\n            <li>• Track up to 10 products</li>\n            <li>• 5 alerts per day</li>\n            <li>• 100 API calls per hour</li>\n            <li>• Basic deal discovery</li>\n          </ul>\n        </div>\n\n        <button\n          type=\"submit\"\n          disabled={loading}\n          className=\"w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200\"\n        >\n          {loading ? (\n            <div className=\"flex items-center justify-center\">\n              <div className=\"animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2\"></div>\n              Creating Account...\n            </div>\n          ) : (\n            'Create Account'\n          )}\n        </button>\n      </form>\n\n      <div className=\"mt-6 text-center\">\n        <p className=\"text-sm text-gray-600\">\n          Already have an account?{' '}\n          <a href=\"/login\" className=\"text-blue-600 hover:text-blue-500 font-medium\">\n            Sign in here\n          </a>\n        </p>\n      </div>\n    </div>\n  );\n};\n\nexport default RegisterForm;
+import React, { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+
+const RegisterForm = ({ onSuccess }) => {
+  const { register, loading } = useAuth();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState({
+    score: 0,
+    feedback: []
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear field error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    
+    // Clear server error
+    if (serverError) {
+      setServerError('');
+    }
+
+    // Check password strength for password field
+    if (name === 'password') {
+      checkPasswordStrength(value);
+    }
+  };
+
+  const checkPasswordStrength = (password) => {
+    const feedback = [];
+    let score = 0;
+
+    if (password.length < 8) {
+      feedback.push('At least 8 characters long');
+    } else {
+      score += 1;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      feedback.push('At least one lowercase letter');
+    } else {
+      score += 1;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      feedback.push('At least one uppercase letter');
+    } else {
+      score += 1;
+    }
+
+    if (!/\d/.test(password)) {
+      feedback.push('At least one number');
+    } else {
+      score += 1;
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      feedback.push('At least one special character');
+    } else {
+      score += 1;
+    }
+
+    setPasswordStrength({ score, feedback });
+  };
+
+  const getPasswordStrengthColor = () => {
+    if (passwordStrength.score <= 2) return 'bg-red-500';
+    if (passwordStrength.score <= 4) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  const getPasswordStrengthText = () => {
+    if (passwordStrength.score <= 2) return 'Weak';
+    if (passwordStrength.score <= 4) return 'Medium';
+    return 'Strong';
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
+    }
+    
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    try {
+      setErrors({});
+      setServerError('');
+      const response = await register({
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
+      });
+      
+      if (onSuccess) {
+        onSuccess(response);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setServerError(error.message || 'Registration failed. Please try again.');
+      
+      // Handle specific field errors
+      if (error.details) {
+        const fieldErrors = {};
+        error.details.forEach(detail => {
+          if (detail.path) {
+            fieldErrors[detail.path] = detail.msg;
+          }
+        });
+        setErrors(fieldErrors);
+      }
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">
+        Create Your StockSpot Account
+      </h2>
+      
+      {serverError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600 text-sm">{serverError}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email Address
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              errors.email ? 'border-red-300' : 'border-gray-300'
+            }`}
+            placeholder="Enter your email"
+            disabled={loading}
+          />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              errors.password ? 'border-red-300' : 'border-gray-300'
+            }`}
+            placeholder="Create a strong password"
+            disabled={loading}
+          />
+          
+          {/* Password strength indicator */}
+          {formData.password && (
+            <div className="mt-2">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
+                    style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs font-medium text-gray-600">
+                  {getPasswordStrengthText()}
+                </span>
+              </div>
+              
+              {passwordStrength.feedback.length > 0 && (
+                <div className="mt-1">
+                  <p className="text-xs text-gray-600">Password must include:</p>
+                  <ul className="text-xs text-gray-500 list-disc list-inside">
+                    {passwordStrength.feedback.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            Confirm Password
+          </label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+            }`}
+            placeholder="Confirm your password"
+            disabled={loading}
+          />
+          {errors.confirmPassword && (
+            <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+          )}
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <h4 className="text-sm font-medium text-blue-900 mb-1">Free Plan Includes:</h4>
+          <ul className="text-xs text-blue-700 space-y-1">
+            <li>• Track up to 10 products</li>
+            <li>• 5 alerts per day</li>
+            <li>• 100 API calls per hour</li>
+            <li>• Basic deal discovery</li>
+          </ul>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+        >
+          {loading ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Creating Account...
+            </div>
+          ) : (
+            'Create Account'
+          )}
+        </button>
+      </form>
+
+      <div className="mt-6 text-center">
+        <p className="text-sm text-gray-600">
+          Already have an account?{' '}
+          <a href="/login" className="text-blue-600 hover:text-blue-500 font-medium">
+            Sign in here
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default RegisterForm;

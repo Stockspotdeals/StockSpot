@@ -3,10 +3,12 @@
  * Creates collections and indexes for Layer 2 smart signals
  */
 
-require("dotenv").config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
+const { initEnvironment } = require('./utils/envInit');
+initEnvironment({ requireMongoUri: true, logMongoStatus: true });
 const mongoose = require("mongoose");
 
-const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
+const uri = process.env.MONGO_URI;
 const mongooseOptions = {
   serverSelectionTimeoutMS: 10000
 };
@@ -251,7 +253,7 @@ const mongooseOptions = {
     console.log("\n🎯 Next Steps:\n");
     console.log("   1. Open MongoDB extension in VS Code");
     console.log("   2. Add connection:");
-    console.log("      mongodb+srv://stockspotdeals_db_user:*****@stockspot-cluster.njhnpac.mongodb.net/stockspot");
+    console.log("      mongodb+srv://<username>:*****@<cluster-host>/stockspot");
     console.log("   3. Browse collections in the sidebar");
     console.log("   4. View documents and manage data directly\n");
     console.log("=" .repeat(60) + "\n");

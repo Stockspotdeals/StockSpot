@@ -1,1 +1,276 @@
-import axios from 'axios';\n\nconst API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';\n\n// Create axios instance\nconst apiClient = axios.create({\n  baseURL: API_BASE_URL,\n  withCredentials: true, // Include cookies for refresh token\n  headers: {\n    'Content-Type': 'application/json'\n  }\n});\n\n// Token storage\nconst TOKEN_KEY = 'stockspot_access_token';\n\nclass AuthService {\n  constructor() {\n    this.setupInterceptors();\n  }\n\n  /**\n   * Setup axios interceptors for token handling\n   */\n  setupInterceptors() {\n    // Request interceptor - add auth token\n    apiClient.interceptors.request.use(\n      (config) => {\n        const token = this.getToken();\n        if (token) {\n          config.headers.Authorization = `Bearer ${token}`;\n        }\n        return config;\n      },\n      (error) => Promise.reject(error)\n    );\n\n    // Response interceptor - handle token refresh\n    apiClient.interceptors.response.use(\n      (response) => response,\n      async (error) => {\n        const originalRequest = error.config;\n\n        if (\n          error.response?.status === 401 &&\n          error.response?.data?.code === 'TOKEN_EXPIRED' &&\n          !originalRequest._retry\n        ) {\n          originalRequest._retry = true;\n\n          try {\n            await this.refreshToken();\n            // Retry original request with new token\n            const token = this.getToken();\n            if (token) {\n              originalRequest.headers.Authorization = `Bearer ${token}`;\n            }\n            return apiClient(originalRequest);\n          } catch (refreshError) {\n            // Refresh failed, redirect to login\n            this.logout();\n            window.location.href = '/login';\n            return Promise.reject(refreshError);\n          }\n        }\n\n        return Promise.reject(error);\n      }\n    );\n  }\n\n  /**\n   * Store access token\n   */\n  setToken(token) {\n    if (token) {\n      localStorage.setItem(TOKEN_KEY, token);\n    } else {\n      localStorage.removeItem(TOKEN_KEY);\n    }\n  }\n\n  /**\n   * Get stored access token\n   */\n  getToken() {\n    return localStorage.getItem(TOKEN_KEY);\n  }\n\n  /**\n   * Check if user is authenticated\n   */\n  isAuthenticated() {\n    const token = this.getToken();\n    if (!token) return false;\n\n    try {\n      // Basic JWT structure check\n      const payload = JSON.parse(atob(token.split('.')[1]));\n      const now = Date.now() / 1000;\n      return payload.exp > now;\n    } catch {\n      return false;\n    }\n  }\n\n  /**\n   * Get current user info from token\n   */\n  getCurrentUser() {\n    const token = this.getToken();\n    if (!token) return null;\n\n    try {\n      const payload = JSON.parse(atob(token.split('.')[1]));\n      return {\n        id: payload.userId,\n        email: payload.email,\n        plan: payload.plan,\n        status: payload.status\n      };\n    } catch {\n      return null;\n    }\n  }\n\n  /**\n   * Register new user\n   */\n  async register(userData) {\n    try {\n      const response = await apiClient.post('/auth/register', userData);\n      \n      if (response.data.accessToken) {\n        this.setToken(response.data.accessToken);\n      }\n      \n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Login user\n   */\n  async login(credentials) {\n    try {\n      const response = await apiClient.post('/auth/login', credentials);\n      \n      if (response.data.accessToken) {\n        this.setToken(response.data.accessToken);\n      }\n      \n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Refresh access token\n   */\n  async refreshToken() {\n    try {\n      const response = await apiClient.post('/auth/refresh');\n      \n      if (response.data.accessToken) {\n        this.setToken(response.data.accessToken);\n      }\n      \n      return response.data;\n    } catch (error) {\n      this.setToken(null); // Clear invalid token\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Logout user\n   */\n  async logout() {\n    try {\n      await apiClient.post('/auth/logout');\n    } catch (error) {\n      // Continue with logout even if API call fails\n      console.error('Logout API call failed:', error);\n    } finally {\n      this.setToken(null);\n    }\n  }\n\n  /**\n   * Logout from all devices\n   */\n  async logoutAll() {\n    try {\n      await apiClient.post('/auth/logout-all');\n    } catch (error) {\n      console.error('Logout all API call failed:', error);\n    } finally {\n      this.setToken(null);\n    }\n  }\n\n  /**\n   * Get user profile\n   */\n  async getProfile() {\n    try {\n      const response = await apiClient.get('/auth/profile');\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Update user profile\n   */\n  async updateProfile(profileData) {\n    try {\n      const response = await apiClient.put('/auth/profile', profileData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Change password\n   */\n  async changePassword(passwordData) {\n    try {\n      const response = await apiClient.put('/auth/change-password', passwordData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Handle API errors consistently\n   */\n  handleError(error) {\n    if (error.response) {\n      // Server responded with error status\n      const { data, status } = error.response;\n      return {\n        message: data.message || 'An error occurred',\n        details: data.details || [],\n        code: data.code,\n        status\n      };\n    } else if (error.request) {\n      // Request made but no response\n      return {\n        message: 'Network error - please check your connection',\n        code: 'NETWORK_ERROR'\n      };\n    } else {\n      // Something else happened\n      return {\n        message: error.message || 'An unexpected error occurred',\n        code: 'UNKNOWN_ERROR'\n      };\n    }\n  }\n}\n\n// Create and export singleton instance\nconst authService = new AuthService();\nexport default authService;\n\n// Also export the configured axios instance for other services\nexport { apiClient };
+import axios from 'axios';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || window.location.origin;
+
+// Create axios instance
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true, // Include cookies for refresh token
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Token storage
+const TOKEN_KEY = 'stockspot_access_token';
+
+class AuthService {
+  constructor() {
+    this.setupInterceptors();
+  }
+
+  /**
+   * Setup axios interceptors for token handling
+   */
+  setupInterceptors() {
+    // Request interceptor - add auth token
+    apiClient.interceptors.request.use(
+      (config) => {
+        const token = this.getToken();
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor - handle token refresh
+    apiClient.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (
+          error.response?.status === 401 &&
+          error.response?.data?.code === 'TOKEN_EXPIRED' &&
+          !originalRequest._retry
+        ) {
+          originalRequest._retry = true;
+
+          try {
+            await this.refreshToken();
+            // Retry original request with new token
+            const token = this.getToken();
+            if (token) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return apiClient(originalRequest);
+          } catch (refreshError) {
+            // Refresh failed, redirect to login
+            this.logout();
+            window.location.href = '/login';
+            return Promise.reject(refreshError);
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  /**
+   * Store access token
+   */
+  setToken(token) {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  }
+
+  /**
+   * Get stored access token
+   */
+  getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated() {
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      // Basic JWT structure check
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const now = Date.now() / 1000;
+      return payload.exp > now;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get current user info from token
+   */
+  getCurrentUser() {
+    const token = this.getToken();
+    if (!token) return null;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return {
+        id: payload.userId,
+        email: payload.email,
+        plan: payload.plan,
+        status: payload.status
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Register new user
+   */
+  async register(userData) {
+    try {
+      const response = await apiClient.post('/auth/register', userData);
+      
+      if (response.data.accessToken) {
+        this.setToken(response.data.accessToken);
+      }
+      
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Login user
+   */
+  async login(credentials) {
+    try {
+      const response = await apiClient.post('/auth/login', credentials);
+      
+      if (response.data.accessToken) {
+        this.setToken(response.data.accessToken);
+      }
+      
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Refresh access token
+   */
+  async refreshToken() {
+    try {
+      const response = await apiClient.post('/auth/refresh');
+      
+      if (response.data.accessToken) {
+        this.setToken(response.data.accessToken);
+      }
+      
+      return response.data;
+    } catch (error) {
+      this.setToken(null); // Clear invalid token
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Logout user
+   */
+  async logout() {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (error) {
+      // Continue with logout even if API call fails
+      console.error('Logout API call failed:', error);
+    } finally {
+      this.setToken(null);
+    }
+  }
+
+  /**
+   * Logout from all devices
+   */
+  async logoutAll() {
+    try {
+      await apiClient.post('/auth/logout-all');
+    } catch (error) {
+      console.error('Logout all API call failed:', error);
+    } finally {
+      this.setToken(null);
+    }
+  }
+
+  /**
+   * Get user profile
+   */
+  async getProfile() {
+    try {
+      const response = await apiClient.get('/auth/profile');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(profileData) {
+    try {
+      const response = await apiClient.put('/auth/profile', profileData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Change password
+   */
+  async changePassword(passwordData) {
+    try {
+      const response = await apiClient.put('/auth/change-password', passwordData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Handle API errors consistently
+   */
+  handleError(error) {
+    if (error.response) {
+      // Server responded with error status
+      const { data, status } = error.response;
+      return {
+        message: data.message || 'An error occurred',
+        details: data.details || [],
+        code: data.code,
+        status
+      };
+    } else if (error.request) {
+      // Request made but no response
+      return {
+        message: 'Network error - please check your connection',
+        code: 'NETWORK_ERROR'
+      };
+    } else {
+      // Something else happened
+      return {
+        message: error.message || 'An unexpected error occurred',
+        code: 'UNKNOWN_ERROR'
+      };
+    }
+  }
+}
+
+// Create and export singleton instance
+const authService = new AuthService();
+export default authService;
+
+// Also export the configured axios instance for other services
+export { apiClient };

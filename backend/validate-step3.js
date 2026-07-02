@@ -142,8 +142,7 @@ class StockSpotValidator {
 
     const checks = [
       { name: 'Tier-aware delays', pattern: /tierDelays|FREE_TIER_DELAY/ },
-      { name: 'SendGrid support', pattern: /sendgrid|SendGrid/ },
-      { name: 'Nodemailer support', pattern: /nodemailer|Nodemailer/ },
+      { name: 'Resend support', pattern: /resend|Resend|RESEND_API_KEY/ },
       { name: 'Email queueing', pattern: /emailQueue|queueEmail/ },
       { name: 'HTML templates', pattern: /generateEmailHTML/ }
     ];
@@ -313,8 +312,7 @@ class StockSpotValidator {
     const requiredDeps = [
       { name: 'stripe', reason: 'Stripe monetization' },
       { name: 'node-cron', reason: 'Feed scheduling' },
-      { name: 'nodemailer', reason: 'Email notifications' },
-      { name: '@sendgrid/mail', reason: 'SendGrid integration' },
+      { name: 'axios', reason: 'Resend email integration' },
       { name: 'mongoose', reason: 'MongoDB' },
       { name: 'express', reason: 'Web server' }
     ];

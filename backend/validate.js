@@ -19,6 +19,9 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
+const { initEnvironment } = require('./utils/envInit');
+
+initEnvironment({ requireMongoUri: false, logMongoStatus: false });
 
 const execPromise = util.promisify(exec);
 
@@ -110,7 +113,7 @@ function checkEnvironment() {
   console.log('\n⚙️  Checking environment variables...');
   
   const requiredVars = {
-    production: ['MONGODB_URI', 'STRIPE_SECRET_KEY', 'SENDGRID_API_KEY'],
+    production: ['MONGO_URI', 'STRIPE_SECRET_KEY', 'RESEND_API_KEY', 'EMAIL_FROM'],
     dryRun: [], // Dry-run needs no vars
   };
 
@@ -158,8 +161,7 @@ async function checkDependencies() {
     'mongoose',
     'stripe',
     'node-cron',
-    'nodemailer',
-    '@sendgrid/mail',
+    'axios',
   ];
 
   let allInstalled = true;

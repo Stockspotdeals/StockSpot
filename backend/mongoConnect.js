@@ -1,13 +1,10 @@
-require("dotenv").config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
+const { initEnvironment } = require('./utils/envInit');
+initEnvironment({ requireMongoUri: true, logMongoStatus: true });
 const mongoose = require("mongoose");
 
 // Use connection string from .env
-const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
-
-if (!uri) {
-  console.error("❌ MONGO_URI or MONGODB_URI not found in .env file");
-  process.exit(1);
-}
+const uri = process.env.MONGO_URI;
 
 const mongooseOptions = {
   serverSelectionTimeoutMS: 10000

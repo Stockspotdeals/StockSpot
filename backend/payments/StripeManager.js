@@ -1,3 +1,6 @@
+const { initEnvironment } = require('../utils/envInit');
+initEnvironment({ requireMongoUri: false, logMongoStatus: false });
+
 /**
  * StripeManager - Payment Processing & Subscription Management
  * 
@@ -322,7 +325,7 @@ class StripeManager {
   async sendSubscriptionConfirmation(user, tier) {
     // Integration with email service
     console.log(`📧 Sending subscription confirmation to ${user.email}`);
-    // Implementation depends on email provider (SendGrid/Nodemailer)
+    // Implementation depends on the centralized Resend-backed email service.
   }
 
   /**

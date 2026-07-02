@@ -1,9 +1,14 @@
 #!/usr/bin/env node
-require('dotenv').config();
+const path = require('path');
+const { loadBackendEnv } = require('./loadEnv');
+
+const rootDir = process.cwd();
+const backendRoot = path.resolve(rootDir, 'backend');
+loadBackendEnv();
 
 const mongoose = require('mongoose');
-const { AuthUserModel } = require('../backend/models/AuthUser');
-const { hashPassword, validatePasswordStrength } = require('../backend/utils/passwordUtils');
+const { AuthUserModel } = require(path.resolve(backendRoot, 'src/models/AuthUser'));
+const { hashPassword, validatePasswordStrength } = require(path.resolve(backendRoot, 'src/utils/passwordUtils'));
 
 async function main() {
   const enabled = process.env.BOOTSTRAP_OWNER === '1';
@@ -15,13 +20,13 @@ async function main() {
     process.exit(1);
   }
 
-  if (!process.env.MONGO_URI) {
-    console.error('MONGO_URI is required.');
+  if (!email || !password) {
+    console.error('OWNER_EMAIL and OWNER_PASSWORD are required.');
     process.exit(1);
   }
 
-  if (!email || !password) {
-    console.error('OWNER_EMAIL and OWNER_PASSWORD are required.');
+  if (!process.env.MONGO_URI) {
+    console.error('MONGO_URI is required.');
     process.exit(1);
   }
 
@@ -36,7 +41,7 @@ async function main() {
   try {
     const existingAdmin = await AuthUserModel.findOne({ plan: 'admin', status: 'active' });
     if (existingAdmin) {
-      console.log(`Admin already exists: ${existingAdmin.email}. No changes made.`);
+      console.log('Admin already exists. No changes made.');
       return;
     }
 
@@ -46,7 +51,7 @@ async function main() {
       existingUser.status = 'active';
       existingUser.updatedAt = new Date();
       await existingUser.save();
-      console.log(`Promoted existing user to admin: ${existingUser.email}`);
+      console.log('Promoted existing user to admin.');
       return;
     }
 
@@ -59,7 +64,7 @@ async function main() {
       status: 'active'
     });
 
-    console.log(`Created owner admin account: ${owner.email}`);
+    console.log('Created owner admin account.');
   } finally {
     await mongoose.disconnect().catch(() => {});
   }

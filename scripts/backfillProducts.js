@@ -1,14 +1,15 @@
-require('dotenv').config();
+const path = require('path');
+const { loadBackendEnv } = require('./loadEnv');
+
+const rootDir = process.cwd();
+const backendRoot = path.resolve(rootDir, 'backend');
+loadBackendEnv();
 const mongoose = require('mongoose');
-const { TrackedProduct } = require('../backend/models/TrackedProduct');
-const { upsertProduct } = require('../backend/services/productUpsert');
+const { TrackedProduct } = require(path.resolve(backendRoot, 'src/models/TrackedProduct'));
+const { upsertProduct } = require(path.resolve(backendRoot, 'src/services/productUpsert'));
 
 async function main() {
-  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/stockspot';
-  if (!uri) {
-    console.error('❌ No MongoDB URI configured (MONGO_URI or MONGODB_URI)');
-    process.exit(1);
-  }
+  const uri = process.env.MONGO_URI;
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   console.log('✅ Connected to MongoDB for backfill');

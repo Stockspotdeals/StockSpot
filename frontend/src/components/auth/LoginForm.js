@@ -1,1 +1,159 @@
-import React, { useState } from 'react';\nimport { useAuth } from '../../hooks/useAuth';\n\nconst LoginForm = ({ onSuccess }) => {\n  const { login, loading } = useAuth();\n  const [formData, setFormData] = useState({\n    email: '',\n    password: ''\n  });\n  const [errors, setErrors] = useState({});\n  const [serverError, setServerError] = useState('');\n\n  const handleChange = (e) => {\n    const { name, value } = e.target;\n    setFormData(prev => ({ ...prev, [name]: value }));\n    // Clear field error when user starts typing\n    if (errors[name]) {\n      setErrors(prev => ({ ...prev, [name]: '' }));\n    }\n    // Clear server error\n    if (serverError) {\n      setServerError('');\n    }\n  };\n\n  const validateForm = () => {\n    const newErrors = {};\n    \n    if (!formData.email) {\n      newErrors.email = 'Email is required';\n    } else if (!/\\S+@\\S+\\.\\S+/.test(formData.email)) {\n      newErrors.email = 'Please enter a valid email address';\n    }\n    \n    if (!formData.password) {\n      newErrors.password = 'Password is required';\n    }\n    \n    return newErrors;\n  };\n\n  const handleSubmit = async (e) => {\n    e.preventDefault();\n    \n    const validationErrors = validateForm();\n    if (Object.keys(validationErrors).length > 0) {\n      setErrors(validationErrors);\n      return;\n    }\n\n    try {\n      setErrors({});\n      setServerError('');\n      const response = await login(formData);\n      \n      if (onSuccess) {\n        onSuccess(response);\n      }\n    } catch (error) {\n      console.error('Login error:', error);\n      setServerError(error.message || 'Login failed. Please try again.');\n      \n      // Handle specific field errors\n      if (error.details) {\n        const fieldErrors = {};\n        error.details.forEach(detail => {\n          if (detail.path) {\n            fieldErrors[detail.path] = detail.msg;\n          }\n        });\n        setErrors(fieldErrors);\n      }\n    }\n  };\n\n  return (\n    <div className=\"max-w-md mx-auto bg-white rounded-lg shadow-md p-6\">\n      <h2 className=\"text-2xl font-bold text-center text-gray-900 mb-6\">\n        Sign In to StockSpot\n      </h2>\n      \n      {serverError && (\n        <div className=\"mb-4 p-3 bg-red-50 border border-red-200 rounded-md\">\n          <p className=\"text-red-600 text-sm\">{serverError}</p>\n        </div>\n      )}\n\n      <form onSubmit={handleSubmit} className=\"space-y-4\">\n        <div>\n          <label htmlFor=\"email\" className=\"block text-sm font-medium text-gray-700 mb-1\">\n            Email Address\n          </label>\n          <input\n            type=\"email\"\n            id=\"email\"\n            name=\"email\"\n            value={formData.email}\n            onChange={handleChange}\n            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${\n              errors.email ? 'border-red-300' : 'border-gray-300'\n            }`}\n            placeholder=\"Enter your email\"\n            disabled={loading}\n          />\n          {errors.email && (\n            <p className=\"mt-1 text-sm text-red-600\">{errors.email}</p>\n          )}\n        </div>\n\n        <div>\n          <label htmlFor=\"password\" className=\"block text-sm font-medium text-gray-700 mb-1\">\n            Password\n          </label>\n          <input\n            type=\"password\"\n            id=\"password\"\n            name=\"password\"\n            value={formData.password}\n            onChange={handleChange}\n            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${\n              errors.password ? 'border-red-300' : 'border-gray-300'\n            }`}\n            placeholder=\"Enter your password\"\n            disabled={loading}\n          />\n          {errors.password && (\n            <p className=\"mt-1 text-sm text-red-600\">{errors.password}</p>\n          )}\n        </div>\n\n        <button\n          type=\"submit\"\n          disabled={loading}\n          className=\"w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200\"\n        >\n          {loading ? (\n            <div className=\"flex items-center justify-center\">\n              <div className=\"animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2\"></div>\n              Signing In...\n            </div>\n          ) : (\n            'Sign In'\n          )}\n        </button>\n      </form>\n\n      <div className=\"mt-6 text-center\">\n        <p className=\"text-sm text-gray-600\">\n          Don't have an account?{' '}\n          <a href=\"/register\" className=\"text-blue-600 hover:text-blue-500 font-medium\">\n            Sign up here\n          </a>\n        </p>\n      </div>\n    </div>\n  );\n};\n\nexport default LoginForm;
+import React, { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+
+const LoginForm = ({ onSuccess }) => {
+  const { login, loading } = useAuth();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear field error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    // Clear server error
+    if (serverError) {
+      setServerError('');
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+    
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    try {
+      setErrors({});
+      setServerError('');
+      const response = await login(formData);
+      
+      if (onSuccess) {
+        onSuccess(response);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setServerError(error.message || 'Login failed. Please try again.');
+      
+      // Handle specific field errors
+      if (error.details) {
+        const fieldErrors = {};
+        error.details.forEach(detail => {
+          if (detail.path) {
+            fieldErrors[detail.path] = detail.msg;
+          }
+        });
+        setErrors(fieldErrors);
+      }
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">
+        Sign In to StockSpot
+      </h2>
+      
+      {serverError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600 text-sm">{serverError}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email Address
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              errors.email ? 'border-red-300' : 'border-gray-300'
+            }`}
+            placeholder="Enter your email"
+            disabled={loading}
+          />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              errors.password ? 'border-red-300' : 'border-gray-300'
+            }`}
+            placeholder="Enter your password"
+            disabled={loading}
+          />
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+        >
+          {loading ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Signing In...
+            </div>
+          ) : (
+            'Sign In'
+          )}
+        </button>
+      </form>
+
+      <div className="mt-6 text-center">
+        <p className="text-sm text-gray-600">
+          Don't have an account?{' '}
+          <a href="/register" className="text-blue-600 hover:text-blue-500 font-medium">
+            Sign up here
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default LoginForm;

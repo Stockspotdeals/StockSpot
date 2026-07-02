@@ -1,1 +1,246 @@
-import { apiClient } from './authService';\n\nclass ApiService {\n  /**\n   * Health check\n   */\n  async getHealth() {\n    try {\n      const response = await apiClient.get('/health');\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Get API info\n   */\n  async getInfo() {\n    try {\n      const response = await apiClient.get('/info');\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Get deals with pagination and filters\n   */\n  async getDeals(params = {}) {\n    try {\n      const response = await apiClient.get('/deals', { params });\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Create new deal\n   */\n  async createDeal(dealData) {\n    try {\n      const response = await apiClient.post('/deals', dealData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Get analytics data\n   */\n  async getAnalytics(params = {}) {\n    try {\n      const response = await apiClient.get('/analytics', { params });\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Post to Twitter\n   */\n  async postToTwitter(postData) {\n    try {\n      const response = await apiClient.post('/twitter/post', postData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Search Amazon products\n   */\n  async searchAmazonProducts(params = {}) {\n    try {\n      const response = await apiClient.get('/amazon/products', { params });\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Shorten URL\n   */\n  async shortenUrl(urlData) {\n    try {\n      const response = await apiClient.post('/links/shorten', urlData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Get all users (admin only)\n   */\n  async getUsers(params = {}) {\n    try {\n      const response = await apiClient.get('/users', { params });\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Get user by ID\n   */\n  async getUserById(userId) {\n    try {\n      const response = await apiClient.get(`/users/${userId}`);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Update user (admin only)\n   */\n  async updateUser(userId, userData) {\n    try {\n      const response = await apiClient.put(`/users/${userId}`, userData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Delete user (admin only)\n   */\n  async deleteUser(userId) {\n    try {\n      const response = await apiClient.delete(`/users/${userId}`);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Get user usage statistics\n   */\n  async getUserUsage(userId) {\n    try {\n      const response = await apiClient.get(`/users/${userId}/usage`);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Reset user usage (admin only)\n   */\n  async resetUserUsage(userId, resetData) {\n    try {\n      const response = await apiClient.post(`/users/${userId}/reset-usage`, resetData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Get plan information\n   */\n  async getPlanInfo() {\n    try {\n      const response = await apiClient.get('/users/plans/info');\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Upgrade user plan\n   */\n  async upgradePlan(userId, planData) {\n    try {\n      const response = await apiClient.post(`/users/${userId}/upgrade`, planData);\n      return response.data;\n    } catch (error) {\n      throw this.handleError(error);\n    }\n  }\n\n  /**\n   * Handle API errors consistently\n   */\n  handleError(error) {\n    if (error.response) {\n      const { data, status } = error.response;\n      \n      // Handle specific error types\n      switch (data.code) {\n        case 'RATE_LIMIT_EXCEEDED':\n        case 'PLAN_RATE_LIMIT_EXCEEDED':\n        case 'FEATURE_LIMIT_EXCEEDED':\n          return {\n            ...data,\n            isLimitError: true\n          };\n        case 'PREMIUM_REQUIRED':\n          return {\n            ...data,\n            isPremiumRequired: true\n          };\n        case 'INSUFFICIENT_PLAN':\n          return {\n            ...data,\n            isPlanUpgradeRequired: true\n          };\n        default:\n          return {\n            message: data.message || 'An error occurred',\n            details: data.details || [],\n            code: data.code,\n            status\n          };\n      }\n    } else if (error.request) {\n      return {\n        message: 'Network error - please check your connection',\n        code: 'NETWORK_ERROR'\n      };\n    } else {\n      return {\n        message: error.message || 'An unexpected error occurred',\n        code: 'UNKNOWN_ERROR'\n      };\n    }\n  }\n}\n\n// Create and export singleton instance\nconst apiService = new ApiService();\nexport default apiService;
+import { apiClient } from './authService';
+
+class ApiService {
+  /**
+   * Health check
+   */
+  async getHealth() {
+    try {
+      const response = await apiClient.get('/health');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get API info
+   */
+  async getInfo() {
+    try {
+      const response = await apiClient.get('/api/status');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get deals with pagination and filters
+   */
+  async getDeals(params = {}) {
+    try {
+      const response = await apiClient.get('/api/feed', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Create new deal
+   */
+  async createDeal(dealData) {
+    try {
+      const response = await apiClient.post('/create-checkout-session', dealData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get analytics data
+   */
+  async getAnalytics(params = {}) {
+    try {
+      const response = await apiClient.get('/analytics', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Post to Twitter
+   */
+  async postToTwitter(postData) {
+    try {
+      const response = await apiClient.post('/twitter/post', postData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Search Amazon products
+   */
+  async searchAmazonProducts(params = {}) {
+    try {
+      const response = await apiClient.get('/amazon/products', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Shorten URL
+   */
+  async shortenUrl(urlData) {
+    try {
+      const response = await apiClient.post('/links/shorten', urlData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get all users (admin only)
+   */
+  async getUsers(params = {}) {
+    try {
+      const response = await apiClient.get('/users', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get user by ID
+   */
+  async getUserById(userId) {
+    try {
+      const response = await apiClient.get(`/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Update user (admin only)
+   */
+  async updateUser(userId, userData) {
+    try {
+      const response = await apiClient.put(`/users/${userId}`, userData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Delete user (admin only)
+   */
+  async deleteUser(userId) {
+    try {
+      const response = await apiClient.delete(`/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get user usage statistics
+   */
+  async getUserUsage(userId) {
+    try {
+      const response = await apiClient.get(`/users/${userId}/usage`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Reset user usage (admin only)
+   */
+  async resetUserUsage(userId, resetData) {
+    try {
+      const response = await apiClient.post(`/users/${userId}/reset-usage`, resetData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get plan information
+   */
+  async getPlanInfo() {
+    try {
+      const response = await apiClient.get('/users/plans/info');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Upgrade user plan
+   */
+  async upgradePlan(userId, planData) {
+    try {
+      const response = await apiClient.post(`/users/${userId}/upgrade`, planData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Handle API errors consistently
+   */
+  handleError(error) {
+    if (error.response) {
+      const { data, status } = error.response;
+      
+      // Handle specific error types
+      switch (data.code) {
+        case 'RATE_LIMIT_EXCEEDED':
+        case 'PLAN_RATE_LIMIT_EXCEEDED':
+        case 'FEATURE_LIMIT_EXCEEDED':
+          return {
+            ...data,
+            isLimitError: true
+          };
+        case 'PREMIUM_REQUIRED':
+          return {
+            ...data,
+            isPremiumRequired: true
+          };
+        case 'INSUFFICIENT_PLAN':
+          return {
+            ...data,
+            isPlanUpgradeRequired: true
+          };
+        default:
+          return {
+            message: data.message || 'An error occurred',
+            details: data.details || [],
+            code: data.code,
+            status
+          };
+      }
+    } else if (error.request) {
+      return {
+        message: 'Network error - please check your connection',
+        code: 'NETWORK_ERROR'
+      };
+    } else {
+      return {
+        message: error.message || 'An unexpected error occurred',
+        code: 'UNKNOWN_ERROR'
+      };
+    }
+  }
+}
+
+// Create and export singleton instance
+const apiService = new ApiService();
+export default apiService;

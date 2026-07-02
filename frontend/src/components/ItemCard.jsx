@@ -48,11 +48,11 @@ function ItemCard({ item, tier }) {
     }
 
     try {
-      const response = await fetch('https://api.stockspotdeals.com/api/ai/generate-flip-template', {
+      const response = await fetch('/api/ai/generate-flip-template', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': localStorage.getItem('token') || ''
+          'Authorization': `Bearer ${localStorage.getItem('stockspot_access_token') || ''}`
         },
         body: JSON.stringify({
           title,
@@ -88,6 +88,7 @@ ${template.strategyDescription}
 └─ ${template.urgencyLine}
             `;
           })
+');
           .join('\n---\n');
 
         if (window.openFlipModal) {
@@ -97,7 +98,9 @@ ${template.strategyDescription}
         }
       } else {
         // Fallback for single template format
-        const resultText = `Suggested Price: $${data.suggestedResalePrice}\nEstimated Profit: $${data.estimatedProfit}\nMargin: ${data.marginPercent}%`;
+        const resultText = `Suggested Price: $${data.suggestedResalePrice}
+Estimated Profit: $${data.estimatedProfit}
+Margin: ${data.marginPercent}%`;
         if (window.openFlipModal) {
           window.openFlipModal(resultText);
         } else {

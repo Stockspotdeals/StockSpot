@@ -16,23 +16,98 @@ class CategoryDetector {
     if (this.isSportsCards(text)) {
       return 'sports_cards';
     }
+
+    // Gaming detection
+    if (this.isGaming(text)) {
+      return 'gaming';
+    }
+
+    // Electronics detection
+    if (this.isElectronics(text)) {
+      return 'electronics';
+    }
+
+    // General collectibles
+    if (this.isCollectibles(text)) {
+      return 'collectibles';
+    }
+
+    // Toys detection
+    if (this.isToys(text)) {
+      return 'toys';
+    }
     
     return 'other';
   }
 
   static isPokemonTCG(text) {
     const pokemonKeywords = [
+      // Core Pokemon terms
       'pokemon',
       'pokémon',
       'tcg',
       'trading card game',
+      
+      // Product types (high priority)
       'booster pack',
       'booster box',
       'elite trainer box',
       'etb',
+      'pokemon card',
+      'collection box',
+      'premium collection',
+      'ultra premium collection',
+      'upc',
+      'build and battle',
+      'trainer toolkit',
+      'theme deck',
+      'structure deck',
+      'blister pack',
+      'tin',
+      'pokeball tin',
+      'great ball tin',
+      'ultra ball tin',
+      'mini portfolio',
+      'portfolio binder',
+      'playmat',
+      'deck box',
+      'card sleeves',
+      'energy cards',
+      'damage counters',
+      'gx box',
+      'v box',
+      'vmax box',
+      'vstar box',
+      'ex box',
+      
+      // Pokemon characters (popular ones)
       'charizard',
       'pikachu',
-      'pokemon card',
+      'mewtwo',
+      'mew',
+      'lugia',
+      'ho-oh',
+      'rayquaza',
+      'dialga',
+      'palkia',
+      'giratina',
+      'arceus',
+      'reshiram',
+      'zekrom',
+      'kyurem',
+      'xerneas',
+      'yveltal',
+      'zygarde',
+      'solgaleo',
+      'lunala',
+      'necrozma',
+      'zacian',
+      'zamazenta',
+      'calyrex',
+      'miraidon',
+      'koraidon',
+      
+      // Recent sets (2020-2024)
       'paldea evolved',
       'scarlet violet',
       'crown zenith',
@@ -50,20 +125,37 @@ class CategoryDetector {
       'darkness ablaze',
       'rebel clash',
       'sword shield',
-      'cosmic eclipse',
+      
+      // Classic sets (still relevant)
+      'base set',
+      'jungle',
+      'fossil',
+      'base set 2',
+      'team rocket',
+      'gym heroes',
+      'gym challenge',
+      'neo genesis',
+      'neo discovery',
+      'neo revelation',
+      'neo destiny',
+      'legendary collection',
+      'expedition',
+      'aquapolis',
+      'skyridge',
+      
+      // Special collections
       'hidden fates',
+      'champion\'s path',
+      'shiny vault',
+      'tag team',
+      'cosmic eclipse',
       'unified minds',
       'unbroken bonds',
       'team up',
       'lost thunder',
-      'dragon majesty',
       'celestial storm',
       'forbidden light',
-      'ultra prism',
-      'crimson invasion',
-      'burning shadows',
-      'guardians rising',
-      'sun moon'
+      'ultra prism'
     ];
     
     return pokemonKeywords.some(keyword => text.includes(keyword));
@@ -85,23 +177,44 @@ class CategoryDetector {
       'awakening of the new era',
       'luffy',
       'zoro',
-      'nami',
       'sanji',
+      'nami',
+      'usopp',
       'chopper',
       'robin',
       'franky',
       'brook',
       'jinbe',
       'ace',
-      'shanks',
+      'sabo',
       'whitebeard',
+      'shanks',
       'kaido',
       'big mom',
-      'crocodile',
+      'blackbeard',
       'doflamingo',
-      'one piece card game',
-      'one piece tcg',
-      'bandai'
+      'crocodile',
+      'enel',
+      'akainu',
+      'kizaru',
+      'aokiji',
+      'garp',
+      'sengoku',
+      'dragon',
+      'law',
+      'kid',
+      'hancock',
+      'mihawk',
+      'buggy',
+      'alvida',
+      'arlong',
+      'don krieg',
+      'kuro',
+      'smoker',
+      'tashigi',
+      'hina',
+      'koby',
+      'helmeppo'
     ];
     
     return onePieceKeywords.some(keyword => text.includes(keyword));
@@ -109,91 +222,60 @@ class CategoryDetector {
 
   static isSportsCards(text) {
     const sportsKeywords = [
-      'baseball card',
-      'basketball card',
-      'football card',
-      'hockey card',
-      'soccer card',
+      'baseball cards',
+      'football cards',
+      'basketball cards',
+      'soccer cards',
+      'hockey cards',
       'topps',
       'panini',
       'upper deck',
-      'bowman',
-      'donruss',
-      'fleer',
-      'score',
       'leaf',
       'prizm',
-      'mosaic',
-      'chronicles',
       'select',
-      'optic',
-      'contenders',
+      'chrome',
+      'refractor',
+      'hobby box',
+      'trading cards',
+      'sports cards',
       'rookie card',
       'autograph',
-      'memorabilia',
-      'game used',
+      'jersey card',
       'patch card',
-      'serial numbered',
-      'refractor',
-      'chrome',
+      'numbered card',
+      'parallel',
+      'insert',
+      'base set',
+      'flagship',
       'heritage',
-      'tribute',
-      'diamond kings',
-      'gypsy queen',
       'allen ginter',
-      'stadium club',
+      'gypsy queen',
+      'archives',
       'finest',
-      'bowman chrome',
-      'topps chrome',
-      'panini prizm',
-      'panini mosaic',
-      'panini select',
-      'panini contenders',
-      'upper deck mvp',
-      'upper deck series',
-      'o-pee-chee',
-      'sp authentic',
-      'sp game used',
-      'artifacts',
-      'black diamond',
-      'ice',
-      'synergy',
-      'ultimate collection',
-      'exquisite collection',
+      'bowman',
+      'donruss',
+      'score',
+      'certified',
+      'absolute',
+      'elite',
+      'limited',
       'national treasures',
-      'immaculate collection',
+      'immaculate',
       'flawless',
       'noir',
-      'gold standard',
-      'totally certified',
-      'preferred',
-      'crown royale',
-      'limited',
-      'classics',
-      'americana',
-      'certified',
-      'playoff',
-      'playoff contenders',
-      'absolute',
-      'phoenix',
-      'revolution',
       'origins',
-      'cornerstones',
-      'encased',
-      'impeccable',
+      'contenders',
+      'chronicles',
+      'mosaic',
+      'optic',
       'spectra',
-      'majestic',
-      'luminance',
-      'one',
-      'elements',
-      'kaboom',
+      'revolution',
+      'phoenix',
+      'status',
+      'clearly',
       'illusions',
       'nba hoops',
-      'nba jam',
-      'clearly authentic',
-      'clearly donruss',
       'court kings',
-      'status',
       'threads',
       'timeless treasures'
     ];
@@ -201,45 +283,102 @@ class CategoryDetector {
     return sportsKeywords.some(keyword => text.includes(keyword));
   }
 
-  static getCategoryEmoji(category) {
-    const emojiMap = {
-      [CATEGORY_TYPES.POKEMON_TCG]: '⚡️',
-      [CATEGORY_TYPES.ONE_PIECE_TCG]: '🏴‍☠️',
-      [CATEGORY_TYPES.SPORTS_CARDS]: '🏈',
-      [CATEGORY_TYPES.GENERAL]: '🛍️'
-    };
-    return emojiMap[category] || '🛍️';
-  }
-
   static isGaming(text) {
     const gamingKeywords = [
-      'gaming', 'video game', 'console', 'xbox', 'playstation', 'nintendo', 
-      'steam deck', 'gaming pc', 'gpu', 'graphics card', 'gaming laptop'
+      'gaming',
+      'video game',
+      'console',
+      'xbox',
+      'playstation',
+      'nintendo',
+      'steam deck',
+      'gaming pc',
+      'gpu',
+      'graphics card',
+      'gaming laptop',
+      'controller',
+      'gaming headset',
+      'gaming mouse',
+      'gaming keyboard',
+      'ps5',
+      'xbox series',
+      'nintendo switch',
+      'steam',
+      'epic games',
+      'battlenet'
     ];
+    
     return gamingKeywords.some(keyword => text.includes(keyword));
   }
 
   static isElectronics(text) {
     const electronicsKeywords = [
-      'iphone', 'android', 'samsung', 'apple', 'phone', 'smartphone',
-      'tablet', 'ipad', 'laptop', 'computer', 'headphones', 'earbuds'
+      'iphone',
+      'android',
+      'samsung',
+      'apple',
+      'phone',
+      'smartphone',
+      'tablet',
+      'ipad',
+      'laptop',
+      'computer',
+      'headphones',
+      'earbuds',
+      'airpods',
+      'smartwatch',
+      'apple watch',
+      'monitor',
+      'tv',
+      'speaker',
+      'bluetooth',
+      'wireless'
     ];
+    
     return electronicsKeywords.some(keyword => text.includes(keyword));
   }
 
   static isCollectibles(text) {
     const collectiblesKeywords = [
-      'collectible', 'limited edition', 'exclusive', 'rare', 'vintage',
-      'figurine', 'statue', 'action figure', 'funko pop'
+      'collectible',
+      'limited edition',
+      'exclusive',
+      'rare',
+      'vintage',
+      'figurine',
+      'statue',
+      'action figure',
+      'funko pop',
+      'hot toys',
+      'sideshow',
+      'first4figures',
+      'kotobukiya',
+      'good smile',
+      'nendoroid',
+      'figma',
+      'scale figure'
     ];
+    
     return collectiblesKeywords.some(keyword => text.includes(keyword));
   }
 
   static isToys(text) {
     const toysKeywords = [
-      'toy', 'lego', 'playset', 'doll', 'stuffed animal', 'plush',
-      'kids toy', 'children toy', 'educational toy'
+      'toy',
+      'lego',
+      'playset',
+      'doll',
+      'stuffed animal',
+      'plush',
+      'kids toy',
+      'children toy',
+      'educational toy',
+      'building blocks',
+      'puzzle',
+      'board game',
+      'card game'
     ];
+    
     return toysKeywords.some(keyword => text.includes(keyword));
   }
 

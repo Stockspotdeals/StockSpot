@@ -1,1 +1,285 @@
-import { useState, useEffect, useContext, createContext } from 'react';\nimport authService from '../services/authService';\n\n// Create Auth Context\nconst AuthContext = createContext(null);\n\n// Auth Provider Component\nexport const AuthProvider = ({ children }) => {\n  const [user, setUser] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [initialized, setInitialized] = useState(false);\n\n  // Initialize auth state on app load\n  useEffect(() => {\n    const initializeAuth = async () => {\n      try {\n        if (authService.isAuthenticated()) {\n          // Try to get current user from token\n          const currentUser = authService.getCurrentUser();\n          if (currentUser) {\n            setUser(currentUser);\n          } else {\n            // Token exists but invalid, try to refresh\n            try {\n              await authService.refreshToken();\n              const refreshedUser = authService.getCurrentUser();\n              setUser(refreshedUser);\n            } catch (refreshError) {\n              // Refresh failed, clear token\n              authService.setToken(null);\n            }\n          }\n        }\n      } catch (error) {\n        console.error('Auth initialization error:', error);\n        // Clear any invalid tokens\n        authService.setToken(null);\n      } finally {\n        setLoading(false);\n        setInitialized(true);\n      }\n    };\n\n    initializeAuth();\n  }, []);\n\n  // Login function\n  const login = async (credentials) => {\n    setLoading(true);\n    try {\n      const response = await authService.login(credentials);\n      const currentUser = authService.getCurrentUser();\n      setUser(currentUser);\n      return response;\n    } catch (error) {\n      throw error;\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  // Register function\n  const register = async (userData) => {\n    setLoading(true);\n    try {\n      const response = await authService.register(userData);\n      const currentUser = authService.getCurrentUser();\n      setUser(currentUser);\n      return response;\n    } catch (error) {\n      throw error;\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  // Logout function\n  const logout = async () => {\n    setLoading(true);\n    try {\n      await authService.logout();\n    } catch (error) {\n      console.error('Logout error:', error);\n    } finally {\n      setUser(null);\n      setLoading(false);\n    }\n  };\n\n  // Logout from all devices\n  const logoutAll = async () => {\n    setLoading(true);\n    try {\n      await authService.logoutAll();\n    } catch (error) {\n      console.error('Logout all error:', error);\n    } finally {\n      setUser(null);\n      setLoading(false);\n    }\n  };\n\n  // Update profile\n  const updateProfile = async (profileData) => {\n    try {\n      const response = await authService.updateProfile(profileData);\n      // Update user state if email changed\n      if (profileData.email) {\n        setUser(prev => ({ ...prev, email: profileData.email }));\n      }\n      return response;\n    } catch (error) {\n      throw error;\n    }\n  };\n\n  // Change password\n  const changePassword = async (passwordData) => {\n    try {\n      const response = await authService.changePassword(passwordData);\n      // Password change logs out all sessions, so clear user state\n      setUser(null);\n      return response;\n    } catch (error) {\n      throw error;\n    }\n  };\n\n  // Check if user has specific plan\n  const hasPlan = (plan) => {\n    if (!user) return false;\n    if (Array.isArray(plan)) {\n      return plan.includes(user.plan);\n    }\n    return user.plan === plan;\n  };\n\n  // Check if user is admin\n  const isAdmin = () => {\n    return user?.plan === 'admin';\n  };\n\n  // Check if user has premium features\n  const isPremium = () => {\n    return user?.plan === 'paid' || user?.plan === 'admin';\n  };\n\n  // Check if user is authenticated\n  const isAuthenticated = () => {\n    return user !== null;\n  };\n\n  const value = {\n    user,\n    loading,\n    initialized,\n    login,\n    register,\n    logout,\n    logoutAll,\n    updateProfile,\n    changePassword,\n    hasPlan,\n    isAdmin,\n    isPremium,\n    isAuthenticated\n  };\n\n  return (\n    <AuthContext.Provider value={value}>\n      {children}\n    </AuthContext.Provider>\n  );\n};\n\n// Hook to use auth context\nexport const useAuth = () => {\n  const context = useContext(AuthContext);\n  if (!context) {\n    throw new Error('useAuth must be used within an AuthProvider');\n  }\n  return context;\n};\n\n// HOC for protected routes\nexport const withAuth = (Component) => {\n  return (props) => {\n    const { isAuthenticated, loading, initialized } = useAuth();\n\n    if (!initialized || loading) {\n      return (\n        <div className=\"flex items-center justify-center min-h-screen\">\n          <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600\"></div>\n        </div>\n      );\n    }\n\n    if (!isAuthenticated()) {\n      // Redirect to login\n      window.location.href = '/login';\n      return null;\n    }\n\n    return <Component {...props} />;\n  };\n};\n\n// HOC for admin-only routes\nexport const withAdminAuth = (Component) => {\n  return (props) => {\n    const { isAuthenticated, isAdmin, loading, initialized } = useAuth();\n\n    if (!initialized || loading) {\n      return (\n        <div className=\"flex items-center justify-center min-h-screen\">\n          <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600\"></div>\n        </div>\n      );\n    }\n\n    if (!isAuthenticated() || !isAdmin()) {\n      return (\n        <div className=\"flex items-center justify-center min-h-screen\">\n          <div className=\"text-center\">\n            <h2 className=\"text-2xl font-bold text-gray-900 mb-4\">Access Denied</h2>\n            <p className=\"text-gray-600 mb-4\">Administrator privileges required</p>\n            <button\n              onClick={() => window.location.href = '/dashboard'}\n              className=\"bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700\"\n            >\n              Return to Dashboard\n            </button>\n          </div>\n        </div>\n      );\n    }\n\n    return <Component {...props} />;\n  };\n};\n\n// HOC for premium-only routes\nexport const withPremiumAuth = (Component) => {\n  return (props) => {\n    const { isAuthenticated, isPremium, loading, initialized } = useAuth();\n\n    if (!initialized || loading) {\n      return (\n        <div className=\"flex items-center justify-center min-h-screen\">\n          <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600\"></div>\n        </div>\n      );\n    }\n\n    if (!isAuthenticated()) {\n      window.location.href = '/login';\n      return null;\n    }\n\n    if (!isPremium()) {\n      return (\n        <div className=\"flex items-center justify-center min-h-screen\">\n          <div className=\"text-center\">\n            <h2 className=\"text-2xl font-bold text-gray-900 mb-4\">Premium Feature</h2>\n            <p className=\"text-gray-600 mb-4\">This feature is only available to paid subscribers</p>\n            <button\n              onClick={() => window.location.href = '/upgrade'}\n              className=\"bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2\"\n            >\n              Upgrade Now\n            </button>\n            <button\n              onClick={() => window.location.href = '/dashboard'}\n              className=\"bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400\"\n            >\n              Return to Dashboard\n            </button>\n          </div>\n        </div>\n      );\n    }\n\n    return <Component {...props} />;\n  };\n};
+import { useState, useEffect, useContext, createContext } from 'react';
+import authService from '../services/authService';
+
+// Create Auth Context
+const AuthContext = createContext(null);
+
+// Auth Provider Component
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  // Initialize auth state on app load
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        if (authService.isAuthenticated()) {
+          // Try to get current user from token
+          const currentUser = authService.getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+          } else {
+            // Token exists but invalid, try to refresh
+            try {
+              await authService.refreshToken();
+              const refreshedUser = authService.getCurrentUser();
+              setUser(refreshedUser);
+            } catch (refreshError) {
+              // Refresh failed, clear token
+              authService.setToken(null);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        // Clear any invalid tokens
+        authService.setToken(null);
+      } finally {
+        setLoading(false);
+        setInitialized(true);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
+  // Login function
+  const login = async (credentials) => {
+    setLoading(true);
+    try {
+      const response = await authService.login(credentials);
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
+      return response;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Register function
+  const register = async (userData) => {
+    setLoading(true);
+    try {
+      const response = await authService.register(userData);
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
+      return response;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout function
+  const logout = async () => {
+    setLoading(true);
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setLoading(false);
+    }
+  };
+
+  // Logout from all devices
+  const logoutAll = async () => {
+    setLoading(true);
+    try {
+      await authService.logoutAll();
+    } catch (error) {
+      console.error('Logout all error:', error);
+    } finally {
+      setUser(null);
+      setLoading(false);
+    }
+  };
+
+  // Update profile
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await authService.updateProfile(profileData);
+      // Update user state if email changed
+      if (profileData.email) {
+        setUser(prev => ({ ...prev, email: profileData.email }));
+      }
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Change password
+  const changePassword = async (passwordData) => {
+    try {
+      const response = await authService.changePassword(passwordData);
+      // Password change logs out all sessions, so clear user state
+      setUser(null);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Check if user has specific plan
+  const hasPlan = (plan) => {
+    if (!user) return false;
+    if (Array.isArray(plan)) {
+      return plan.includes(user.plan);
+    }
+    return user.plan === plan;
+  };
+
+  // Check if user is admin
+  const isAdmin = () => {
+    return user?.plan === 'admin';
+  };
+
+  // Check if user has premium features
+  const isPremium = () => {
+    return user?.plan === 'paid' || user?.plan === 'admin';
+  };
+
+  // Check if user is authenticated
+  const isAuthenticated = () => {
+    return user !== null;
+  };
+
+  const value = {
+    user,
+    loading,
+    initialized,
+    login,
+    register,
+    logout,
+    logoutAll,
+    updateProfile,
+    changePassword,
+    hasPlan,
+    isAdmin,
+    isPremium,
+    isAuthenticated
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Hook to use auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+// HOC for protected routes
+export const withAuth = (Component) => {
+  return (props) => {
+    const { isAuthenticated, loading, initialized } = useAuth();
+
+    if (!initialized || loading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      );
+    }
+
+    if (!isAuthenticated()) {
+      // Redirect to login
+      window.location.href = '/login';
+      return null;
+    }
+
+    return <Component {...props} />;
+  };
+};
+
+// HOC for admin-only routes
+export const withAdminAuth = (Component) => {
+  return (props) => {
+    const { isAuthenticated, isAdmin, loading, initialized } = useAuth();
+
+    if (!initialized || loading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      );
+    }
+
+    if (!isAuthenticated() || !isAdmin()) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-4">Administrator privileges required</p>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return <Component {...props} />;
+  };
+};
+
+// HOC for premium-only routes
+export const withPremiumAuth = (Component) => {
+  return (props) => {
+    const { isAuthenticated, isPremium, loading, initialized } = useAuth();
+
+    if (!initialized || loading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      );
+    }
+
+    if (!isAuthenticated()) {
+      window.location.href = '/login';
+      return null;
+    }
+
+    if (!isPremium()) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Premium Feature</h2>
+            <p className="text-gray-600 mb-4">This feature is only available to paid subscribers</p>
+            <button
+              onClick={() => window.location.href = '/upgrade'}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2"
+            >
+              Upgrade Now
+            </button>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return <Component {...props} />;
+  };
+};

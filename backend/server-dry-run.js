@@ -5,7 +5,7 @@
  * 
  * Runs StockSpot in dry-run mode:
  * - Logs all feed operations without making API calls
- * - No Stripe/SendGrid/Amazon API calls
+ * - No Stripe/Resend/Amazon API calls
  * - No database writes (uses in-memory storage)
  * - Perfect for validating feeds and business logic
  * 
