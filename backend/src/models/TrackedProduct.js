@@ -22,6 +22,14 @@ const EVENT_TYPES = {
   CREATED: 'created'
 };
 
+// Tracking type constants
+const TRACKING_TYPES = {
+  RESTOCK: 'restock',
+  PRICE_DROP: 'price_drop',
+  PREORDER: 'preorder',
+  RELEASE: 'release'
+};
+
 /**
  * Tracked Product Schema - Simplified for Autonomous Bot
  */
@@ -36,6 +44,18 @@ const TrackedProductSchema = new mongoose.Schema({
   title: {
     type: String,
     default: ''
+  },
+  source: {
+    type: String,
+    enum: ['auto', 'owner'],
+    default: 'auto',
+    index: true
+  },
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AuthUser',
+    default: null,
+    index: true
   },
   retailer: {
     type: String,
@@ -84,6 +104,14 @@ const TrackedProductSchema = new mongoose.Schema({
     default: 5 // minutes
   },
   
+  // Tracking type (e.g. restock, preorder, release)
+  trackingType: {
+    type: String,
+    enum: Object.values(TRACKING_TYPES),
+    default: TRACKING_TYPES.RESTOCK,
+    index: true
+  },
+
   // Tracking metadata
   lastCheckedAt: {
     type: Date,
@@ -157,8 +185,11 @@ const TrackedProductSchema = new mongoose.Schema({
 TrackedProductSchema.index({ isActive: 1, nextCheck: 1 });
 TrackedProductSchema.index({ retailer: 1, category: 1 });
 
-// Ensure legacy documents always have flags populated
+// Ensure legacy documents always have default fields populated
 TrackedProductSchema.post('init', function(doc) {
+  if (!doc.trackingType) {
+    doc.trackingType = TRACKING_TYPES.RESTOCK;
+  }
   if (!doc.flags) {
     doc.flags = { restock: false, highDemand: false };
   } else {
@@ -298,5 +329,6 @@ module.exports = {
   TrackedProduct,
   ProductEvent,
   RETAILER_TYPES,
-  EVENT_TYPES
+  EVENT_TYPES,
+  TRACKING_TYPES
 };

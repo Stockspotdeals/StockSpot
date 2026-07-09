@@ -118,28 +118,60 @@
           </select>
         </div>
         <div class="field">
+          <label for="tracking-type">Tracking Type</label>
+          <select id="tracking-type" name="trackingType">
+            <option value="restock">Restock</option>
+            <option value="price_drop">Price Drop</option>
+            <option value="preorder">Preorder</option>
+            <option value="release">Release</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="url">Product URL</label>
           <input id="url" name="url" type="url" placeholder="https://…" required />
+        </div>
+        <div class="field">
+          <label for="notes">Notes (optional)</label>
+          <input id="notes" name="notes" type="text" placeholder="Internal notes..." />
         </div>
         <button type="submit" class="btn" id="add-btn">Add Tracked Product</button>
       </form>
     </div>
 
-    <!-- Tracked products table -->
+    <!-- Search/filter controls -->
     <div class="panel">
       <h2>Tracked Products</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Retailer</th>
-            <th>Category</th>
-            <th>URL</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="product-list"></tbody>
-      </table>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <input id="search-input" type="text" placeholder="Search products..." style="padding:0.5rem 0.75rem;border:1px solid #cbd5e1;border-radius:6px;flex:1;min-width:180px;" />
+        <select id="filter-source" style="padding:0.5rem 0.75rem;border:1px solid #cbd5e1;border-radius:6px;">
+          <option value="">All Sources</option>
+          <option value="auto">Auto</option>
+          <option value="owner">Owner</option>
+        </select>
+        <select id="filter-status" style="padding:0.5rem 0.75rem;border:1px solid #cbd5e1;border-radius:6px;">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <button id="search-btn" class="btn btn-secondary" style="padding:0.5rem 1rem;font-size:0.85rem;">Search</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Source</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Retailer</th>
+              <th>Category</th>
+              <th>URL</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="product-list"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
