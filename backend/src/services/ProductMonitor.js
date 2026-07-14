@@ -18,6 +18,36 @@ function getCheerio() {
   return cheerio;
 }
 
+/**
+ * Centralized preorder phrase list for automatic preorder page detection.
+ * Used by detectPreorder() to scan page content for preorder signals.
+ */
+const PREORDER_PHRASES = [
+  'preorder',
+  'pre-order',
+  'pre order',
+  'reserve now',
+  'reserve yours',
+  'coming soon',
+  'available for preorder',
+  'available for pre-order',
+  'ships on',
+  'releases on',
+  'release date',
+  'launches',
+  'expected release'
+];
+
+/**
+ * Hype signal keywords used for deterministic hype score calculation.
+ * Weighted by intensity of demand signal.
+ */
+const HYPE_SIGNALS = {
+  HIGH: ['sold out', 'limit 1', 'limited edition', 'collector', 'exclusive'],
+  MEDIUM: ['queue', 'waitlist', 'high demand', 'highly anticipated', 'backorder', 'back order'],
+  LOW: ['popular', 'trending', 'hot item', 'demand', 'rare']
+};
+
 class ProductMonitor {
   constructor() {
     this.isDryRun = process.env.DRY_RUN === 'true';
@@ -78,6 +108,41 @@ class ProductMonitor {
         };
       }
 
+      // --- Preorder Detection Phase (detection only, no new alerts) ---
+      const pageText = productData.pageText || '';
+      const title = productData.title || trackedProduct.title || '';
+      const combinedText = `${title} ${pageText}`.toLowerCase();
+
+      const preorderResult = this.detectPreorder(combinedText);
+      const isPreorder = preorderResult.isPreorder;
+
+      // trackingType assignment: only set to 'preorder' if not already explicitly owner-selected
+      let trackingType = trackedProduct.trackingType;
+      if (isPreorder && trackedProduct.source !== 'owner') {
+        trackingType = 'preorder';
+      }
+
+      // releaseDate extraction
+      let releaseDate = trackedProduct.releaseDate || null;
+      if (isPreorder) {
+        const extractedDate = this.extractReleaseDate(combinedText);
+        if (extractedDate) {
+          if (releaseDate === null || extractedDate.getTime() !== releaseDate.getTime()) {
+            releaseDate = extractedDate;
+          }
+        }
+      }
+
+      // hypeScore calculation (deterministic, no AI)
+      let hypeScore = trackedProduct.hypeScore || 0;
+      if (isPreorder) {
+        const calculatedScore = this.calculateHypeScore(combinedText, preorderResult);
+        if (calculatedScore !== hypeScore) {
+          hypeScore = calculatedScore;
+        }
+      }
+      // --- End Preorder Detection Phase ---
+
       const productUpdate = {
         title: productData.title || trackedProduct.title,
         lastCheckedAt: new Date(),
@@ -96,7 +161,11 @@ class ProductMonitor {
         flags: {
           restock: (productData.flags && productData.flags.restock) || (trackedProduct.flags && trackedProduct.flags.restock) || false,
           highDemand: (productData.flags && productData.flags.highDemand) || (trackedProduct.flags && trackedProduct.flags.highDemand) || false
-        }
+        },
+        // Preorder intelligence fields (included only when detected)
+        trackingType,
+        releaseDate,
+        hypeScore
       };
 
       if (shouldPersistProduct) {
@@ -148,7 +217,8 @@ class ProductMonitor {
           pageType: 'product_page',
           fetchStatus: 200,
           extractionReason: 'dry-run mock payload',
-          restricted: false
+          restricted: false,
+          pageText: ''
         });
       }
 
@@ -168,7 +238,8 @@ class ProductMonitor {
           fetchStatus: page.fetchStatus,
           extractionReason: page.extractionReason,
           restricted: true,
-          fetchMode: page.fetchMode || 'http'
+          fetchMode: page.fetchMode || 'http',
+          pageText: ''
         });
       }
 
@@ -190,7 +261,8 @@ class ProductMonitor {
           fetchStatus: page.fetchStatus,
           extractionReason: page.extractionReason,
           restricted: false,
-          fetchMode: page.fetchMode || 'http'
+          fetchMode: page.fetchMode || 'http',
+          pageText: ''
         });
       }
 
@@ -219,7 +291,8 @@ class ProductMonitor {
         fetchStatus: page.fetchStatus,
         extractionReason: title || price !== null || availabilityText ? 'extracted product page' : 'missing product signals',
         restricted: false,
-        fetchMode: page.fetchMode || 'http'
+        fetchMode: page.fetchMode || 'http',
+        pageText
       });
 
       if (normalizedSnapshot.pageType === 'redirect') {
@@ -472,7 +545,8 @@ class ProductMonitor {
       fetchStatus: data.fetchStatus || null,
       extractionReason: data.extractionReason || 'unknown',
       restricted: !!data.restricted,
-      fetchMode: data.fetchMode || 'http'
+      fetchMode: data.fetchMode || 'http',
+      pageText: data.pageText || ''
     };
   }
 
@@ -860,6 +934,136 @@ class ProductMonitor {
       ]
     });
   }
+
+  // ----------------------------------------------------------------
+  // Preorder Intelligence Methods
+  // ----------------------------------------------------------------
+
+  /**
+   * Detect whether a page is a preorder page by scanning for common preorder phrases.
+   *
+   * @param {string} lowerText - The combined page text (title + body) lowercased.
+   * @returns {{ isPreorder: boolean, matchedPhrases: string[] }}
+   */
+  detectPreorder(lowerText) {
+    const matchedPhrases = PREORDER_PHRASES.filter(phrase => lowerText.includes(phrase));
+    return {
+      isPreorder: matchedPhrases.length > 0,
+      matchedPhrases
+    };
+  }
+
+  /**
+   * Attempt to extract a release date from page text.
+   * Looks for common date patterns near release/preorder keywords.
+   *
+   * @param {string} lowerText - The combined page text (title + body) lowercased.
+   * @returns {Date|null}
+   */
+  extractReleaseDate(lowerText) {
+    // Patterns to match: "releases on January 15, 2025", "ships on 01/15/2025", etc.
+    const datePatterns = [
+      // "releases on <Month> <Day>, <Year>"
+      /(?:releases?\s+(?:on|in|:)|release\s+date[:\s]+|ships?\s+(?:on|:)|launches?\s+(?:on|:)|expected\s+release[:\s]+)(?:on\s+)?\s*(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i,
+      // "releases on MM/DD/YYYY"
+      /(?:releases?\s+(?:on|in|:)|release\s+date[:\s]+|ships?\s+(?:on|:)|launches?\s+(?:on|:)|expected\s+release[:\s]+)(?:on\s+)?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i,
+      // "releases on YYYY-MM-DD"
+      /(?:releases?\s+(?:on|in|:)|release\s+date[:\s]+|ships?\s+(?:on|:)|launches?\s+(?:on|:)|expected\s+release[:\s]+)(?:on\s+)?\s*(\d{4})-(\d{1,2})-(\d{1,2})/i,
+      // Bare date patterns (with month name) near preorder context
+      /(?:(?:preorder|pre-order|pre order|coming\s+soon|available\s+for\s+pre).{0,50}?)(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i
+    ];
+
+    for (const pattern of datePatterns) {
+      const match = lowerText.match(pattern);
+      if (match) {
+        if (match[1] && match[2] && match[3]) {
+          // Check if this is a YYYY-MM-DD pattern (year in group 1 is 4 digits)
+          const isYearFirst = /^\d{4}$/.test(match[1]);
+
+          let month, day, year;
+
+          if (isYearFirst) {
+            // YYYY-MM-DD: group1=year, group2=month, group3=day
+            year = parseInt(match[1], 10);
+            month = parseInt(match[2], 10) - 1; // JS months are 0-indexed
+            day = parseInt(match[3], 10);
+          } else {
+            // Group 1 is month name or number
+            const monthStr = match[1];
+            const dayStr = match[2];
+            const yearStr = match[3];
+
+            const monthMap = {
+              january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
+              july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+              jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+              jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+            };
+
+            month = parseInt(monthStr, 10);
+            if (isNaN(month)) {
+              month = monthMap[monthStr.toLowerCase()];
+            } else {
+              month = month - 1; // JS months are 0-indexed
+            }
+
+            day = parseInt(dayStr, 10);
+            year = parseInt(yearStr, 10);
+          }
+
+          if (month !== undefined && !isNaN(month) && !isNaN(day) && !isNaN(year)) {
+            const date = new Date(year, month, day);
+            // Validate the date is reasonable (not in distant past for a release)
+            if (!isNaN(date.getTime()) && date > new Date('2020-01-01')) {
+              return date;
+            }
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Calculate a deterministic hype score (0-100) based on preorder and demand signals.
+   * Does NOT use AI. Pure keyword-based scoring.
+   *
+   * @param {string} lowerText - The combined page text (title + body) lowercased.
+   * @param {{ isPreorder: boolean, matchedPhrases: string[] }} preorderResult
+   * @returns {number} - Score clamped between 0 and 100.
+   */
+  calculateHypeScore(lowerText, preorderResult) {
+    let score = 0;
+
+    // Base score from matched preorder phrases (max +30)
+    const phraseCount = preorderResult.matchedPhrases.length;
+    score += Math.min(phraseCount * 10, 30);
+
+    // High-intensity signals (+15 each, max +45)
+    for (const signal of HYPE_SIGNALS.HIGH) {
+      if (lowerText.includes(signal)) {
+        score += 15;
+      }
+    }
+
+    // Medium-intensity signals (+10 each, max +30)
+    for (const signal of HYPE_SIGNALS.MEDIUM) {
+      if (lowerText.includes(signal)) {
+        score += 10;
+      }
+    }
+
+    // Low-intensity signals (+5 each, max +15)
+    for (const signal of HYPE_SIGNALS.LOW) {
+      if (lowerText.includes(signal)) {
+        score += 5;
+      }
+    }
+
+    // Cap at 100
+    return Math.min(score, 100);
+  }
 }
 
-module.exports = { ProductMonitor };
+module.exports = { ProductMonitor, PREORDER_PHRASES, HYPE_SIGNALS };

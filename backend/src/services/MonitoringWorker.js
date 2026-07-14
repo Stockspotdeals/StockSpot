@@ -3,6 +3,7 @@ initEnvironment({ requireMongoUri: true, logMongoStatus: false });
 
 const cron = require('node-cron');
 const { ProductMonitor } = require('./ProductMonitor');
+const { CategoryDiscovery } = require('./CategoryDiscovery');
 const { NotificationService } = require('./NotificationService');
 const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
 const { upsertProduct } = require('./productUpsert');
@@ -10,6 +11,7 @@ const { upsertProduct } = require('./productUpsert');
 class UniversalMonitoringWorker {
   constructor() {
     this.productMonitor = new ProductMonitor();
+    this.categoryDiscovery = new CategoryDiscovery(this.productMonitor);
     this.notificationService = new NotificationService();
     this.isRunning = false;
     this.isStarted = false;
@@ -123,86 +125,103 @@ class UniversalMonitoringWorker {
     const startTime = Date.now();
     this.isRunning = true;
     
+    // --- Phase 1: Monitor existing products ---
     try {
       console.log('🔄 Starting monitoring cycle...');
       
-      // Get products due for checking
       const productsDue = await this.productMonitor.getProductsDueForCheck();
       
-      if (productsDue.length === 0) {
-        console.log('✨ No products due for checking');
-        return;
-      }
-      
-      console.log(`📦 Found ${productsDue.length} products to monitor`);
-      
-      // Group products by user to respect rate limits
-      const productsByUser = this.groupProductsByUser(productsDue);
-      
-      let totalChecked = 0;
-      let totalSuccessful = 0;
-      let totalFailed = 0;
-      
-      // Process each user's products
-      for (const [userId, userProducts] of Object.entries(productsByUser)) {
-        try {
-          console.log(`👤 Processing ${userProducts.length} products for user ${userId}`);
-          
-          const results = await this.productMonitor.monitorProducts(userProducts);
-          
-          const successful = results.filter(r => r.success).length;
-          const failed = results.filter(r => !r.success).length;
-          
-          console.log(`  ✅ ${successful} successful, ❌ ${failed} failed`);
-          
-          totalChecked += userProducts.length;
-          totalSuccessful += successful;
-          totalFailed += failed;
-          
-          // Upsert products for signal engine consumption (non-blocking per-item)
-          for (const r of results) {
-            if (r && r.success && r.result && r.result.trackedProduct) {
-              const pageType = r.result.pageType || (r.result.productData && r.result.productData.pageType);
-              if (pageType && pageType !== 'product_page') {
-                console.log('⚠️  Skipping product upsert for non-product page', r.productId, pageType);
-                continue;
-              }
-              try {
-                // Keep this operation safe: failures should not stop monitoring
-                await upsertProduct(r.result.trackedProduct);
-              } catch (err) {
-                console.warn('⚠️  Product upsert failed for', r.productId, err && err.message);
+      if (productsDue.length > 0) {
+        console.log(`📦 Found ${productsDue.length} products to monitor`);
+        
+        // Group products by user to respect rate limits
+        const productsByUser = this.groupProductsByUser(productsDue);
+        
+        let totalChecked = 0;
+        let totalSuccessful = 0;
+        let totalFailed = 0;
+        
+        // Process each user's products
+        for (const [userId, userProducts] of Object.entries(productsByUser)) {
+          try {
+            console.log(`👤 Processing ${userProducts.length} products for user ${userId}`);
+            
+            const results = await this.productMonitor.monitorProducts(userProducts);
+            
+            const successful = results.filter(r => r.success).length;
+            const failed = results.filter(r => !r.success).length;
+            
+            console.log(`  ✅ ${successful} successful, ❌ ${failed} failed`);
+            
+            totalChecked += userProducts.length;
+            totalSuccessful += successful;
+            totalFailed += failed;
+            
+            // Upsert products for signal engine consumption (non-blocking per-item)
+            for (const r of results) {
+              if (r && r.success && r.result && r.result.trackedProduct) {
+                const pageType = r.result.pageType || (r.result.productData && r.result.productData.pageType);
+                if (pageType && pageType !== 'product_page') {
+                  console.log('⚠️  Skipping product upsert for non-product page', r.productId, pageType);
+                  continue;
+                }
+                try {
+                  // Keep this operation safe: failures should not stop monitoring
+                  await upsertProduct(r.result.trackedProduct);
+                } catch (err) {
+                  console.warn('⚠️  Product upsert failed for', r.productId, err && err.message);
+                }
               }
             }
-          }
 
-          // Log significant events
-          await this.logSignificantEvents(results);
-          
-          // Add delay between users to be respectful
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-        } catch (error) {
-          console.error(`❌ Error processing products for user ${userId}:`, error.message);
-          totalFailed += userProducts.length;
+            // Log significant events
+            await this.logSignificantEvents(results);
+            
+            // Add delay between users to be respectful
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+          } catch (error) {
+            console.error(`❌ Error processing products for user ${userId}:`, error.message);
+            totalFailed += userProducts.length;
+          }
         }
+        
+        // Update stats
+        this.stats.totalChecks += totalChecked;
+        this.stats.successfulChecks += totalSuccessful;
+        this.stats.failedChecks += totalFailed;
+        this.stats.lastRun = new Date();
+        this.stats.runDuration = Date.now() - startTime;
+        
+        console.log(`🎯 Monitoring cycle complete: ${totalSuccessful}/${totalChecked} successful (${Math.round(totalSuccessful/totalChecked*100)}%)`);
+        console.log(`⏱️ Duration: ${Math.round(this.stats.runDuration/1000)}s`);
+      } else {
+        console.log('✨ No products due for checking');
+        this.stats.lastRun = new Date();
+        this.stats.runDuration = Date.now() - startTime;
       }
-      
-      // Update stats
-      this.stats.totalChecks += totalChecked;
-      this.stats.successfulChecks += totalSuccessful;
-      this.stats.failedChecks += totalFailed;
-      this.stats.lastRun = new Date();
-      this.stats.runDuration = Date.now() - startTime;
-      
-      console.log(`🎯 Monitoring cycle complete: ${totalSuccessful}/${totalChecked} successful (${Math.round(totalSuccessful/totalChecked*100)}%)`);
-      console.log(`⏱️ Duration: ${Math.round(this.stats.runDuration/1000)}s`);
       
     } catch (error) {
       console.error('💥 Error in monitoring cycle:', error);
-    } finally {
-      this.isRunning = false;
     }
+
+    // --- Phase 2: Autonomous Discovery (always runs regardless of productsDue) ---
+    // Discovery uses the existing ProductMonitor fetch infrastructure and
+    // MonitoringWorker schedule — no new workers or cron jobs.
+    try {
+      const discoveries = await this.categoryDiscovery.discoverProducts();
+      if (discoveries.length > 0) {
+        console.log(`🔍 Discovery found ${discoveries.length} new products:`);
+        for (const d of discoveries) {
+          console.log(`  [${d.retailer}] ${d.title} — ${d.reason}`);
+        }
+      }
+    } catch (discoveryError) {
+      console.warn('⚠️ Category discovery error (non-fatal):', discoveryError.message);
+    }
+    // --- End Discovery Phase ---
+    
+    this.isRunning = false;
   }
 
   /**

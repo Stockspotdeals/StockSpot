@@ -112,6 +112,22 @@ const TrackedProductSchema = new mongoose.Schema({
     index: true
   },
 
+  // Preorder intelligence fields
+  releaseDate: {
+    type: Date,
+    default: null
+  },
+  hypeScore: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  preorderMetadata: {
+    type: Object,
+    default: {}
+  },
+
   // Tracking metadata
   lastCheckedAt: {
     type: Date,

@@ -50,6 +50,13 @@ function buildListQuery(query) {
   const search = String(query.search || '').trim();
   const source = normalizeSource(query.source);
   const status = String(query.status || 'all').trim().toLowerCase();
+  const retailer = String(query.retailer || '').trim().toLowerCase();
+  const category = String(query.category || '').trim().toLowerCase();
+  const trackingType = String(query.trackingType || '').trim().toLowerCase();
+  const hypeMin = query.hypeMin !== undefined ? Number(query.hypeMin) : undefined;
+  const hypeMax = query.hypeMax !== undefined ? Number(query.hypeMax) : undefined;
+  const releaseBefore = query.releaseBefore ? new Date(query.releaseBefore) : undefined;
+  const releaseAfter = query.releaseAfter ? new Date(query.releaseAfter) : undefined;
 
   if (source === 'auto' || source === 'owner') {
     filter.source = source;
@@ -59,6 +66,30 @@ function buildListQuery(query) {
     filter.isActive = true;
   } else if (status === 'inactive') {
     filter.isActive = false;
+  }
+
+  if (retailer && TRACKED_PRODUCT_RETAILERS.has(retailer)) {
+    filter.retailer = retailer;
+  }
+
+  if (category && TRACKED_PRODUCT_CATEGORIES.has(category)) {
+    filter.category = category;
+  }
+
+  if (trackingType && TRACKED_PRODUCT_TRACKING_TYPES.has(trackingType)) {
+    filter.trackingType = trackingType;
+  }
+
+  if (hypeMin !== undefined || hypeMax !== undefined) {
+    filter.hypeScore = {};
+    if (hypeMin !== undefined && !isNaN(hypeMin)) filter.hypeScore.$gte = hypeMin;
+    if (hypeMax !== undefined && !isNaN(hypeMax)) filter.hypeScore.$lte = hypeMax;
+  }
+
+  if (releaseBefore || releaseAfter) {
+    filter.releaseDate = {};
+    if (releaseBefore && !isNaN(releaseBefore.getTime())) filter.releaseDate.$lte = releaseBefore;
+    if (releaseAfter && !isNaN(releaseAfter.getTime())) filter.releaseDate.$gte = releaseAfter;
   }
 
   if (search) {
@@ -73,6 +104,21 @@ function buildListQuery(query) {
   }
 
   return filter;
+}
+
+function buildListSort(query) {
+  const sortMap = {
+    newest: { createdAt: -1 },
+    oldest: { createdAt: 1 },
+    hype_high: { hypeScore: -1, createdAt: -1 },
+    hype_low: { hypeScore: 1, createdAt: -1 },
+    release_upcoming: { releaseDate: 1, createdAt: -1 },
+    retailer: { retailer: 1, createdAt: -1 },
+    category: { category: 1, createdAt: -1 },
+    recent_check: { lastCheckedAt: -1, createdAt: -1 }
+  };
+  const sortKey = String(query.sort || 'newest').trim().toLowerCase();
+  return sortMap[sortKey] || sortMap.newest;
 }
 
 /**
@@ -95,6 +141,104 @@ router.get('/status', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/tracked-products/dashboard
+ * Owner intelligence dashboard summary with counts, breakdowns, and health indicators.
+ */
+router.get('/dashboard', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      total,
+      autoCount,
+      ownerCount,
+      activeCount,
+      inactiveCount,
+      preorderCount,
+      restockCount,
+      priceDropCount,
+      hypeStats,
+      upcomingReleases,
+      retailerBreakdown,
+      categoryBreakdown,
+      trackingTypeBreakdown,
+      sourceBreakdown,
+      healthBreakdown
+    ] = await Promise.all([
+      TrackedProduct.countDocuments(),
+      TrackedProduct.countDocuments({ source: 'auto' }),
+      TrackedProduct.countDocuments({ source: 'owner' }),
+      TrackedProduct.countDocuments({ isActive: true }),
+      TrackedProduct.countDocuments({ isActive: false }),
+      TrackedProduct.countDocuments({ trackingType: 'preorder' }),
+      TrackedProduct.countDocuments({ trackingType: 'restock' }),
+      TrackedProduct.countDocuments({ trackingType: 'price_drop' }),
+      TrackedProduct.aggregate([
+        { $match: { hypeScore: { $gt: 0 } } },
+        { $group: { _id: null, avg: { $avg: '$hypeScore' }, max: { $max: '$hypeScore' } } }
+      ]),
+      TrackedProduct.find({
+        releaseDate: { $gte: now, $lte: thirtyDaysFromNow },
+        isActive: true
+      }).sort({ releaseDate: 1 }).limit(20).lean(),
+      TrackedProduct.aggregate([
+        { $group: { _id: '$retailer', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      TrackedProduct.aggregate([
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      TrackedProduct.aggregate([
+        { $group: { _id: '$trackingType', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      TrackedProduct.aggregate([
+        { $group: { _id: '$source', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      TrackedProduct.aggregate([
+        {
+          $group: {
+            _id: null,
+            healthy: { $sum: { $cond: [{ $and: [{ $eq: ['$isActive', true] }, { $eq: ['$errorCount', 0] }] }, 1, 0] } },
+            warning: { $sum: { $cond: [{ $and: [{ $eq: ['$isActive', true] }, { $gt: ['$errorCount', 0] }, { $lte: ['$errorCount', 5] }] }, 1, 0] } },
+            error: { $sum: { $cond: [{ $or: [{ $eq: ['$isActive', false] }, { $gt: ['$errorCount', 5] }] }, 1, 0] } }
+          }
+        }
+      ])
+    ]);
+
+    res.json({
+      summary: {
+        total,
+        autoDiscovered: autoCount,
+        ownerAdded: ownerCount,
+        active: activeCount,
+        inactive: inactiveCount,
+        preorder: preorderCount,
+        restock: restockCount,
+        priceDrop: priceDropCount,
+        averageHypeScore: hypeStats.length > 0 ? Math.round(hypeStats[0].avg) : 0,
+        maxHypeScore: hypeStats.length > 0 ? hypeStats[0].max : 0
+      },
+      upcomingReleases,
+      breakdowns: {
+        byRetailer: retailerBreakdown,
+        byCategory: categoryBreakdown,
+        byTrackingType: trackingTypeBreakdown,
+        bySource: sourceBreakdown
+      },
+      health: healthBreakdown.length > 0 ? healthBreakdown[0] : { healthy: 0, warning: 0, error: 0 }
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+/**
  * GET /api/tracked-products
  * List tracked products for admin review
  */
@@ -104,9 +248,10 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), 100);
     const skip = (page - 1) * limit;
     const filter = buildListQuery(req.query);
+    const sort = buildListSort(req.query);
 
     const [products, total] = await Promise.all([
-      TrackedProduct.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      TrackedProduct.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       TrackedProduct.countDocuments(filter)
     ]);
 
@@ -129,7 +274,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
  */
 router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { title, retailer, url, category, source, notes, trackingType } = req.body;
+    const { title, retailer, url, category, source, notes, trackingType, releaseDate, hypeScore, preorderMetadata } = req.body;
 
     if (!url || typeof url !== 'string' || url.trim().length === 0) {
       return res.status(400).json({ error: 'url is required' });
@@ -163,6 +308,9 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       url: normalizedUrl,
       category: normalizedCategory,
       trackingType: normalizedTrackingType,
+      releaseDate: releaseDate ? new Date(releaseDate) : undefined,
+      hypeScore: typeof hypeScore === 'number' ? Math.min(Math.max(hypeScore, 0), 100) : undefined,
+      preorderMetadata: preorderMetadata && typeof preorderMetadata === 'object' ? preorderMetadata : undefined,
       isActive: true,
       nextCheck: new Date(),
       checkInterval: 5,
@@ -247,6 +395,25 @@ router.patch('/:id', authenticateToken, requireAdmin, async (req, res) => {
       if (update.isActive && !product.nextCheck) {
         update.nextCheck = new Date();
       }
+    }
+
+    if (typeof req.body.releaseDate !== 'undefined') {
+      if (req.body.releaseDate === null || req.body.releaseDate === '') {
+        update.releaseDate = null;
+      } else {
+        const parsed = new Date(req.body.releaseDate);
+        if (!isNaN(parsed.getTime())) {
+          update.releaseDate = parsed;
+        }
+      }
+    }
+
+    if (typeof req.body.hypeScore === 'number') {
+      update.hypeScore = Math.min(Math.max(req.body.hypeScore, 0), 100);
+    }
+
+    if (typeof req.body.preorderMetadata === 'object' && req.body.preorderMetadata !== null) {
+      update.preorderMetadata = req.body.preorderMetadata;
     }
 
     update.updatedAt = new Date();
