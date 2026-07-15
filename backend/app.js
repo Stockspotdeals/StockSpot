@@ -15,7 +15,9 @@ const { MonitoringWorker } = require('./src/services/MonitoringWorker');
 const { authenticateToken, requireAdmin } = require('./src/middleware/authMiddleware');
 const { getLiveSignals } = require('./src/services/signalPipeline');
 
-const CANONICAL_PREMIUM_MONTHLY_PRICE_ID = 'price_1TmoLXLZ30FLlixp8FiDIju7';
+const CANONICAL_PREMIUM_MONTHLY_PRICE_ID = process.env.STRIPE_PRICE_ID || (() => {
+  throw new Error('STRIPE_PRICE_ID environment variable is required');
+})();
 
 let monitoringWorkerInstance = null;
 let activeServerPort = 'not-listening';
@@ -56,10 +58,8 @@ app.use(helmet({
   if (process.env.FRONTEND_URL) {
     allowed.push(process.env.FRONTEND_URL);
   }
-  // add our custom domain directly as a fallback
+  // add our custom domain directly
   allowed.push('https://stockspotdeals.com');
-  // optional: include GitHub Pages URL if you're still hosting there
-  allowed.push('https://your-github-username.github.io');
 
   const originOption = process.env.NODE_ENV === 'production' ? allowed : 'http://localhost:3000';
 

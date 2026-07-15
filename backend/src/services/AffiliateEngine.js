@@ -2,7 +2,12 @@ const { RETAILER_TYPES } = require('../models/TrackedProduct');
 
 class AffiliateEngine {
   constructor() {
-    this.amazonAssociateId = process.env.AMAZON_ASSOCIATE_ID || 'stockspot-20';
+    this.amazonAssociateId = process.env.AMAZON_ASSOCIATE_ID || '';
+    if (this.amazonAssociateId) {
+      console.log(`[AffiliateEngine] Using AMAZON_ASSOCIATE_ID from environment`);
+    } else {
+      console.warn('[AffiliateEngine] AMAZON_ASSOCIATE_ID is not set — affiliate tags will not be injected');
+    }
   }
 
   /**
@@ -21,8 +26,10 @@ class AffiliateEngine {
         return originalUrl;
       }
 
-      // Add or update the affiliate tag
-      parsedUrl.searchParams.set('tag', this.amazonAssociateId);
+      // Only inject affiliate tag if AMAZON_ASSOCIATE_ID is configured
+      if (this.amazonAssociateId) {
+        parsedUrl.searchParams.set('tag', this.amazonAssociateId);
+      }
       
       // Remove other tracking parameters to clean up the URL
       const trackingParams = [
@@ -65,8 +72,9 @@ class AffiliateEngine {
       const asin = asinMatch[1];
       const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
       
-      // Build clean URL with affiliate tag
-      return `${baseUrl}/dp/${asin}?tag=${this.amazonAssociateId}`;
+      // Build clean URL with affiliate tag (only if configured)
+      const tagSuffix = this.amazonAssociateId ? `?tag=${this.amazonAssociateId}` : '';
+      return `${baseUrl}/dp/${asin}${tagSuffix}`;
     } catch (error) {
       console.error('Error extracting clean Amazon URL:', error);
       return url;

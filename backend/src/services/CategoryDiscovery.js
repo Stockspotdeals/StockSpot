@@ -30,24 +30,53 @@ const PRIORITY_CATEGORIES = [
 ];
 
 /**
+ * Preorder and collector-intent keywords used to identify high-signal
+ * discovery pages. Products whose titles contain these keywords receive
+ * a hype score boost via the existing calculateHypeScore() mechanism.
+ */
+const PREORDER_SIGNAL_KEYWORDS = [
+  'preorder', 'pre-order', 'pre order', 'coming soon', 'reserve now',
+  'launches', 'releases', 'collector', 'limited edition', 'exclusive',
+  'bundle', 'anniversary', 'special edition', 'premium', 'steelbook',
+  'booster box', 'elite trainer box', 'gift collection', 'starter deck',
+  'console bundle'
+];
+
+/**
  * Retailer category page URLs for product discovery.
  * These are the "landing" or "browse" pages that list products
  * in high-value categories like trading cards, collectibles, gaming, etc.
+ *
+ * Includes preorder-focused, collector-edition, and limited-release pages
+ * so that CategoryDiscovery finds products that ProductMonitor can later
+ * upgrade to preorder trackingType.
  */
 const CATEGORY_URLS = {
   [RETAILER_TYPES.AMAZON]: [
+    // Trading cards & collectibles (existing)
     'https://www.amazon.com/s?k=pokemon+trading+cards&i=toys-and-games&rh=n%3A165795011',
     'https://www.amazon.com/s?k=one+piece+trading+card+game&i=toys-and-games',
     'https://www.amazon.com/s?k=sports+trading+cards&i=toys-and-games&rh=n%3A166331011',
     'https://www.amazon.com/s?k=collectible+action+figures&i=toys-and-games',
     'https://www.amazon.com/s?k=lego+sets&i=toys-and-games',
+    'https://www.amazon.com/s?k=magic+the+gathering&i=toys-and-games',
+    'https://www.amazon.com/s?k=yu+gi+oh+trading+cards&i=toys-and-games',
+    // Gaming (existing)
     'https://www.amazon.com/s?k=nintendo+switch+games&i=videogames',
     'https://www.amazon.com/s?k=playstation+5+games&i=videogames',
     'https://www.amazon.com/s?k=xbox+series+x+games&i=videogames',
-    'https://www.amazon.com/s?k=magic+the+gathering&i=toys-and-games',
-    'https://www.amazon.com/s?k=yu+gi+oh+trading+cards&i=toys-and-games'
+    // Preorder & collector edition pages (new)
+    'https://www.amazon.com/s?k=pokemon+booster+box+preorder&i=toys-and-games',
+    'https://www.amazon.com/s?k=collector+edition+preorder&i=toys-and-games',
+    'https://www.amazon.com/s?k=limited+edition+steelbook&i=videogames',
+    'https://www.amazon.com/s?k=elite+trainer+box&i=toys-and-games',
+    'https://www.amazon.com/s?k=special+edition+console+bundle&i=videogames',
+    'https://www.amazon.com/s?k=exclusive+collector+action+figure&i=toys-and-games',
+    'https://www.amazon.com/s?k=preorder+nintendo+switch&i=videogames',
+    'https://www.amazon.com/s?k=coming+soon+pokemon&i=toys-and-games'
   ],
   [RETAILER_TYPES.WALMART]: [
+    // Existing
     'https://www.walmart.com/browse/toys/pokemon-trading-cards/4171_1227809_1229591',
     'https://www.walmart.com/browse/video-games/nintendo-switch-games/2636_7050607',
     'https://www.walmart.com/browse/video-games/playstation-5-games/2636_4938110',
@@ -56,6 +85,7 @@ const CATEGORY_URLS = {
     'https://www.walmart.com/browse/toys/action-figures/4171_1227809_1228046'
   ],
   [RETAILER_TYPES.TARGET]: [
+    // Existing
     'https://www.target.com/c/pokemon-trading-cards/-/N-5xtcp',
     'https://www.target.com/c/nintendo-switch-games/-/N-5xsg0',
     'https://www.target.com/c/playstation-5-games/-/N-5xsg1',
@@ -64,22 +94,31 @@ const CATEGORY_URLS = {
     'https://www.target.com/c/action-figures/-/N-55da3'
   ],
   [RETAILER_TYPES.BESTBUY]: [
+    // Existing
     'https://www.bestbuy.com/site/trading-card-games/pokemon-trading-cards/pcmcat313500050014.c?id=pcmcat313500050014',
     'https://www.bestbuy.com/site/video-games/nintendo-switch/pcmcat1486574754468.c?id=pcmcat1486574754468',
     'https://www.bestbuy.com/site/video-games/playstation-5/pcmcat1582144059518.c?id=pcmcat1582144059518',
     'https://www.bestbuy.com/site/video-games/xbox-series-x/pcmcat1582144744292.c?id=pcmcat1582144744292',
-    'https://www.bestbuy.com/site/toys/action-figures/abcat170100.c?id=abcat170100'
+    'https://www.bestbuy.com/site/toys/action-figures/abcat170100.c?id=abcat170100',
+    // Preorder discovery pages (new)
+    'https://www.bestbuy.com/site/electronics/pc-games/pcmcat143600050187.c?id=pcmcat143600050187'
   ],
   [RETAILER_TYPES.GAMESTOP]: [
+    // Existing TCG
     'https://www.gamestop.com/tcg/pokemon',
     'https://www.gamestop.com/tcg/one-piece',
     'https://www.gamestop.com/tcg/magic',
     'https://www.gamestop.com/tcg/yu-gi-oh',
+    // Existing gaming
     'https://www.gamestop.com/video-games/nintendo-switch',
     'https://www.gamestop.com/video-games/playstation-5',
     'https://www.gamestop.com/video-games/xbox-series-x',
+    // Existing collectibles
     'https://www.gamestop.com/collectibles',
-    'https://www.gamestop.com/toys'
+    'https://www.gamestop.com/toys',
+    // Preorder-focused pages (new)
+    'https://www.gamestop.com/collectibles/action-figures',
+    'https://www.gamestop.com/collectibles/premium'
   ]
 };
 

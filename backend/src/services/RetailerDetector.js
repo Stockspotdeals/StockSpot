@@ -39,6 +39,11 @@ class RetailerDetector {
         return RETAILER_TYPES.BESTBUY;
       }
 
+      // GameStop detection
+      if (hostname.includes('gamestop.com')) {
+        return RETAILER_TYPES.GAMESTOP;
+      }
+
       // Pokémon Center detection
       if (hostname.includes('pokemoncenter.com')) {
         return RETAILER_TYPES.POKEMONCENTER;
@@ -66,6 +71,8 @@ class RetailerDetector {
           return this.extractTargetProductId(parsedUrl);
         case RETAILER_TYPES.BESTBUY:
           return this.extractBestBuyProductId(parsedUrl);
+        case RETAILER_TYPES.GAMESTOP:
+          return this.extractGameStopProductId(parsedUrl);
         case RETAILER_TYPES.POKEMONCENTER:
           return this.extractPokemonCenterProductId(parsedUrl);
         default:
@@ -126,6 +133,20 @@ class RetailerDetector {
     return match ? match[1] : null;
   }
 
+  static extractGameStopProductId(parsedUrl) {
+    // GameStop product URL patterns:
+    //   /products/product-name/123456
+    //   /products/product-name/123456.html
+    //   /tcg/pokemon/products/product-name/123456
+    const pathname = parsedUrl.pathname;
+    
+    // Pattern: /products/product-name/DIGITS or /something/products/product-name/DIGITS
+    const match = pathname.match(/\/products\/[^\/]+\/(\d+)(?:\.\w+)?$/);
+    if (match) return match[1];
+    
+    return null;
+  }
+
   /**
    * Normalize product URL (remove tracking parameters, etc.)
    */
@@ -142,6 +163,8 @@ class RetailerDetector {
           return this.normalizeTargetUrl(parsedUrl);
         case RETAILER_TYPES.BESTBUY:
           return this.normalizeBestBuyUrl(parsedUrl);
+        case RETAILER_TYPES.GAMESTOP:
+          return this.normalizeGameStopUrl(parsedUrl);
         default:
           // Generic normalization - remove common tracking parameters
           parsedUrl.searchParams.delete('utm_source');
@@ -207,6 +230,29 @@ class RetailerDetector {
     trackingParams.forEach(param => {
       parsedUrl.searchParams.delete(param);
     });
+    
+    return parsedUrl.toString();
+  }
+
+  static normalizeGameStopUrl(parsedUrl) {
+    // GameStop URL normalization:
+    // 1. Remove tracking parameters
+    // 2. Strip .html suffix from path if present
+    // 3. Preserve the canonical product path
+    const trackingParams = [
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+      'ref', 'tag', 'cid', 'affil', 'cjevent', 'affId', 'sourceid',
+      'irgwc', 'irclickid', 'partner', 'clickid'
+    ];
+    
+    trackingParams.forEach(param => {
+      parsedUrl.searchParams.delete(param);
+    });
+    
+    // Strip .html suffix from pathname to prevent duplicate entries
+    if (parsedUrl.pathname.endsWith('.html')) {
+      parsedUrl.pathname = parsedUrl.pathname.slice(0, -5);
+    }
     
     return parsedUrl.toString();
   }
@@ -304,6 +350,32 @@ class RetailerDetector {
             'sold out',
             'coming soon',
             'unavailable nearby'
+          ]
+        }
+      },
+
+      // GameStop — category page product tiles, standard product pages
+      [RETAILER_TYPES.GAMESTOP]: {
+        name: 'GameStop',
+        baseDelay: 1500,
+        maxDelay: 8000,
+        timeout: 25000,
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache'
+        },
+        selectors: {
+          title: '[class*="product-title"], [class*="ProductCard"] h3, h1',
+          price: '[class*="price"], [class*="ProductCard"] [class*="price"]',
+          availability: '[class*="availability"], [class*="ProductCard"] [class*="stock"]',
+          outOfStock: [
+            'out of stock',
+            'not available',
+            'sold out online',
+            'coming soon',
+            'unavailable'
           ]
         }
       },
