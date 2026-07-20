@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const { TrackedProduct } = require('../models/TrackedProduct');
 const { ProductIntelligence } = require('./ProductIntelligence');
+const { OwnerIntelligence } = require('./OwnerIntelligence');
 
 async function upsertProduct(trackedProduct) {
   try {
@@ -87,6 +88,16 @@ async function upsertProduct(trackedProduct) {
       console.warn('⚠️  ProductIntelligence analysis failed for', trackedProduct._id, intelErr.message);
     }
     // ── End Campaign B ──
+
+    // ── Campaign C: Owner Intelligence — Discovery Learning ──
+    try {
+      const intelligence = ProductIntelligence.analyze(trackedProduct, trackedProduct.pageText || '');
+      await OwnerIntelligence.processProduct(trackedProduct, intelligence);
+    } catch (oiErr) {
+      // Owner Intelligence is non-critical — log and continue
+      console.warn('⚠️  OwnerIntelligence processing failed for', trackedProduct._id, oiErr.message);
+    }
+    // ── End Campaign C ──
 
     return product;
   } catch (err) {

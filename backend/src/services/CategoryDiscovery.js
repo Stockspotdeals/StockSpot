@@ -2,6 +2,7 @@ const { RetailerDetector, RETAILER_TYPES } = require('./RetailerDetector');
 const { TrackedProduct } = require('../models/TrackedProduct');
 const { DiscoverySource } = require('../models/DiscoverySource');
 const { CategoryDetector } = require('./CategoryDetector');
+const { OwnerIntelligence } = require('./OwnerIntelligence');
 
 // Lazy load cheerio — only loaded when actually needed for HTML parsing
 let cheerio = null;
@@ -1192,7 +1193,30 @@ class CategoryDiscovery {
       console.warn('[CategoryDiscovery] Sitemap discovery error (non-fatal):', sitemapError.message);
     }
 
-    // Phase 5: Record analytics
+    // Phase 5: Owner Intelligence — process discoveries for learning
+    try {
+      // Group discoveries by source URL and retailer for Owner Intelligence processing
+      const discoveriesBySource = {};
+      for (const d of discoveries) {
+        const key = d._sourceUrl || 'unknown';
+        if (!discoveriesBySource[key]) {
+          discoveriesBySource[key] = { retailer: d.retailer, products: [] };
+        }
+        discoveriesBySource[key].products.push(d);
+      }
+
+      for (const [sourceUrl, group] of Object.entries(discoveriesBySource)) {
+        await OwnerIntelligence.processDiscoveries(
+          group.products,
+          sourceUrl,
+          group.retailer
+        );
+      }
+    } catch (oiError) {
+      console.warn('[CategoryDiscovery] Owner Intelligence processing error (non-fatal):', oiError.message);
+    }
+
+    // Phase 6: Record analytics
     const durationMs = Date.now() - startTime;
     try {
       await CategoryDiscovery.recordAnalytics({
@@ -1269,6 +1293,7 @@ class CategoryDiscovery {
     }
 
     // Record successful crawl with health metrics
+    const $ = cheerioLib.load(page.html);
     const productLinks = this.extractProductLinks($, retailer);
     await CategoryDiscovery.recordSuccessfulCrawl(categoryUrl, responseTimeMs, productLinks.length);
 
@@ -1424,7 +1449,8 @@ class CategoryDiscovery {
         title: link.title,
         url: normalizedUrl,
         reason: `Discovered from ${retailer} category page; category=${category}`,
-        timestamp: new Date()
+        timestamp: new Date(),
+        _sourceUrl: originatingSourceUrl
       };
 
       // Track product yield on the originating discovery source

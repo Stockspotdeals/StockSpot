@@ -5,6 +5,7 @@ const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
 const { DiscoverySource } = require('../src/models/DiscoverySource');
 const { CategoryDiscovery } = require('../src/services/CategoryDiscovery');
 const { ProductIntelligence } = require('../src/services/ProductIntelligence');
+const { OwnerIntelligence, OwnerIntelligenceDashboard } = require('../src/services/OwnerIntelligence');
 
 const router = express.Router();
 
@@ -661,6 +662,91 @@ router.get('/intelligence/classifications', authenticateToken, requireAdmin, asy
   } catch (error) {
     console.error('Error fetching classifications:', error);
     res.status(500).json({ error: 'Failed to fetch classifications' });
+  }
+});
+
+// ══════════════════════════════════════════════
+// Campaign C — Owner Intelligence Endpoints
+// ══════════════════════════════════════════════
+
+/**
+ * GET /api/admin/owner-intelligence/dashboard - Get Owner Intelligence dashboard
+ */
+router.get('/owner-intelligence/dashboard', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const dashboard = await OwnerIntelligence.getDashboard();
+    res.json(dashboard);
+  } catch (error) {
+    console.error('Error fetching Owner Intelligence dashboard:', error);
+    res.status(500).json({ error: 'Failed to fetch Owner Intelligence dashboard' });
+  }
+});
+
+/**
+ * GET /api/admin/owner-intelligence/retailers - Get top retailers
+ */
+router.get('/owner-intelligence/retailers', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5;
+    const retailers = await OwnerIntelligenceDashboard.getTopRetailers(limit);
+    res.json({ retailers });
+  } catch (error) {
+    console.error('Error fetching top retailers:', error);
+    res.status(500).json({ error: 'Failed to fetch top retailers' });
+  }
+});
+
+/**
+ * GET /api/admin/owner-intelligence/categories - Get top categories
+ */
+router.get('/owner-intelligence/categories', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5;
+    const categories = await OwnerIntelligenceDashboard.getTopCategories(limit);
+    res.json({ categories });
+  } catch (error) {
+    console.error('Error fetching top categories:', error);
+    res.status(500).json({ error: 'Failed to fetch top categories' });
+  }
+});
+
+/**
+ * GET /api/admin/owner-intelligence/sources - Get top discovery sources
+ */
+router.get('/owner-intelligence/sources', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const sources = await OwnerIntelligenceDashboard.getTopSources(limit);
+    res.json({ sources });
+  } catch (error) {
+    console.error('Error fetching top sources:', error);
+    res.status(500).json({ error: 'Failed to fetch top sources' });
+  }
+});
+
+/**
+ * GET /api/admin/owner-intelligence/success-rates - Get discovery success rates
+ */
+router.get('/owner-intelligence/success-rates', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const rates = await OwnerIntelligenceDashboard.getSuccessRates();
+    res.json(rates);
+  } catch (error) {
+    console.error('Error fetching success rates:', error);
+    res.status(500).json({ error: 'Failed to fetch success rates' });
+  }
+});
+
+/**
+ * GET /api/admin/owner-intelligence/priority-distribution - Get priority distribution
+ */
+router.get('/owner-intelligence/priority-distribution', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const distribution = await OwnerIntelligenceDashboard.getPriorityDistribution();
+    res.json(distribution);
+  } catch (error) {
+    console.error('Error fetching priority distribution:', error);
+    res.status(500).json({ error: 'Failed to fetch priority distribution' });
   }
 });
 
