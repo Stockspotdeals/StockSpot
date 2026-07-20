@@ -86,6 +86,90 @@ const productSchema = new mongoose.Schema({
   detectedAt: {
     type: Date,
     default: Date.now
+  },
+
+  // ── Campaign B: Product Intelligence Fields ──
+  classification: {
+    type: String,
+    default: null
+  },
+  classificationConfidence: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  isCollectible: {
+    type: Boolean,
+    default: false
+  },
+  collectibleConfidence: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  estimatedMSRP: {
+    type: Number,
+    default: null
+  },
+  msrpConfidence: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  releaseWindow: {
+    type: String,
+    default: null
+  },
+  releaseMonth: {
+    type: Number,
+    default: null
+  },
+  releaseQuarter: {
+    type: Number,
+    default: null
+  },
+  releaseYear: {
+    type: Number,
+    default: null
+  },
+  preorderStatus: {
+    type: Boolean,
+    default: false
+  },
+  launchStatus: {
+    type: Boolean,
+    default: false
+  },
+  alreadyReleased: {
+    type: Boolean,
+    default: false
+  },
+  demandScore: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  scarcityScore: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  flipScore: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  confidenceScore: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
   }
 }, {
   timestamps: true,

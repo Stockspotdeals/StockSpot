@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const { TrackedProduct } = require('../models/TrackedProduct');
+const { ProductIntelligence } = require('./ProductIntelligence');
 
 async function upsertProduct(trackedProduct) {
   try {
@@ -53,6 +54,39 @@ async function upsertProduct(trackedProduct) {
 
     const opts = { upsert: true, new: true, setDefaultsOnInsert: true };
     const product = await Product.findOneAndUpdate(filter, update, opts).exec();
+
+    // ── Campaign B: Compute Product Intelligence ──
+    try {
+      const intelligence = ProductIntelligence.analyze(trackedProduct, trackedProduct.pageText || '');
+      await Product.updateOne(
+        { _id: product._id },
+        {
+          $set: {
+            classification: intelligence.classification,
+            classificationConfidence: intelligence.classificationConfidence,
+            isCollectible: intelligence.isCollectible,
+            collectibleConfidence: intelligence.collectibleConfidence,
+            estimatedMSRP: intelligence.estimatedMSRP,
+            msrpConfidence: intelligence.msrpConfidence,
+            releaseWindow: intelligence.releaseWindow,
+            releaseMonth: intelligence.releaseMonth,
+            releaseQuarter: intelligence.releaseQuarter,
+            releaseYear: intelligence.releaseYear,
+            preorderStatus: intelligence.preorderStatus,
+            launchStatus: intelligence.launchStatus,
+            alreadyReleased: intelligence.alreadyReleased,
+            demandScore: intelligence.demandScore,
+            scarcityScore: intelligence.scarcityScore,
+            flipScore: intelligence.flipScore,
+            confidenceScore: intelligence.confidenceScore
+          }
+        }
+      );
+    } catch (intelErr) {
+      // Intelligence is non-critical — log and continue
+      console.warn('⚠️  ProductIntelligence analysis failed for', trackedProduct._id, intelErr.message);
+    }
+    // ── End Campaign B ──
 
     return product;
   } catch (err) {

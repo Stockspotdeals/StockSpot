@@ -4,6 +4,7 @@ const { getMonitoringWorker } = require('../services/MonitoringWorker');
 const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
 const { DiscoverySource } = require('../src/models/DiscoverySource');
 const { CategoryDiscovery } = require('../src/services/CategoryDiscovery');
+const { ProductIntelligence } = require('../src/services/ProductIntelligence');
 
 const router = express.Router();
 
@@ -571,6 +572,95 @@ router.get('/discovery/health', authenticateToken, requireAdmin, async (req, res
   } catch (error) {
     console.error('Error fetching discovery health:', error);
     res.status(500).json({ error: 'Failed to fetch discovery health' });
+  }
+});
+
+/**
+ * GET /api/admin/intelligence/summary - Get product intelligence summary
+ */
+router.get('/intelligence/summary', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const Product = require('../models/Product');
+
+    const [
+      classificationBreakdown,
+      collectibleCount,
+      highDemandCount,
+      highScarcityCount,
+      highFlipCount,
+      preorderCount,
+      avgScores
+    ] = await Promise.all([
+      // Classification breakdown
+      Product.aggregate([
+        { $match: { classification: { $ne: null } } },
+        { $group: { _id: '$classification', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+
+      // Collectible count
+      Product.countDocuments({ isCollectible: true }),
+
+      // High demand (score >= 70)
+      Product.countDocuments({ demandScore: { $gte: 70 } }),
+
+      // High scarcity (score >= 60)
+      Product.countDocuments({ scarcityScore: { $gte: 60 } }),
+
+      // High flip (score >= 60)
+      Product.countDocuments({ flipScore: { $gte: 60 } }),
+
+      // Preorder count
+      Product.countDocuments({ preorderStatus: true }),
+
+      // Average scores
+      Product.aggregate([
+        {
+          $group: {
+            _id: null,
+            avgDemand: { $avg: '$demandScore' },
+            avgScarcity: { $avg: '$scarcityScore' },
+            avgFlip: { $avg: '$flipScore' },
+            avgConfidence: { $avg: '$confidenceScore' },
+            avgCollectibleConfidence: { $avg: '$collectibleConfidence' }
+          }
+        }
+      ])
+    ]);
+
+    res.json({
+      classificationBreakdown,
+      collectibleCount,
+      highDemandCount,
+      highScarcityCount,
+      highFlipCount,
+      preorderCount,
+      averages: avgScores[0] || {
+        avgDemand: 0,
+        avgScarcity: 0,
+        avgFlip: 0,
+        avgConfidence: 0,
+        avgCollectibleConfidence: 0
+      },
+      totalAnalyzed: await Product.countDocuments({ classification: { $ne: null } })
+    });
+  } catch (error) {
+    console.error('Error fetching intelligence summary:', error);
+    res.status(500).json({ error: 'Failed to fetch intelligence summary' });
+  }
+});
+
+/**
+ * GET /api/admin/intelligence/classifications - Get classification options
+ */
+router.get('/intelligence/classifications', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    res.json({
+      classifications: ProductIntelligence.getClassificationOptions()
+    });
+  } catch (error) {
+    console.error('Error fetching classifications:', error);
+    res.status(500).json({ error: 'Failed to fetch classifications' });
   }
 });
 
