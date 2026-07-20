@@ -118,6 +118,24 @@ const SEED_CATEGORY_URLS = {
 };
 
 /**
+ * Publisher hubs for PART 6 — Publisher Discovery.
+ * These are root pages for publisher content that may lead to product pages.
+ */
+const PUBLISHER_HUBS = {
+  'nintendo': 'https://www.nintendo.com/us/games/',
+  'playstation': 'https://www.playstation.com/en-us/ps5/games/',
+  'xbox': 'https://www.xbox.com/en-US/games/all-games',
+  'pokemon': 'https://www.pokemon.com/us/pokemon-tcg',
+  'bandai': 'https://www.bandai.com/',
+  'lorcana': 'https://www.disneylorcana.com/en-US/cards',
+  'one_piece': 'https://onepiece-cardgame.com/en/cards',
+  'hasbro': 'https://shop.hasbro.com/en-us',
+  'mattel': 'https://shop.mattel.com/',
+  'funko': 'https://www.funko.com/shop',
+  'lego': 'https://www.lego.com/en-us/themes'
+};
+
+/**
  * Maximum number of category pages to visit per retailer per discovery run.
  */
 const MAX_PAGES_PER_RETAILER = 3;
@@ -126,6 +144,21 @@ const MAX_PAGES_PER_RETAILER = 3;
  * Maximum number of new products to create per discovery run (rate control).
  */
 const MAX_NEW_PRODUCTS_PER_RUN = 25;
+
+/**
+ * Maximum number of new sources to discover per run.
+ */
+const MAX_NEW_SOURCES_PER_RUN = 10;
+
+/**
+ * Maximum number of publisher pages to check per run.
+ */
+const MAX_PUBLISHER_PAGES_PER_RUN = 5;
+
+/**
+ * Analytics collection name for PART 8.
+ */
+const ANALYTICS_COLLECTION = 'discovery_analytics';
 
 class CategoryDiscovery {
   constructor(productMonitor) {
@@ -226,7 +259,11 @@ class CategoryDiscovery {
             retailer,
             sourceType: 'category',
             priority: 100,
-            enabled: true
+            crawlPriority: 100,
+            crawlWeight: 1.0,
+            enabled: true,
+            baseCooldownMinutes: 30,
+            currentCooldownMinutes: 30
           });
           order++;
         }
@@ -245,17 +282,46 @@ class CategoryDiscovery {
   }
 
   /**
-   * Get enabled discovery sources grouped by retailer, preserving seed order.
+   * Calculate a dynamic priority score for a DiscoverySource.
+   * Used for sorting crawl order — higher score = crawled earlier.
+   *
+   * Delegates to the model's static method for consistency.
+   */
+  static calculateSourceScore(source) {
+    return DiscoverySource.calculateDynamicPriority(source);
+  }
+
+  /**
+   * Get enabled discovery sources sorted by dynamic priority,
+   * respecting crawl budget (cooldowns, failure streaks, etc.).
+   *
    * Returns the same structure as the legacy CATEGORY_URLS constant:
    *   { retailer1: [url1, url2, ...], retailer2: [...] }
    */
   static async getDiscoveryUrls() {
-    const sources = await DiscoverySource.find({ enabled: true })
-      .sort({ priority: 1, createdAt: 1 })
-      .lean();
+    const now = new Date();
+
+    // Get all enabled sources that are not in cooldown
+    const sources = await DiscoverySource.find({
+      enabled: true,
+      $or: [
+        { cooldownUntil: null },
+        { cooldownUntil: { $lte: now } }
+      ]
+    }).lean();
+
+    // Score each source, sort by highest score first
+    sources.forEach(s => {
+      s._discoveryScore = DiscoverySource.calculateDynamicPriority(s);
+    });
+    sources.sort((a, b) => b._discoveryScore - a._discoveryScore);
+
+    // Apply crawl budget: limit to top N sources per run
+    const CRAWL_BUDGET = 20;
+    const budgeted = sources.slice(0, CRAWL_BUDGET);
 
     const grouped = {};
-    for (const source of sources) {
+    for (const source of budgeted) {
       if (!grouped[source.retailer]) {
         grouped[source.retailer] = [];
       }
@@ -263,6 +329,216 @@ class CategoryDiscovery {
     }
 
     return grouped;
+  }
+
+  /**
+   * Get all enabled sources with full metadata for admin dashboard.
+   */
+  static async getAllSources() {
+    return await DiscoverySource.find({ enabled: true })
+      .sort({ crawlPriority: -1, lastCrawledAt: -1 })
+      .lean();
+  }
+
+  /**
+   * Get disabled sources for admin dashboard.
+   */
+  static async getDisabledSources() {
+    return await DiscoverySource.find({ enabled: false })
+      .sort({ disabledAt: -1 })
+      .lean();
+  }
+
+  /**
+   * Manually re-enable a disabled source.
+   */
+  static async reEnableSource(sourceId) {
+    return await DiscoverySource.findByIdAndUpdate(sourceId, {
+      $set: {
+        enabled: true,
+        autoDisabled: false,
+        disabledReason: null,
+        disabledAt: null,
+        manuallyReEnabledAt: new Date(),
+        consecutiveFailures: 0,
+        cooldownUntil: null,
+        currentCooldownMinutes: 30
+      }
+    }, { new: true });
+  }
+
+  /**
+   * Manually disable a source.
+   */
+  static async disableSource(sourceId, reason) {
+    return await DiscoverySource.findByIdAndUpdate(sourceId, {
+      $set: {
+        enabled: false,
+        disabledReason: reason || 'Manually disabled',
+        disabledAt: new Date()
+      }
+    }, { new: true });
+  }
+
+  /**
+   * Manually update source priority.
+   */
+  static async updateSourcePriority(sourceId, priority) {
+    const clamped = Math.max(0, Math.min(1000, priority));
+    return await DiscoverySource.findByIdAndUpdate(sourceId, {
+      $set: { crawlPriority: clamped, priority: clamped }
+    }, { new: true });
+  }
+
+  /**
+   * Record a successful crawl on a discovery source.
+   * Updates health metrics and adjusts cooldown.
+   */
+  static async recordSuccessfulCrawl(url, responseTimeMs, productsFound) {
+    const source = await DiscoverySource.findOne({ url });
+    if (!source) return;
+
+    const update = {
+      $set: {
+        lastCrawledAt: new Date(),
+        lastSuccessfulCrawl: new Date(),
+        consecutiveFailures: 0,
+        lastHttpStatus: 200
+      },
+      $inc: {
+        successfulCrawls: 1,
+        crawlCount: 1,
+        totalResponseTime: responseTimeMs || 0
+      }
+    };
+
+    if (productsFound > 0) {
+      update.$set.lastProductFoundAt = new Date();
+      update.$inc.totalProductsFound = productsFound;
+    }
+
+    // Update average response time
+    const newCrawlCount = (source.crawlCount || 0) + 1;
+    const totalTime = (source.totalResponseTime || 0) + (responseTimeMs || 0);
+    update.$set.averageResponseTime = newCrawlCount > 0 ? Math.round(totalTime / newCrawlCount) : 0;
+
+    // Update average products per crawl
+    const newTotalProducts = (source.totalProductsFound || 0) + productsFound;
+    update.$set.averageProductsPerCrawl = newCrawlCount > 0
+      ? Math.round((newTotalProducts / newCrawlCount) * 100) / 100
+      : 0;
+
+    // Calculate and set adaptive cooldown
+    const updatedSource = { ...source.toObject(), ...update.$set };
+    // Merge the $inc values for calculation
+    updatedSource.successfulCrawls = (source.successfulCrawls || 0) + 1;
+    updatedSource.crawlCount = newCrawlCount;
+    updatedSource.totalResponseTime = totalTime;
+    updatedSource.totalProductsFound = newTotalProducts;
+
+    const cooldownMs = DiscoverySource.calculateCooldownMs(updatedSource);
+    update.$set.cooldownUntil = new Date(Date.now() + cooldownMs);
+    update.$set.currentCooldownMinutes = Math.round(cooldownMs / 60000);
+
+    // Update dynamic priority
+    const newScore = DiscoverySource.calculateDynamicPriority(updatedSource);
+    update.$set.crawlPriority = Math.min(1000, newScore);
+
+    await DiscoverySource.updateOne({ url }, update);
+  }
+
+  /**
+   * Record a failed crawl on a discovery source.
+   * Implements PART 5 — Auto-disable logic.
+   */
+  static async recordFailedCrawl(url, httpStatus, errorMessage) {
+    const source = await DiscoverySource.findOne({ url });
+    if (!source) return;
+
+    const newConsecutiveFailures = (source.consecutiveFailures || 0) + 1;
+    const update = {
+      $set: {
+        lastCrawledAt: new Date(),
+        consecutiveFailures: newConsecutiveFailures,
+        lastHttpStatus: httpStatus || null,
+        lastErrorMessage: errorMessage || null
+      },
+      $inc: {
+        failedCrawls: 1,
+        crawlCount: 1
+      }
+    };
+
+    // Auto-disable logic
+    let shouldDisable = false;
+    let disableReason = null;
+
+    // 404 repeatedly
+    if (httpStatus === 404 && newConsecutiveFailures >= 3) {
+      shouldDisable = true;
+      disableReason = 'Page not found (404) after 3 attempts';
+    }
+
+    // Blocked repeatedly
+    if ((httpStatus === 403 || httpStatus === 429) && newConsecutiveFailures >= 3) {
+      shouldDisable = true;
+      disableReason = httpStatus === 403 ? 'Access blocked (403) after 3 attempts' : 'Rate limited (429) after 3 attempts';
+    }
+
+    // No products after many crawls
+    if (newConsecutiveFailures >= 10 && (source.totalProductsFound || 0) === 0) {
+      shouldDisable = true;
+      disableReason = 'No products found after 10 failed crawls';
+    }
+
+    // Permanent redirect
+    if (httpStatus >= 300 && httpStatus < 400 && newConsecutiveFailures >= 3) {
+      shouldDisable = true;
+      disableReason = `Permanent redirect (${httpStatus}) after 3 attempts`;
+    }
+
+    // General failure threshold
+    if (newConsecutiveFailures >= 15) {
+      shouldDisable = true;
+      disableReason = `Exceeded maximum consecutive failures (${newConsecutiveFailures})`;
+    }
+
+    if (shouldDisable) {
+      update.$set.enabled = false;
+      update.$set.autoDisabled = true;
+      update.$set.disabledReason = disableReason;
+      update.$set.disabledAt = new Date();
+      console.log(`[CategoryDiscovery] 🚫 Auto-disabled source: ${url} — ${disableReason}`);
+    } else {
+      // Set longer cooldown on failure
+      const cooldownMs = DiscoverySource.calculateCooldownMs({
+        ...source.toObject(),
+        consecutiveFailures: newConsecutiveFailures
+      });
+      update.$set.cooldownUntil = new Date(Date.now() + cooldownMs);
+      update.$set.currentCooldownMinutes = Math.round(cooldownMs / 60000);
+    }
+
+    // Update dynamic priority (will decrease due to failures)
+    const updatedSource = {
+      ...source.toObject(),
+      ...update.$set,
+      failedCrawls: (source.failedCrawls || 0) + 1,
+      crawlCount: (source.crawlCount || 0) + 1
+    };
+    const newScore = DiscoverySource.calculateDynamicPriority(updatedSource);
+    update.$set.crawlPriority = Math.min(1000, newScore);
+
+    await DiscoverySource.updateOne({ url }, update);
+  }
+
+  /**
+   * Record a product creation from a discovery source.
+   */
+  static async recordProductCreated(url) {
+    await DiscoverySource.updateOne({ url }, {
+      $inc: { totalProductsCreated: 1 }
+    });
   }
 
   /**
@@ -283,8 +559,6 @@ class CategoryDiscovery {
     };
 
     const MAX_ROOT_PAGES = 2;
-    const MAX_NEW_SOURCES = 10;
-    const DISCOVERY_TTL_DAYS = 7;
     let newSourceCount = 0;
 
     // Patterns to identify discovery pages (not individual products)
@@ -308,7 +582,9 @@ class CategoryDiscovery {
       /\/s\?ref_=/,                          // Amazon browse
       /\/video-games\//i,                    // Gaming landing pages
       /\/toys\//i,                           // Toys landing
-      /\/trading-cards\//i                   // TCG landing
+      /\/trading-cards\//i,                  // TCG landing
+      /\/collection\//i,                     // Collection pages
+      /\/shop\//i                            // Shop pages
     ];
 
     // Patterns to REJECT individual product pages
@@ -339,7 +615,7 @@ class CategoryDiscovery {
     const existingSources = await DiscoverySource.distinct('url');
 
     for (const [retailer, rootUrl] of Object.entries(rootDomains)) {
-      if (newSourceCount >= MAX_NEW_SOURCES) break;
+      if (newSourceCount >= MAX_NEW_SOURCES_PER_RUN) break;
 
       const existingRetailerCount = existingSources.filter(u => {
         try { return RetailerDetector.detectRetailer(u) === retailer; } catch { return false; }
@@ -352,7 +628,7 @@ class CategoryDiscovery {
       }
 
       for (let page = 0; page < MAX_ROOT_PAGES; page++) {
-        if (newSourceCount >= MAX_NEW_SOURCES) break;
+        if (newSourceCount >= MAX_NEW_SOURCES_PER_RUN) break;
 
         const fetchUrl = page === 0 ? rootUrl : `${rootUrl}/s?k=pokemon`;
         const config = RetailerDetector.getRetailerConfig(retailer);
@@ -361,8 +637,6 @@ class CategoryDiscovery {
           const cheerioLib = getCheerio();
           if (!cheerioLib) continue;
 
-          // Use a simple axios fetch directly for source discovery — this is
-          // a lightweight navigational scan, not product monitoring.
           const axios = require('axios');
           const response = await axios.get(fetchUrl, {
             timeout: 15000,
@@ -408,7 +682,7 @@ class CategoryDiscovery {
           });
 
           for (const candidateUrl of candidateUrls) {
-            if (newSourceCount >= MAX_NEW_SOURCES) break;
+            if (newSourceCount >= MAX_NEW_SOURCES_PER_RUN) break;
             if (existingSources.includes(candidateUrl)) continue;
 
             try {
@@ -417,7 +691,11 @@ class CategoryDiscovery {
                 retailer,
                 sourceType: 'category',
                 priority: 200,
-                enabled: true
+                crawlPriority: 200,
+                crawlWeight: 1.0,
+                enabled: true,
+                baseCooldownMinutes: 30,
+                currentCooldownMinutes: 30
               });
               existingSources.push(candidateUrl);
               newSourceCount++;
@@ -438,6 +716,395 @@ class CategoryDiscovery {
     }
 
     console.log(`[CategoryDiscovery] Source discovery complete: ${newSourceCount} new sources found`);
+    return newSourceCount;
+  }
+
+  /**
+   * PART 6 — Publisher Discovery.
+   * Discover product pages from publisher hubs.
+   * Only discovers pages that lead to products, never hardcodes product URLs.
+   */
+  static async discoverPublisherSources() {
+    let newSourceCount = 0;
+    const existingSources = await DiscoverySource.distinct('url');
+
+    console.log('[CategoryDiscovery] Starting publisher discovery...');
+
+    for (const [publisher, hubUrl] of Object.entries(PUBLISHER_HUBS)) {
+      if (newSourceCount >= MAX_PUBLISHER_PAGES_PER_RUN) break;
+
+      // Check if we already have sources for this publisher
+      const existingPublisherCount = await DiscoverySource.countDocuments({
+        publisherName: publisher,
+        enabled: true
+      });
+
+      // Limit to 5 sources per publisher
+      if (existingPublisherCount >= 5) {
+        console.log(`[CategoryDiscovery] Publisher ${publisher} already has ${existingPublisherCount} sources, skipping`);
+        continue;
+      }
+
+      try {
+        const axios = require('axios');
+        const response = await axios.get(hubUrl, {
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html',
+            'Accept-Language': 'en-US,en;q=0.9'
+          }
+        });
+
+        if (response.status !== 200 || !response.data) continue;
+
+        const cheerioLib = getCheerio();
+        if (!cheerioLib) continue;
+
+        const $ = cheerioLib.load(response.data);
+        const candidateUrls = new Set();
+
+        // Extract links that look like they lead to product/category pages
+        $('a[href]').each((i, el) => {
+          const href = $(el).attr('href');
+          if (!href) return;
+
+          const fullUrl = href.startsWith('http')
+            ? href
+            : `${hubUrl}${href.startsWith('/') ? href : '/' + href}`;
+
+          try {
+            const canonicalUrl = CategoryDiscovery.canonicalizeDiscoveryUrl(fullUrl);
+
+            // Skip if already known
+            if (existingSources.includes(canonicalUrl)) return;
+
+            // Must look like a discovery/category page, not a product page
+            const isCategory = /\/games\//i.test(canonicalUrl) ||
+              /\/category\//i.test(canonicalUrl) ||
+              /\/collection\//i.test(canonicalUrl) ||
+              /\/shop\//i.test(canonicalUrl) ||
+              /\/browse\//i.test(canonicalUrl) ||
+              /\/tcg\//i.test(canonicalUrl) ||
+              /\/cards\//i.test(canonicalUrl) ||
+              /\/themes\//i.test(canonicalUrl) ||
+              /\/products\//i.test(canonicalUrl);
+
+            // Skip product pages
+            const isProduct = /\/product\/[^/]+\/[A-Z0-9]+/i.test(canonicalUrl) ||
+              /\/dp\//i.test(canonicalUrl);
+
+            if (isCategory && !isProduct) {
+              candidateUrls.add(canonicalUrl);
+            }
+          } catch {
+            // Invalid URL — skip
+          }
+        });
+
+        for (const candidateUrl of candidateUrls) {
+          if (newSourceCount >= MAX_PUBLISHER_PAGES_PER_RUN) break;
+          if (existingSources.includes(candidateUrl)) continue;
+
+          try {
+            await DiscoverySource.create({
+              url: candidateUrl,
+              retailer: RETAILER_TYPES.OTHER,
+              sourceType: 'publisher',
+              priority: 150,
+              crawlPriority: 150,
+              crawlWeight: 1.0,
+              enabled: true,
+              publisherName: publisher,
+              publisherHub: hubUrl,
+              baseCooldownMinutes: 60,
+              currentCooldownMinutes: 60
+            });
+            existingSources.push(candidateUrl);
+            newSourceCount++;
+            console.log(`[CategoryDiscovery] ✅ New publisher source: [${publisher}] ${candidateUrl}`);
+          } catch (err) {
+            if (err.code !== 11000) {
+              console.warn(`[CategoryDiscovery] Failed to save publisher source ${candidateUrl}:`, err.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`[CategoryDiscovery] Publisher discovery failed for ${publisher}:`, error.message);
+      }
+
+      // Polite delay between publisher hub fetches
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    console.log(`[CategoryDiscovery] Publisher discovery complete: ${newSourceCount} new sources`);
+    return newSourceCount;
+  }
+
+  /**
+   * PART 7 — Sitemap Discovery.
+   * If a retailer sitemap exists, parse it and extract discovery pages.
+   * Ignores product URLs, feeds discovered pages into DiscoverySource.
+   */
+  static async discoverFromSitemaps() {
+    const sitemapUrls = {
+      [RETAILER_TYPES.AMAZON]: 'https://www.amazon.com/sitemap_index.xml',
+      [RETAILER_TYPES.WALMART]: 'https://www.walmart.com/sitemap_index.xml',
+      [RETAILER_TYPES.TARGET]: 'https://www.target.com/sitemap_index.xml',
+      [RETAILER_TYPES.BESTBUY]: 'https://www.bestbuy.com/sitemap_index.xml',
+      [RETAILER_TYPES.GAMESTOP]: 'https://www.gamestop.com/sitemap_index.xml'
+    };
+
+    let newSourceCount = 0;
+    const existingSources = await DiscoverySource.distinct('url');
+
+    console.log('[CategoryDiscovery] Starting sitemap discovery...');
+
+    for (const [retailer, sitemapUrl] of Object.entries(sitemapUrls)) {
+      if (newSourceCount >= MAX_NEW_SOURCES_PER_RUN) break;
+
+      try {
+        const axios = require('axios');
+        const response = await axios.get(sitemapUrl, {
+          timeout: 20000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/xml, text/xml, */*'
+          },
+          // Don't throw on non-200 — sitemaps may not exist
+          validateStatus: status => status < 500
+        });
+
+        if (response.status !== 200 || !response.data) {
+          console.log(`[CategoryDiscovery] No sitemap found for ${retailer} (status ${response.status})`);
+          continue;
+        }
+
+        const cheerioLib = getCheerio();
+        if (!cheerioLib) continue;
+
+        const $ = cheerioLib.load(response.data, { xmlMode: true });
+
+        // Extract all <loc> elements from the sitemap
+        const urls = [];
+        $('loc').each((i, el) => {
+          const loc = $(el).text().trim();
+          if (loc) urls.push(loc);
+        });
+
+        // Also check for sitemap index (nested sitemaps)
+        const sitemapLocs = [];
+        $('sitemap loc').each((i, el) => {
+          const loc = $(el).text().trim();
+          if (loc) sitemapLocs.push(loc);
+        });
+
+        console.log(`[CategoryDiscovery] Sitemap for ${retailer}: ${urls.length} URLs, ${sitemapLocs.length} sub-sitemaps`);
+
+        // Filter URLs to find discovery pages (not product pages)
+        const discoveryUrls = urls.filter(url => {
+          // Must belong to the same retailer
+          if (RetailerDetector.detectRetailer(url) !== retailer) return false;
+
+          // Must look like a discovery/category/search page
+          const isDiscovery = /\/s\?/i.test(url) ||
+            /\/browse\//i.test(url) ||
+            /\/c\//i.test(url) ||
+            /\/site\//i.test(url) ||
+            /\/category\//i.test(url) ||
+            /\/collection\//i.test(url) ||
+            /\/search\//i.test(url) ||
+            /\/deals\//i.test(url) ||
+            /\/new-releases\//i.test(url) ||
+            /\/preorder/i.test(url) ||
+            /\/coming-soon/i.test(url) ||
+            /\/tcg\//i.test(url) ||
+            /\/collectibles\//i.test(url) ||
+            /\/video-games\//i.test(url) ||
+            /\/toys\//i.test(url) ||
+            /\/trading-cards\//i.test(url) ||
+            /\/landing-page\//i.test(url);
+
+          // Must NOT be a product page
+          const isProduct = /\/dp\/[A-Z0-9]{10}/i.test(url) ||
+            /\/gp\/product\//i.test(url) ||
+            /\/product\//i.test(url) ||
+            /\/products\/[^/]+\/\d+/i.test(url) ||
+            /\/ip\/[^/]+\/\d+/i.test(url) ||
+            /\/p\//i.test(url);
+
+          return isDiscovery && !isProduct;
+        });
+
+        // Save discovered URLs
+        for (const discoveryUrl of discoveryUrls) {
+          if (newSourceCount >= MAX_NEW_SOURCES_PER_RUN) break;
+          if (existingSources.includes(discoveryUrl)) continue;
+
+          const canonicalUrl = CategoryDiscovery.canonicalizeDiscoveryUrl(discoveryUrl);
+
+          try {
+            await DiscoverySource.create({
+              url: canonicalUrl,
+              retailer,
+              sourceType: 'sitemap',
+              priority: 150,
+              crawlPriority: 150,
+              crawlWeight: 1.0,
+              enabled: true,
+              lastSitemapParse: new Date(),
+              baseCooldownMinutes: 45,
+              currentCooldownMinutes: 45
+            });
+            existingSources.push(canonicalUrl);
+            newSourceCount++;
+            console.log(`[CategoryDiscovery] ✅ New sitemap source: [${retailer}] ${canonicalUrl}`);
+          } catch (err) {
+            if (err.code !== 11000) {
+              console.warn(`[CategoryDiscovery] Failed to save sitemap source ${canonicalUrl}:`, err.message);
+            }
+          }
+        }
+
+        // Update sitemap metadata on existing sources
+        if (discoveryUrls.length > 0) {
+          await DiscoverySource.updateMany(
+            { retailer, sourceType: 'sitemap' },
+            { $set: { lastSitemapParse: new Date(), sitemapUrlsFound: discoveryUrls.length } }
+          );
+        }
+      } catch (error) {
+        console.warn(`[CategoryDiscovery] Sitemap discovery failed for ${retailer}:`, error.message);
+      }
+
+      // Polite delay between sitemap fetches
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    console.log(`[CategoryDiscovery] Sitemap discovery complete: ${newSourceCount} new sources`);
+    return newSourceCount;
+  }
+
+  /**
+   * PART 8 — Record lightweight discovery analytics.
+   */
+  static async recordAnalytics(metrics) {
+    try {
+      const mongoose = require('mongoose');
+      const db = mongoose.connection.db;
+      if (!db) return;
+
+      const collection = db.collection(ANALYTICS_COLLECTION);
+      await collection.insertOne({
+        ...metrics,
+        timestamp: new Date()
+      });
+
+      // Keep only last 1000 analytics records to prevent history explosion
+      const count = await collection.countDocuments();
+      if (count > 1000) {
+        const oldest = await collection.find()
+          .sort({ timestamp: 1 })
+          .limit(count - 1000)
+          .toArray();
+        if (oldest.length > 0) {
+          await collection.deleteMany({
+            _id: { $in: oldest.map(o => o._id) }
+          });
+        }
+      }
+    } catch (error) {
+      // Analytics failures are non-fatal
+      console.warn('[CategoryDiscovery] Failed to record analytics:', error.message);
+    }
+  }
+
+  /**
+   * Get discovery analytics summary.
+   */
+  static async getAnalyticsSummary(days = 7) {
+    try {
+      const mongoose = require('mongoose');
+      const db = mongoose.connection.db;
+      if (!db) return null;
+
+      const collection = db.collection(ANALYTICS_COLLECTION);
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+      const pipeline = [
+        { $match: { timestamp: { $gte: since } } },
+        {
+          $group: {
+            _id: null,
+            totalRuns: { $sum: 1 },
+            totalProductsDiscovered: { $sum: '$productsDiscovered' },
+            totalNewSources: { $sum: '$newSources' },
+            totalPublisherSources: { $sum: '$publisherSources' },
+            totalSitemapSources: { $sum: '$sitemapSources' },
+            avgDuration: { $avg: '$durationMs' },
+            avgSuccessRate: { $avg: '$successRate' },
+            maxProductsInRun: { $max: '$productsDiscovered' }
+          }
+        }
+      ];
+
+      const results = await collection.aggregate(pipeline).toArray();
+      return results[0] || null;
+    } catch (error) {
+      console.warn('[CategoryDiscovery] Failed to get analytics:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get source health summary for dashboard.
+   */
+  static async getSourceHealthSummary() {
+    try {
+      const total = await DiscoverySource.countDocuments();
+      const enabled = await DiscoverySource.countDocuments({ enabled: true });
+      const disabled = await DiscoverySource.countDocuments({ enabled: false });
+      const autoDisabled = await DiscoverySource.countDocuments({ autoDisabled: true });
+      const productive = await DiscoverySource.countDocuments({
+        enabled: true,
+        totalProductsFound: { $gt: 0 }
+      });
+      const dead = await DiscoverySource.countDocuments({
+        enabled: true,
+        consecutiveFailures: { $gte: 5 }
+      });
+      const inCooldown = await DiscoverySource.countDocuments({
+        enabled: true,
+        cooldownUntil: { $gt: new Date() }
+      });
+
+      // Retailer breakdown
+      const retailerBreakdown = await DiscoverySource.aggregate([
+        { $group: { _id: '$retailer', count: { $sum: 1 }, enabled: { $sum: { $cond: ['$enabled', 1, 0] } } } },
+        { $sort: { count: -1 } }
+      ]);
+
+      // Source type breakdown
+      const typeBreakdown = await DiscoverySource.aggregate([
+        { $group: { _id: '$sourceType', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]);
+
+      return {
+        total,
+        enabled,
+        disabled,
+        autoDisabled,
+        productive,
+        dead,
+        inCooldown,
+        retailerBreakdown,
+        typeBreakdown
+      };
+    } catch (error) {
+      console.warn('[CategoryDiscovery] Failed to get source health:', error.message);
+      return null;
+    }
   }
 
   /**
@@ -447,6 +1114,7 @@ class CategoryDiscovery {
    * @returns {Array<{ retailer: string, title: string, url: string, reason: string, timestamp: Date }>}
    */
   async discoverProducts() {
+    const startTime = Date.now();
     const CATEGORY_URLS = await CategoryDiscovery.getDiscoveryUrls();
     const discoveries = [];
     const retailerKeys = Object.keys(CATEGORY_URLS);
@@ -464,6 +1132,17 @@ class CategoryDiscovery {
 
       for (const categoryUrl of urls) {
         if (newProductCount >= MAX_NEW_PRODUCTS_PER_RUN) break;
+
+        // Crawl cooldown: skip if this source was crawled within the cooldown period
+        const sourceRecord = await DiscoverySource.findOne({ url: categoryUrl, enabled: true }).lean();
+        if (sourceRecord && sourceRecord.cooldownUntil) {
+          const cooldownTime = new Date(sourceRecord.cooldownUntil).getTime();
+          if (Date.now() < cooldownTime) {
+            const remainingMin = Math.round((cooldownTime - Date.now()) / 60000);
+            console.log(`[CategoryDiscovery] Skipping ${categoryUrl} — cooldown ${remainingMin}m remaining`);
+            continue;
+          }
+        }
 
         try {
           const discovered = await this.discoverFromCategoryPage(retailer, categoryUrl);
@@ -484,13 +1163,72 @@ class CategoryDiscovery {
     console.log(`[CategoryDiscovery] Discovery cycle complete: ${discoveries.length} new products found`);
 
     // Phase 2: Source Discovery — find new discovery pages without creating products
+    let newSources = 0;
     try {
-      await CategoryDiscovery.discoverNewSources();
+      newSources = await CategoryDiscovery.discoverNewSources();
     } catch (sourceError) {
       console.warn('[CategoryDiscovery] Source discovery error (non-fatal):', sourceError.message);
     }
 
+    // Phase 3: Publisher Discovery
+    let publisherSources = 0;
+    try {
+      publisherSources = await CategoryDiscovery.discoverPublisherSources();
+    } catch (publisherError) {
+      console.warn('[CategoryDiscovery] Publisher discovery error (non-fatal):', publisherError.message);
+    }
+
+    // Phase 4: Sitemap Discovery (runs less frequently — once per hour)
+    let sitemapSources = 0;
+    try {
+      const lastSitemapRun = await CategoryDiscovery.getLastSitemapRun();
+      const hoursSinceSitemap = lastSitemapRun
+        ? (Date.now() - lastSitemapRun.getTime()) / (60 * 60 * 1000)
+        : 999;
+      if (hoursSinceSitemap >= 1) {
+        sitemapSources = await CategoryDiscovery.discoverFromSitemaps();
+      }
+    } catch (sitemapError) {
+      console.warn('[CategoryDiscovery] Sitemap discovery error (non-fatal):', sitemapError.message);
+    }
+
+    // Phase 5: Record analytics
+    const durationMs = Date.now() - startTime;
+    try {
+      await CategoryDiscovery.recordAnalytics({
+        productsDiscovered: discoveries.length,
+        newSources,
+        publisherSources,
+        sitemapSources,
+        durationMs,
+        successRate: discoveries.length > 0 ? 1.0 : 0,
+        retailersScanned: retailerKeys.length
+      });
+    } catch (analyticsError) {
+      console.warn('[CategoryDiscovery] Analytics recording error (non-fatal):', analyticsError.message);
+    }
+
     return discoveries;
+  }
+
+  /**
+   * Get the timestamp of the last sitemap run.
+   */
+  static async getLastSitemapRun() {
+    try {
+      const mongoose = require('mongoose');
+      const db = mongoose.connection.db;
+      if (!db) return null;
+
+      const collection = db.collection(ANALYTICS_COLLECTION);
+      const last = await collection.findOne(
+        { sitemapSources: { $gt: 0 } },
+        { sort: { timestamp: -1 } }
+      );
+      return last ? last.timestamp : null;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -511,15 +1249,28 @@ class CategoryDiscovery {
 
     // Use the existing ProductMonitor's fetch infrastructure
     const config = RetailerDetector.getRetailerConfig(retailer);
+    const fetchStartTime = Date.now();
     const page = await this.productMonitor.fetchHtmlWithRetry(categoryUrl, config);
+    const responseTimeMs = Date.now() - fetchStartTime;
 
     if (!page || page.pageType === 'blocked' || page.pageType === 'bot_interstitial' || !page.html) {
       console.warn(`[CategoryDiscovery] Could not fetch category page: ${retailer} ${categoryUrl} (${page?.pageType || 'no response'})`);
+
+      // Determine HTTP status from page response
+      const httpStatus = page?.statusCode || (page?.pageType === 'blocked' ? 403 : 0);
+
+      // Record failed crawl with auto-disable logic
+      await CategoryDiscovery.recordFailedCrawl(
+        categoryUrl,
+        httpStatus,
+        page?.pageType || 'No response'
+      );
       return [];
     }
 
-    const $ = cheerioLib.load(page.html);
+    // Record successful crawl with health metrics
     const productLinks = this.extractProductLinks($, retailer);
+    await CategoryDiscovery.recordSuccessfulCrawl(categoryUrl, responseTimeMs, productLinks.length);
 
     if (productLinks.length === 0) {
       console.log(`[CategoryDiscovery] No product links found on ${retailer} ${categoryUrl}`);
@@ -534,7 +1285,7 @@ class CategoryDiscovery {
       if (discovered.length >= MAX_NEW_PRODUCTS_PER_RUN) break;
 
       try {
-        const result = await this.processProductLink(retailer, link);
+        const result = await this.processProductLink(retailer, link, categoryUrl);
         if (result) {
           discovered.push(result);
         }
@@ -624,7 +1375,7 @@ class CategoryDiscovery {
    * @param {{ url: string, title: string }} link
    * @returns {{ retailer: string, title: string, url: string, reason: string, timestamp: Date }|null}
    */
-  async processProductLink(retailer, link) {
+  async processProductLink(retailer, link, originatingSourceUrl = null) {
     const normalizedUrl = RetailerDetector.normalizeUrl(link.url, retailer);
 
     // Check if product already exists (deduplication)
@@ -675,6 +1426,11 @@ class CategoryDiscovery {
         reason: `Discovered from ${retailer} category page; category=${category}`,
         timestamp: new Date()
       };
+
+      // Track product yield on the originating discovery source
+      if (originatingSourceUrl) {
+        await CategoryDiscovery.recordProductCreated(originatingSourceUrl);
+      }
 
       console.log(`[CategoryDiscovery] ✅ New product created: [${retailer}] ${link.title}`);
       return discovery;

@@ -444,6 +444,14 @@ try {
   console.warn('User value route not mounted:', err.message);
 }
 
+// Admin API routes (worker control, discovery management, system stats)
+try {
+  const adminRoutes = require('./routes/admin');
+  app.use('/api/admin', adminRoutes);
+} catch (err) {
+  console.warn('Admin route not mounted:', err.message);
+}
+
 // Initialize automated signal ingestion scheduler after routes are mounted
 try {
   initializeSignalScheduler();

@@ -2,6 +2,8 @@ const express = require('express');
 const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
 const { getMonitoringWorker } = require('../services/MonitoringWorker');
 const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
+const { DiscoverySource } = require('../src/models/DiscoverySource');
+const { CategoryDiscovery } = require('../src/services/CategoryDiscovery');
 
 const router = express.Router();
 
@@ -397,6 +399,178 @@ router.post('/cleanup', authenticateToken, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error during cleanup:', error);
     res.status(500).json({ error: 'Failed to perform cleanup' });
+  }
+});
+
+/**
+ * GET /api/admin/discovery/sources - Get all discovery sources
+ */
+router.get('/discovery/sources', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { status = 'all' } = req.query;
+    let sources;
+    
+    if (status === 'disabled') {
+      sources = await DiscoverySource.find({ enabled: false })
+        .sort({ disabledAt: -1 })
+        .lean();
+    } else if (status === 'auto-disabled') {
+      sources = await DiscoverySource.find({ autoDisabled: true })
+        .sort({ disabledAt: -1 })
+        .lean();
+    } else if (status === 'cooldown') {
+      sources = await DiscoverySource.find({
+        enabled: true,
+        cooldownUntil: { $gt: new Date() }
+      })
+        .sort({ cooldownUntil: 1 })
+        .lean();
+    } else {
+      sources = await DiscoverySource.find({ enabled: true })
+        .sort({ crawlPriority: -1, lastCrawledAt: -1 })
+        .lean();
+    }
+    
+    // Add computed fields for display
+    const now = Date.now();
+    sources.forEach(s => {
+      s._dynamicPriority = DiscoverySource.calculateDynamicPriority(s);
+      s._cooldownRemainingMs = s.cooldownUntil ? Math.max(0, new Date(s.cooldownUntil).getTime() - now) : 0;
+      s._cooldownRemainingMin = Math.round(s._cooldownRemainingMs / 60000);
+      s._isInCooldown = s._cooldownRemainingMs > 0;
+      s._successRate = (s.successfulCrawls || 0) + (s.failedCrawls || 0) > 0
+        ? Math.round((s.successfulCrawls || 0) / ((s.successfulCrawls || 0) + (s.failedCrawls || 0)) * 100)
+        : null;
+    });
+    
+    res.json({ sources, total: sources.length });
+  } catch (error) {
+    console.error('Error fetching discovery sources:', error);
+    res.status(500).json({ error: 'Failed to fetch discovery sources' });
+  }
+});
+
+/**
+ * POST /api/admin/discovery/sources/:id/enable - Re-enable a disabled source
+ */
+router.post('/discovery/sources/:id/enable', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const source = await CategoryDiscovery.reEnableSource(req.params.id);
+    if (!source) {
+      return res.status(404).json({ error: 'Source not found' });
+    }
+    res.json({ message: 'Source re-enabled successfully', source });
+  } catch (error) {
+    console.error('Error enabling source:', error);
+    res.status(500).json({ error: 'Failed to enable source' });
+  }
+});
+
+/**
+ * POST /api/admin/discovery/sources/:id/disable - Disable a source
+ */
+router.post('/discovery/sources/:id/disable', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const source = await CategoryDiscovery.disableSource(req.params.id, reason);
+    if (!source) {
+      return res.status(404).json({ error: 'Source not found' });
+    }
+    res.json({ message: 'Source disabled successfully', source });
+  } catch (error) {
+    console.error('Error disabling source:', error);
+    res.status(500).json({ error: 'Failed to disable source' });
+  }
+});
+
+/**
+ * POST /api/admin/discovery/sources/:id/priority - Update source priority
+ */
+router.post('/discovery/sources/:id/priority', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { priority } = req.body;
+    if (typeof priority !== 'number' || priority < 0 || priority > 1000) {
+      return res.status(400).json({ error: 'Priority must be a number between 0 and 1000' });
+    }
+    const source = await CategoryDiscovery.updateSourcePriority(req.params.id, priority);
+    if (!source) {
+      return res.status(404).json({ error: 'Source not found' });
+    }
+    res.json({ message: 'Priority updated successfully', source });
+  } catch (error) {
+    console.error('Error updating priority:', error);
+    res.status(500).json({ error: 'Failed to update priority' });
+  }
+});
+
+/**
+ * POST /api/admin/discovery/sources/:id/retry - Force retry a crawl on a source
+ */
+router.post('/discovery/sources/:id/retry', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const source = await DiscoverySource.findById(req.params.id);
+    if (!source) {
+      return res.status(404).json({ error: 'Source not found' });
+    }
+    
+    // Reset cooldown and failures so next crawl will pick it up
+    await DiscoverySource.findByIdAndUpdate(req.params.id, {
+      $set: {
+        cooldownUntil: new Date(Date.now() - 1000), // Expire cooldown immediately
+        consecutiveFailures: 0,
+        enabled: true,
+        autoDisabled: false,
+        disabledReason: null
+      }
+    });
+    
+    res.json({ message: 'Source queued for retry. Next discovery cycle will crawl it.' });
+  } catch (error) {
+    console.error('Error resetting source:', error);
+    res.status(500).json({ error: 'Failed to reset source' });
+  }
+});
+
+/**
+ * POST /api/admin/discovery/sources/:id/refresh - Refresh source metadata
+ */
+router.post('/discovery/sources/:id/refresh', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const source = await DiscoverySource.findById(req.params.id);
+    if (!source) {
+      return res.status(404).json({ error: 'Source not found' });
+    }
+    
+    // Recalculate dynamic priority and cooldown
+    const dynamicPriority = DiscoverySource.calculateDynamicPriority(source);
+    const cooldownMs = DiscoverySource.calculateCooldownMs(source);
+    
+    await DiscoverySource.findByIdAndUpdate(req.params.id, {
+      $set: {
+        crawlPriority: Math.min(1000, dynamicPriority),
+        currentCooldownMinutes: Math.round(cooldownMs / 60000),
+        cooldownUntil: new Date(Date.now() + cooldownMs)
+      }
+    });
+    
+    res.json({ message: 'Source metadata refreshed', crawlPriority: dynamicPriority });
+  } catch (error) {
+    console.error('Error refreshing source:', error);
+    res.status(500).json({ error: 'Failed to refresh source' });
+  }
+});
+
+/**
+ * GET /api/admin/discovery/health - Get discovery health summary
+ */
+router.get('/discovery/health', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const health = await CategoryDiscovery.getSourceHealthSummary();
+    const analytics = await CategoryDiscovery.getAnalyticsSummary(7);
+    res.json({ health, analytics });
+  } catch (error) {
+    console.error('Error fetching discovery health:', error);
+    res.status(500).json({ error: 'Failed to fetch discovery health' });
   }
 });
 
