@@ -70,6 +70,67 @@ function getHighValueBoost(signal) {
   return 0;
 }
 
+function getIntelligenceMetadata(signal) {
+  const metadata = signal && signal.metadata ? signal.metadata : {};
+  return metadata.productIntelligence || metadata.intelligence || signal?.productIntelligence || signal?.intelligence || null;
+}
+
+function getIntelligenceBoost(signal) {
+  const intelligence = getIntelligenceMetadata(signal);
+  if (!intelligence) {
+    return 0;
+  }
+
+  let boost = 0;
+  const demandScore = Number(intelligence.demandScore);
+  const scarcityScore = Number(intelligence.scarcityScore);
+  const flipScore = Number(intelligence.flipScore);
+  const confidenceScore = Number(intelligence.confidenceScore);
+
+  if (Number.isFinite(demandScore)) {
+    if (demandScore >= 80) boost += 6;
+    else if (demandScore >= 60) boost += 4;
+    else if (demandScore >= 40) boost += 2;
+  }
+
+  if (Number.isFinite(scarcityScore)) {
+    if (scarcityScore >= 80) boost += 4;
+    else if (scarcityScore >= 60) boost += 2;
+    else if (scarcityScore >= 40) boost += 1;
+  }
+
+  if (Number.isFinite(flipScore)) {
+    if (flipScore >= 80) boost += 5;
+    else if (flipScore >= 60) boost += 3;
+    else if (flipScore >= 40) boost += 1;
+  }
+
+  if (Number.isFinite(confidenceScore)) {
+    if (confidenceScore >= 85) boost += 2;
+    else if (confidenceScore >= 70) boost += 1;
+  }
+
+  if (intelligence.isCollectible) boost += 4;
+  if (intelligence.preorderStatus) boost += 2;
+
+  if (Number.isFinite(Number(intelligence.estimatedMSRP))) {
+    const estimatedMSRP = Number(intelligence.estimatedMSRP);
+    if (estimatedMSRP >= 500) boost += 2;
+    else if (estimatedMSRP >= 250) boost += 1;
+  }
+
+  return boost;
+}
+
+function applyIntelligenceBoost(signal, score, reasoning) {
+  const boost = getIntelligenceBoost(signal);
+  if (boost > 0) {
+    reasoning.push(`intelligence boost +${boost}`);
+    return clamp(score + boost, 0, 100);
+  }
+  return score;
+}
+
 function getCategoryWeight(category) {
   return CATEGORY_WEIGHTS[category] ?? CATEGORY_WEIGHTS.other;
 }
@@ -99,6 +160,23 @@ function calculateConfidence(signal, category, reasoningCount) {
   if (category !== 'other') {
     confidence += 0.08;
   }
+
+  const intelligence = getIntelligenceMetadata(signal);
+  if (intelligence) {
+    if (Number.isFinite(Number(intelligence.confidenceScore)) && Number(intelligence.confidenceScore) >= 70) {
+      confidence += 0.03;
+    }
+    if (intelligence.isCollectible) {
+      confidence += 0.03;
+    }
+    if (intelligence.preorderStatus) {
+      confidence += 0.02;
+    }
+    if (Number.isFinite(Number(intelligence.demandScore)) && Number(intelligence.demandScore) >= 70) {
+      confidence += 0.02;
+    }
+  }
+
   confidence += Math.min(0.12, reasoningCount * 0.03);
   return Number(clamp(confidence, 0.5, 0.95).toFixed(2));
 }
@@ -115,7 +193,7 @@ function enrichPriceDrop(signal, category, reasoning) {
     reasoning.push(`high-value boost ${valueBoost}`);
   }
 
-  return clamp(15 + dropScore + categoryWeight + valueBoost, 0, 100);
+  return applyIntelligenceBoost(signal, clamp(15 + dropScore + categoryWeight + valueBoost, 0, 100), reasoning);
 }
 
 function enrichRestock(signal, category, reasoning) {
@@ -132,7 +210,7 @@ function enrichRestock(signal, category, reasoning) {
     reasoning.push(`high-value boost ${valueBoost}`);
   }
 
-  return clamp(35 + rarityBoost + categoryWeight + valueBoost, 0, 100);
+  return applyIntelligenceBoost(signal, clamp(35 + rarityBoost + categoryWeight + valueBoost, 0, 100), reasoning);
 }
 
 function enrichOutOfStock(signal, category, reasoning) {
@@ -145,14 +223,14 @@ function enrichOutOfStock(signal, category, reasoning) {
     reasoning.push(`high-value boost ${valueBoost}`);
   }
 
-  return clamp(18 + categoryWeight + valueBoost, 0, 100);
+  return applyIntelligenceBoost(signal, clamp(18 + categoryWeight + valueBoost, 0, 100), reasoning);
 }
 
 function enrichPriceIncrease(signal, category, reasoning) {
   const categoryWeight = Math.round(getCategoryWeight(category) * 0.4);
   reasoning.push('price increase de-prioritized');
   reasoning.push(`category weight ${categoryWeight}`);
-  return clamp(20 + categoryWeight, 0, 100);
+  return applyIntelligenceBoost(signal, clamp(20 + categoryWeight, 0, 100), reasoning);
 }
 
 function computeHeuristicScore(signal, category, reasoning) {

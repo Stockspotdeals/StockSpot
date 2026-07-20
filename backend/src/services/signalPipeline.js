@@ -153,18 +153,36 @@ async function saveSignal(payload) {
   return signal;
 }
 
+function normalizeSignalPayload(payload) {
+  const metadata = { ...(payload && payload.metadata ? payload.metadata : {}) };
+
+  if (payload && payload.productIntelligence && !metadata.productIntelligence) {
+    metadata.productIntelligence = payload.productIntelligence;
+  }
+
+  if (payload && payload.intelligence && !metadata.productIntelligence) {
+    metadata.productIntelligence = payload.intelligence;
+  }
+
+  return {
+    ...(payload || {}),
+    metadata
+  };
+}
+
 async function processSignal(payload) {
-  const signalLabel = payload.productName || payload.title || payload.signalType || 'unknown signal';
+  const normalizedPayload = normalizeSignalPayload(payload);
+  const signalLabel = normalizedPayload.productName || normalizedPayload.title || normalizedPayload.signalType || 'unknown signal';
   console.log(`[SignalPipeline] Starting pipeline for ${signalLabel}`);
 
   try {
-    const hash = getSignalHash(payload);
-    if (await isDuplicate(payload, hash)) {
+    const hash = getSignalHash(normalizedPayload);
+    if (await isDuplicate(normalizedPayload, hash)) {
       console.log(`[SignalPipeline] Duplicate signal ignored: ${signalLabel}`);
       return null;
     }
 
-    const enrichedPayload = enrichSignalWithAffiliateData(payload);
+    const enrichedPayload = enrichSignalWithAffiliateData(normalizedPayload);
     const monetizationBoost = calculateMonetizationBoost(enrichedPayload.estimatedCommission);
     const fallbackScore = Math.min(100, Math.max(0, calculateSignalScore(enrichedPayload) + monetizationBoost));
     const intelligentSignal = enrichSignal({
