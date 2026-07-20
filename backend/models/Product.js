@@ -21,7 +21,7 @@ const productSchema = new mongoose.Schema({
   },
   price: {
     type: Number,
-    required: true,
+    default: null,
     min: 0
   },
   originalPrice: {
@@ -185,4 +185,4 @@ productSchema.index({ retailer: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ updatedAt: -1 });
 
-module.exports = mongoose.model('Product', productSchema);
+module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);
