@@ -38,6 +38,8 @@ const PREORDER_PHRASES = [
   'expected release'
 ];
 
+const isProductionEnvironment = process.env.NODE_ENV === 'production';
+
 /**
  * Hype signal keywords used for deterministic hype score calculation.
  * Weighted by intensity of demand signal.
@@ -82,6 +84,27 @@ class ProductMonitor {
     try {
       const retailerConfig = RetailerDetector.getRetailerConfig(trackedProduct.retailer);
       const productData = await this.scrapeProduct(trackedProduct, retailerConfig);
+
+      if (productData && productData.skipped) {
+        await trackedProduct.updateOne({
+          monitoringState: 'skipped',
+          lastPageType: productData.pageType || 'skipped',
+          lastFetchStatus: productData.fetchStatus,
+          lastFetchReason: productData.extractionReason,
+          lastError: productData.extractionReason,
+          lastCheckedAt: new Date(),
+          nextCheck: this.calculateNextCheck(trackedProduct, false, (trackedProduct.errorCount || 0) + 1)
+        });
+
+        return {
+          success: false,
+          skipped: true,
+          pageType: productData.pageType || 'skipped',
+          changes: [],
+          productData,
+          trackedProduct: { ...trackedProduct.toObject(), monitoringState: 'skipped' }
+        };
+      }
 
       const restrictedPage = productData.restricted || ['blocked', 'bot_interstitial'].includes(productData.pageType);
       const shouldPersistProduct = !restrictedPage && ['product_page', 'redirect'].includes(productData.pageType);
@@ -204,8 +227,28 @@ class ProductMonitor {
     try {
       const url = RetailerDetector.normalizeUrl(trackedProduct.url, trackedProduct.retailer);
 
-      // Return mock data in dry-run mode
+      // Return synthetic data only for non-production dry-run development environments.
       if (this.isDryRun) {
+        if (isProductionEnvironment) {
+          return {
+            success: false,
+            skipped: true,
+            title: null,
+            price: null,
+            availability: null,
+            inStock: null,
+            category: trackedProduct.category || null,
+            affiliateLink: trackedProduct.affiliateLink || url,
+            lastChecked: new Date(),
+            pageType: 'skipped',
+            fetchStatus: null,
+            extractionReason: 'dry-run disabled in production',
+            restricted: false,
+            fetchMode: 'dry-run',
+            pageText: ''
+          };
+        }
+
         return this.buildNormalizedSnapshot(trackedProduct, {
           title: 'Mock Product (Dry-Run)',
           price: 49.99,
@@ -902,7 +945,14 @@ class ProductMonitor {
           await new Promise(resolve => setTimeout(resolve, delay));
           
           const result = await this.monitorProduct(product);
-          return { productId: product._id, success: true, result };
+          const isSuccessfulResult = result && result.success !== false && result.skipped !== true;
+          return {
+            productId: product._id,
+            success: isSuccessfulResult,
+            result,
+            skipped: result && result.skipped === true,
+            error: isSuccessfulResult ? null : (result && result.extractionReason) || 'Monitoring skipped or failed'
+          };
         } catch (error) {
           return { productId: product._id, success: false, error: error.message };
         }

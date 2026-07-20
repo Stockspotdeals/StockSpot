@@ -13,6 +13,10 @@ const connectorCooldowns = new Map();
 const connectorHashes = new Map();
 let schedulerStarted = false;
 
+function isMockConnectorEnabled() {
+  return process.env.CONNECTOR_ENABLE_MOCKS === 'true';
+}
+
 function cleanupConnectorState() {
   const oldestAllowed = Date.now() - 60 * 60 * 1000;
   while (connectorHistory.length && connectorHistory[0] < oldestAllowed) {
@@ -197,6 +201,11 @@ function trendFeedConnector() {
 }
 
 async function fetchConnectorSignals() {
+  if (!isMockConnectorEnabled()) {
+    console.log('[DataConnectors] Mock connector outputs disabled; skipping synthetic signal generation');
+    return [];
+  }
+
   const connectors = [
     productSearchConnector,
     priceTrackingConnector,
