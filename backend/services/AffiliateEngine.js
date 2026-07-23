@@ -2,7 +2,7 @@ const { RETAILER_TYPES } = require('../models/TrackedProduct');
 
 class AffiliateEngine {
   constructor() {
-    this.amazonAssociateId = process.env.AMAZON_ASSOCIATE_ID || 'stockspot-20';
+    this.amazonAssociateId = process.env.AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_ID || 'stockspotde02-20';
   }
 
   /**

@@ -2,7 +2,7 @@ const { RETAILER_TYPES } = require('../models/TrackedProduct');
 
 class AffiliateEngine {
   constructor() {
-    this.amazonAssociateId = process.env.AMAZON_ASSOCIATE_ID || '';
+    this.amazonAssociateId = process.env.AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_ID || '';
     if (this.amazonAssociateId) {
       console.log(`[AffiliateEngine] Using AMAZON_ASSOCIATE_ID from environment`);
     } else {

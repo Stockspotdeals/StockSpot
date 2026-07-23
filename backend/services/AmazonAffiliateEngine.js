@@ -5,7 +5,7 @@
 
 class AmazonAffiliateEngine {
   constructor() {
-    this.associateId = process.env.AMAZON_ASSOCIATE_ID || 'stockspot-20';
+    this.associateId = process.env.AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_ID || 'stockspotde02-20';
     this.supportedDomains = [
       'amazon.com', 'amazon.co.uk', 'amazon.ca', 'amazon.de',
       'amazon.fr', 'amazon.it', 'amazon.es', 'amazon.co.jp',
