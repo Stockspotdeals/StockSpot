@@ -481,6 +481,40 @@ try {
   console.error('Failed to initialize alert dispatcher scheduler:', err.message);
 }
 
+// Initialize featured deals engine and scheduler (refreshes every 30 minutes)
+try {
+  const { getFeaturedDealsEngine } = require('./src/services/FeaturedDealsEngine');
+  const featuredEngine = getFeaturedDealsEngine();
+  console.log('[FeaturedDeals] Engine initialized');
+
+  // Refresh immediately on startup (non-blocking, after 30s delay)
+  setTimeout(() => {
+    featuredEngine.refreshFeaturedFeed().catch(err => {
+      console.error('[FeaturedDeals] Initial refresh failed:', err.message);
+    });
+  }, 30000);
+
+  // Schedule refresh every 30 minutes
+  setInterval(() => {
+    featuredEngine.refreshFeaturedFeed().catch(err => {
+      console.error('[FeaturedDeals] Scheduled refresh failed:', err.message);
+    });
+  }, 30 * 60 * 1000);
+
+  console.log('[FeaturedDeals] Scheduler: refresh every 30 minutes');
+} catch (err) {
+  console.error('Failed to initialize featured deals engine:', err.message);
+}
+
+// Featured deals API routes
+try {
+  const featuredRoutes = require('./src/routes/featured');
+  app.use('/api/featured', featuredRoutes);
+  console.log('[FeaturedDeals] API routes mounted at /api/featured');
+} catch (err) {
+  console.warn('Featured deals route not mounted:', err.message);
+}
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
