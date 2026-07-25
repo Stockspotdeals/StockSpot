@@ -27,7 +27,7 @@ function initEnvironment(options = {}) {
   // while still supporting local development with a .env file.
   if (!process.env.MONGO_URI) {
     try {
-      require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+      require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
     } catch (_) {
       // dotenv might not be installed or .env file is missing – that's fine
       // in production since the platform provides the variables.
