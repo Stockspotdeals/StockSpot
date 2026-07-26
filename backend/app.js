@@ -15,6 +15,12 @@ const { MonitoringWorker } = require('./src/services/MonitoringWorker');
 const { authenticateToken, requireAdmin } = require('./src/middleware/authMiddleware');
 const { getLiveSignals } = require('./src/services/signalPipeline');
 
+console.log('[ENV DEBUG] STRIPE_SECRET_KEY exists:', Boolean(process.env.STRIPE_SECRET_KEY));
+console.log('[ENV DEBUG] STRIPE_PRO_PRICE_ID exists:', Boolean(process.env.STRIPE_PRO_PRICE_ID));
+console.log('[ENV DEBUG] STRIPE_PRICE_ID exists:', Boolean(process.env.STRIPE_PRICE_ID));
+console.log('[ENV DEBUG] STRIPE_LIFETIME_PRICE_ID exists:', Boolean(process.env.STRIPE_LIFETIME_PRICE_ID));
+console.log('[ENV DEBUG] NODE_ENV:', process.env.NODE_ENV);
+
 const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRICE_ID || (() => {
   throw new Error('STRIPE_PRO_PRICE_ID environment variable is required');
 })();
