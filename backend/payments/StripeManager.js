@@ -16,7 +16,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { UserModel } = require('../models/User');
 const crypto = require('crypto');
 
-const CANONICAL_PREMIUM_MONTHLY_PRICE_ID = 'price_1TmoLXLZ30FLlixp8FiDIju7';
+const CANONICAL_PRO_PRICE_ID = 'price_1TxKrJLaSQX9ywU5PW7wwgiw';
+const CANONICAL_LIFETIME_PRICE_ID = 'price_1TxKtfLaSQX9ywU52N9VHL5f';
 
 class StripeManager {
   /**
@@ -66,8 +67,8 @@ class StripeManager {
    */
   getPriceIdForTier(tier) {
     const tiers = {
-      'PAID': process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PREMIUM_MONTHLY_PRICE_ID,
-      'YEARLY': process.env.STRIPE_PRICE_YEARLY_ID,
+      'PAID': process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PRO_PRICE_ID,
+      'YEARLY': process.env.STRIPE_LIFETIME_PRICE_ID || process.env.STRIPE_PRICE_YEARLY_ID || CANONICAL_LIFETIME_PRICE_ID,
     };
     return tiers[tier];
   }
@@ -257,10 +258,12 @@ class StripeManager {
    * Get tier from price ID
    */
   getTierFromPriceId(priceId) {
-    if (priceId === (process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PREMIUM_MONTHLY_PRICE_ID)) {
+    const proPriceId = process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRICE_MONTHLY_ID || CANONICAL_PRO_PRICE_ID;
+    const lifetimePriceId = process.env.STRIPE_LIFETIME_PRICE_ID || process.env.STRIPE_PRICE_YEARLY_ID || CANONICAL_LIFETIME_PRICE_ID;
+    if (priceId === proPriceId) {
       return 'PAID';
     }
-    if (priceId === process.env.STRIPE_PRICE_YEARLY_ID) {
+    if (priceId === lifetimePriceId) {
       return 'YEARLY';
     }
     return 'FREE';

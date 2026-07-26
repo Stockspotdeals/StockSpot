@@ -1,6 +1,6 @@
 /**
  * Tier Monetization System
- * Manages Free, Paid ($9.99/mo), and Yearly ($99/yr) tiers
+ * Manages Free, StockSpot Pro ($19.99/mo), and StockSpot Lifetime ($149 one-time) tiers
  */
 
 class TierManager {
@@ -20,7 +20,7 @@ class TierManager {
     },
     PAID: {
       name: 'paid',
-      price: 9.99,
+      price: 19.99,
       billingCycle: 'monthly',
       features: {
         instantAmazonAffiliate: true,
@@ -33,8 +33,8 @@ class TierManager {
     },
     YEARLY: {
       name: 'yearly',
-      price: 99.0,
-      billingCycle: 'yearly',
+      price: 149.0,
+      billingCycle: 'one-time',
       features: {
         instantAmazonAffiliate: true,
         delayedNonAmazon: 0, // No delay

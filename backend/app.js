@@ -15,9 +15,10 @@ const { MonitoringWorker } = require('./src/services/MonitoringWorker');
 const { authenticateToken, requireAdmin } = require('./src/middleware/authMiddleware');
 const { getLiveSignals } = require('./src/services/signalPipeline');
 
-const CANONICAL_PREMIUM_MONTHLY_PRICE_ID = process.env.STRIPE_PRICE_ID || (() => {
-  throw new Error('STRIPE_PRICE_ID environment variable is required');
+const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRICE_ID || (() => {
+  throw new Error('STRIPE_PRO_PRICE_ID environment variable is required');
 })();
+const STRIPE_LIFETIME_PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID;
 
 let monitoringWorkerInstance = null;
 let activeServerPort = 'not-listening';
@@ -339,11 +340,17 @@ try {
 app.post('/create-checkout-session', authenticateToken, async (req, res) => {
   try {
     const frontendUrl = String(process.env.FRONTEND_URL || 'https://stockspotdeals.com').replace(/\/$/, '');
+    const plan = req.body.plan || 'monthly';
+    const isLifetime = plan === 'lifetime';
+    const priceId = isLifetime
+      ? STRIPE_LIFETIME_PRICE_ID
+      : STRIPE_PRO_PRICE_ID;
+
     const sessionConfig = {
-      mode: 'subscription',
+      mode: isLifetime ? 'payment' : 'subscription',
       line_items: [
         {
-          price: CANONICAL_PREMIUM_MONTHLY_PRICE_ID,
+          price: priceId,
           quantity: 1
         }
       ],
