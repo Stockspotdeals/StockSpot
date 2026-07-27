@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="StockSpot — AI-powered monitoring for Amazon, Walmart, Target, Best Buy, GameStop and more. Never miss another deal.">
+  <meta name="description" content="StockSpot — Real-time monitoring for Amazon, Walmart, Target, Best Buy, GameStop and more. Never miss another deal.">
   <meta name="theme-color" content="#000000">
   <meta property="og:title" content="StockSpot | Never Miss Another Deal">
-  <meta property="og:description" content="AI-powered monitoring for Amazon, Walmart, Target, Best Buy, GameStop and more. Real-time restock alerts and price drop detection.">
+  <meta property="og:description" content="Real-time monitoring for Amazon, Walmart, Target, Best Buy, GameStop and more. Instant restock alerts and price drop detection.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://stockspotdeals.com">
   <title>StockSpot | Never Miss Another Deal</title>
@@ -48,9 +48,9 @@
         <div class="hero-backdrop"></div>
         <div class="container hero-grid">
           <div class="hero-copy reveal">
-            <p class="eyebrow">AI-Powered Deal Monitoring</p>
+            <p class="eyebrow">Smart Deal Monitoring</p>
             <h1>Never Miss Another Deal.</h1>
-            <p class="hero-text">AI-powered monitoring for Amazon, Walmart, Target, Best Buy, GameStop and more. Real-time restock alerts and price drop detection — so you can flip smarter, faster.</p>
+            <p class="hero-text">Real-time monitoring for Amazon, Walmart, Target, Best Buy, GameStop and more. Instant restock alerts and price drop detection — so you can flip smarter, faster.</p>
             <div class="hero-actions">
               <a class="button button-primary" href="#live-deals">Start Free</a>
               <a class="button button-secondary" href="#pricing">Upgrade to Pro</a>
@@ -62,7 +62,7 @@
           </div>
           <div class="hero-panel">
             <div class="hero-panel-card reveal">
-              <span class="spotlight-chip">⚡ Live Monitoring</span>
+              <span class="spotlight-chip">&#9889; Live Monitoring</span>
               <p>StockSpot continuously tracks thousands of products across major retailers. When a restock hits or a price drops, you'll know instantly.</p>
               <ul class="spotlight-list">
                 <li>Amazon, Walmart, Target, Best Buy</li>
@@ -72,11 +72,11 @@
             </div>
             <div class="hero-panel-card stats-card reveal">
               <div class="stat-block">
-                <span class="stat-value" id="statProducts">—</span>
+                <span class="stat-value" id="statProducts">&mdash;</span>
                 <span class="stat-label">Products Tracked</span>
               </div>
               <div class="stat-block">
-                <span class="stat-value" id="statSignals">—</span>
+                <span class="stat-value" id="statSignals">&mdash;</span>
                 <span class="stat-label">Signals Today</span>
               </div>
             </div>
@@ -110,37 +110,37 @@
           </div>
           <div class="features-grid">
             <div class="feature-card reveal">
-              <div class="feature-icon">🤖</div>
-              <h3>AI Monitoring</h3>
-              <p>Intelligent algorithms scan thousands of products across 20+ retailers 24/7, detecting restocks and price movements in real time.</p>
+              <div class="feature-icon">&#128269;</div>
+              <h3>Intelligent Monitoring</h3>
+              <p>Smart algorithms scan thousands of products across 20+ retailers 24/7, detecting restocks and price movements in real time.</p>
             </div>
             <div class="feature-card reveal">
-              <div class="feature-icon">⚡</div>
+              <div class="feature-icon">&#9889;</div>
               <h3>Instant Restock Alerts</h3>
               <p>Get notified the moment high-demand products come back in stock. Beat the bots and secure your inventory first.</p>
             </div>
             <div class="feature-card reveal">
-              <div class="feature-icon">📉</div>
+              <div class="feature-icon">&#128201;</div>
               <h3>Price Drop Detection</h3>
               <p>Track price history and receive alerts when products drop to your target price. Never overpay again.</p>
             </div>
             <div class="feature-card reveal">
-              <div class="feature-icon">💎</div>
+              <div class="feature-icon">&#128142;</div>
               <h3>Flip Potential</h3>
               <p>Smart scoring system identifies products with high resale value. Know what to buy and where to sell for maximum profit.</p>
             </div>
             <div class="feature-card reveal">
-              <div class="feature-icon">🔗</div>
+              <div class="feature-icon">&#128279;</div>
               <h3>Amazon Affiliate Links</h3>
               <p>Every deal includes your affiliate tag automatically. Earn commissions on every purchase you drive.</p>
             </div>
             <div class="feature-card reveal">
-              <div class="feature-icon">📡</div>
+              <div class="feature-icon">&#128250;</div>
               <h3>Real-Time Signals</h3>
               <p>Live signal feed with demand scores, flip scores, and confidence ratings. Make data-driven purchasing decisions.</p>
             </div>
             <div class="feature-card reveal">
-              <div class="feature-icon">📊</div>
+              <div class="feature-icon">&#128202;</div>
               <h3>Responsive Dashboard</h3>
               <p>Full-featured dashboard with signal history, monitoring controls, and performance analytics. Works on any device.</p>
             </div>
@@ -229,7 +229,7 @@
       <p>Access your dashboard and manage your monitoring preferences.</p>
       <form class="auth-form" id="loginForm">
         <label><span>Email</span><input type="email" id="loginEmail" required autocomplete="email" placeholder="you@example.com"></label>
-        <label><span>Password</span><input type="password" id="loginPassword" required autocomplete="current-password" placeholder="••••••••"></label>
+        <label><span>Password</span><input type="password" id="loginPassword" required autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"></label>
         <button class="button button-primary" type="submit">Login</button>
       </form>
       <p class="auth-switch-copy">Don't have an account? <button class="text-button" id="showRegister" type="button">Register</button></p>
@@ -267,7 +267,7 @@
     const API_BASE = BACKEND_URL + '/api/featured';
     const AFFILIATE_TAG = 'stockspotde02-20';
 
-    function formatPrice(n) { return n != null ? '$' + Number(n).toFixed(2) : '—'; }
+    function formatPrice(n) { return n != null ? '$' + Number(n).toFixed(2) : '\u2014'; }
 
     function badgeMap(b) {
       const map = { HOT:'badge-hot', RESTOCK:'badge-restock', PRICE_DROP:'badge-price-drop', COLLECTIBLE:'badge-collectible', LIMITED:'badge-limited', PREORDER:'badge-preorder', HIGH_FLIP:'badge-high-flip' };
@@ -287,55 +287,55 @@
 
     function renderBadges(badges) {
       if (!badges || !badges.length) return '';
-      return badges.map(b => `<span class="badge ${badgeMap(b)}">${b.replace('_',' ')}</span>`).join('');
+      return badges.map(b => '<span class="badge ' + badgeMap(b) + '">' + b.replace('_',' ') + '</span>').join('');
     }
 
     function renderCard(item) {
       const img = item.image || './assets/images/stockspot-logo.png';
       const link = ensureAffiliateTag(item.affiliateUrl || '#');
-      return `
-        <article class="deal-card">
-          <div class="deal-image-wrap">
-            <img src="${img}" alt="${item.title || item.name || 'Product'}" loading="lazy" onerror="this.src='./assets/images/stockspot-logo.png'">
-            <div class="deal-badges">${renderBadges(item.badges)}</div>
-          </div>
-          <div class="deal-body">
-            <div class="deal-retailer">${item.retailer || 'Unknown'}</div>
-            <h3 class="deal-title">${item.title || item.name || 'Unnamed Product'}</h3>
-            <div class="deal-pricing">
-              <span class="deal-price">${formatPrice(item.price)}</span>
-              ${item.estimatedMSRP && item.estimatedMSRP > (item.price || 0) ? `<span class="deal-msrp">${formatPrice(item.estimatedMSRP)}</span>` : ''}
-              ${item.savingsPercent > 0 ? `<span class="deal-savings">-${item.savingsPercent}%</span>` : ''}
-            </div>
-            ${item.savings > 0 ? `<div style="font-size:12px;color:var(--accent-red);font-weight:600;">Save ${formatPrice(item.savings)}</div>` : ''}
-            <div class="deal-scores">
-              ${item.demandScore > 0 ? `<span>🔥 Demand <strong class="score-val">${item.demandScore}</strong></span>` : ''}
-              ${item.flipScore > 0 ? `<span>📈 Flip <strong class="score-val">${item.flipScore}</strong></span>` : ''}
-              ${item.confidenceScore > 0 ? `<span>✅ Confidence <strong class="score-val">${item.confidenceScore}%</strong></span>` : ''}
-            </div>
-            <div class="deal-actions">
-              <a class="btn-affiliate" href="${link}" target="_blank" rel="noopener sponsored">View on Amazon</a>
-            </div>
-          </div>
-          <div class="deal-footer">
-            ${item.lastSignalType ? `Signal: ${item.lastSignalType.replace('-',' ')}` : 'Monitored'} · Last updated ${item.lastMonitoredAt ? new Date(item.lastMonitoredAt).toLocaleDateString() : 'today'}
-          </div>
-        </article>
-      `;
+      return [
+        '<article class="deal-card">',
+          '<div class="deal-image-wrap">',
+            '<img src="' + img + '" alt="' + (item.title || item.name || 'Product') + '" loading="lazy" onerror="this.src=\'./assets/images/stockspot-logo.png\'">',
+            '<div class="deal-badges">' + renderBadges(item.badges) + '</div>',
+          '</div>',
+          '<div class="deal-body">',
+            '<div class="deal-retailer">' + (item.retailer || 'Unknown') + '</div>',
+            '<h3 class="deal-title">' + (item.title || item.name || 'Unnamed Product') + '</h3>',
+            '<div class="deal-pricing">',
+              '<span class="deal-price">' + formatPrice(item.price) + '</span>',
+              (item.estimatedMSRP && item.estimatedMSRP > (item.price || 0) ? '<span class="deal-msrp">' + formatPrice(item.estimatedMSRP) + '</span>' : ''),
+              (item.savingsPercent > 0 ? '<span class="deal-savings">-' + item.savingsPercent + '%</span>' : ''),
+            '</div>',
+            (item.savings > 0 ? '<div style="font-size:12px;color:var(--accent-red);font-weight:600;">Save ' + formatPrice(item.savings) + '</div>' : ''),
+            '<div class="deal-scores">',
+              (item.demandScore > 0 ? '<span>\uD83D\uDD25 Demand <strong class="score-val">' + item.demandScore + '</strong></span>' : ''),
+              (item.flipScore > 0 ? '<span>\uD83D\uDCC8 Flip <strong class="score-val">' + item.flipScore + '</strong></span>' : ''),
+              (item.confidenceScore > 0 ? '<span>\u2705 Confidence <strong class="score-val">' + item.confidenceScore + '%</strong></span>' : ''),
+            '</div>',
+            '<div class="deal-actions">',
+              '<a class="btn-affiliate" href="' + link + '" target="_blank" rel="noopener sponsored">View on Amazon</a>',
+            '</div>',
+          '</div>',
+          '<div class="deal-footer">',
+            (item.lastSignalType ? 'Signal: ' + item.lastSignalType.replace('-',' ') : 'Monitored') + ' \u00B7 Last updated ' + (item.lastMonitoredAt ? new Date(item.lastMonitoredAt).toLocaleDateString() : 'today'),
+          '</div>',
+        '</article>'
+      ].join('');
     }
 
     function renderSection(key, section) {
       if (!section.items || !section.items.length) return '';
-      return `
-        <section class="deals-subsection" id="section-${key}">
-          <div class="deals-subsection-heading">
-            <h3>${section.label}</h3>
-          </div>
-          <div class="deal-grid">
-            ${section.items.map(renderCard).join('')}
-          </div>
-        </section>
-      `;
+      return [
+        '<section class="deals-subsection" id="section-' + key + '">',
+          '<div class="deals-subsection-heading">',
+            '<h3>' + section.label + '</h3>',
+          '</div>',
+          '<div class="deal-grid">',
+            section.items.map(renderCard).join(''),
+          '</div>',
+        '</section>'
+      ].join('');
     }
 
     async function loadFeatured() {
@@ -365,13 +365,13 @@
         }
 
         if (!hasContent) {
-          html = `<div class="empty-state"><h3>Monitoring thousands of products.</h3><p>New deals will appear automatically as StockSpot detects restocks and price drops.</p></div>`;
+          html = '<div class="empty-state"><h3>Monitoring thousands of products.</h3><p>New deals will appear automatically as StockSpot detects restocks and price drops.</p></div>';
         }
 
         container.innerHTML = html;
       } catch (err) {
         loading.style.display = 'none';
-        container.innerHTML = `<div class="empty-state"><h3>Monitoring thousands of products.</h3><p>New deals will appear automatically as StockSpot detects restocks and price drops.</p></div>`;
+        container.innerHTML = '<div class="empty-state"><h3>Monitoring thousands of products.</h3><p>New deals will appear automatically as StockSpot detects restocks and price drops.</p></div>';
       }
     }
 
@@ -381,8 +381,8 @@
         const resp = await fetch(BACKEND_URL + '/api/featured/stats');
         if (resp.ok) {
           const data = await resp.json();
-          document.getElementById('statProducts').textContent = data.productsTracked != null ? data.productsTracked.toLocaleString() : '—';
-          document.getElementById('statSignals').textContent = data.signalsToday != null ? data.signalsToday.toLocaleString() : '—';
+          document.getElementById('statProducts').textContent = data.productsTracked != null ? Number(data.productsTracked).toLocaleString() : '\u2014';
+          document.getElementById('statSignals').textContent = data.signalsToday != null ? Number(data.signalsToday).toLocaleString() : '\u2014';
         }
       } catch {}
     }
