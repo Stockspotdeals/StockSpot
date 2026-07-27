@@ -66,8 +66,8 @@ img { display: block; max-width: 100%; }
   min-width: 0;
 }
 .brand-logo {
-  width: 85px;
-  height: 85px;
+  width: 120px;
+  height: 120px;
   object-fit: contain;
   flex-shrink: 0;
 }
