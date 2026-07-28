@@ -66,8 +66,9 @@ img { display: block; max-width: 100%; }
   min-width: 0;
 }
 .brand-logo {
-  height: 64px;
-  width: auto;
+  width: 94px;
+  height: 94px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 .brand-wordmark {
