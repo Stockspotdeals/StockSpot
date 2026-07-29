@@ -19,21 +19,21 @@ const AFFILIATE_TAG = process.env.AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASS
 // so the homepage always displays featured deals with affiliate links.
 const BOOTSTRAP_PRODUCTS = [
   {
-    name: 'Pokemon TCG: Scarlet & Violet - Paldean Fates Booster Pack',
-    title: 'Pokemon TCG: Scarlet & Violet - Paldean Fates Booster Pack',
-    price: 4.49, originalPrice: 4.99, estimatedMSRP: 4.99,
-    url: 'https://www.amazon.com/dp/B0CHQY6Y7G',
-    affiliateLink: 'https://www.amazon.com/dp/B0CHQY6Y7G?tag=' + AFFILIATE_TAG,
-    image: 'https://m.media-amazon.com/images/I/81X5Vo4xR1L._AC_SL1500_.jpg',
+    name: 'Pokemon TCG: Scarlet & Violet 151 Elite Trainer Box',
+    title: 'Pokemon TCG: Scarlet & Violet 151 Elite Trainer Box',
+    price: 59.99, originalPrice: 69.99, estimatedMSRP: 69.99,
+    url: 'https://www.amazon.com/dp/B0C4B2H5F5',
+    affiliateLink: 'https://www.amazon.com/dp/B0C4B2H5F5?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/81vI7eG8sJL._AC_SL1500_.jpg',
     retailer: 'Amazon', category: 'collectibles', inStock: true,
-    isCollectible: true, flipScore: 72, demandScore: 85, scarcityScore: 45, confidenceScore: 80
+    isCollectible: true, flipScore: 78, demandScore: 92, scarcityScore: 75, confidenceScore: 82
   },
   {
-    name: 'Nintendo Switch OLED Model - Mario Red Edition',
-    title: 'Nintendo Switch OLED Model - Mario Red Edition',
+    name: 'Nintendo Switch OLED Model - White',
+    title: 'Nintendo Switch OLED Model - White',
     price: 349.99, originalPrice: 359.99, estimatedMSRP: 359.99,
-    url: 'https://www.amazon.com/dp/B0BYPF4B9C',
-    affiliateLink: 'https://www.amazon.com/dp/B0BYPF4B9C?tag=' + AFFILIATE_TAG,
+    url: 'https://www.amazon.com/dp/B08N5WRWNW',
+    affiliateLink: 'https://www.amazon.com/dp/B08N5WRWNW?tag=' + AFFILIATE_TAG,
     image: 'https://m.media-amazon.com/images/I/71R7m0yGmPL._AC_SL1500_.jpg',
     retailer: 'Amazon', category: 'gaming', inStock: true,
     isCollectible: false, flipScore: 45, demandScore: 90, scarcityScore: 30, confidenceScore: 95
@@ -52,8 +52,8 @@ const BOOTSTRAP_PRODUCTS = [
     name: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
     title: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
     price: 329.99, originalPrice: 399.99, estimatedMSRP: 399.99,
-    url: 'https://www.amazon.com/dp/B0B3QCZ5L5',
-    affiliateLink: 'https://www.amazon.com/dp/B0B3QCZ5L5?tag=' + AFFILIATE_TAG,
+    url: 'https://www.amazon.com/dp/B09BG3VX1F',
+    affiliateLink: 'https://www.amazon.com/dp/B09BG3VX1F?tag=' + AFFILIATE_TAG,
     image: 'https://m.media-amazon.com/images/I/61McsgS8u6L._AC_SL1500_.jpg',
     retailer: 'Amazon', category: 'electronics', inStock: true,
     isCollectible: false, flipScore: 55, demandScore: 88, scarcityScore: 25, confidenceScore: 92
@@ -62,38 +62,38 @@ const BOOTSTRAP_PRODUCTS = [
     name: 'Meta Quest 3 128GB — VR Headset',
     title: 'Meta Quest 3 128GB — VR Headset',
     price: 499.99, originalPrice: 549.99, estimatedMSRP: 549.99,
-    url: 'https://www.amazon.com/dp/B0CF5BZ2P4',
-    affiliateLink: 'https://www.amazon.com/dp/B0CF5BZ2P4?tag=' + AFFILIATE_TAG,
+    url: 'https://www.amazon.com/dp/B0B9F7SP3P',
+    affiliateLink: 'https://www.amazon.com/dp/B0B9F7SP3P?tag=' + AFFILIATE_TAG,
     image: 'https://m.media-amazon.com/images/I/61CQ2J7yGtL._AC_SL1500_.jpg',
     retailer: 'Amazon', category: 'electronics', inStock: true,
     isCollectible: false, flipScore: 40, demandScore: 82, scarcityScore: 40, confidenceScore: 88
   },
   {
-    name: 'Pokemon TCG: Scarlet & Violet 151 Booster Bundle',
-    title: 'Pokemon TCG: Scarlet & Violet 151 Booster Bundle',
-    price: 26.99, originalPrice: 29.99, estimatedMSRP: 29.99,
-    url: 'https://www.amazon.com/dp/B0CG2L3G3P',
-    affiliateLink: 'https://www.amazon.com/dp/B0CG2L3G3P?tag=' + AFFILIATE_TAG,
-    image: 'https://m.media-amazon.com/images/I/81vI7eG8sJL._AC_SL1500_.jpg',
+    name: 'Pokemon TCG: Paldean Fates Elite Trainer Box',
+    title: 'Pokemon TCG: Paldean Fates Elite Trainer Box',
+    price: 49.99, originalPrice: 59.99, estimatedMSRP: 59.99,
+    url: 'https://www.amazon.com/dp/B0CNPF6V6L',
+    affiliateLink: 'https://www.amazon.com/dp/B0CNPF6V6L?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/81X5Vo4xR1L._AC_SL1500_.jpg',
     retailer: 'Amazon', category: 'collectibles', inStock: true,
-    isCollectible: true, flipScore: 78, demandScore: 92, scarcityScore: 75, confidenceScore: 82
+    isCollectible: true, flipScore: 72, demandScore: 85, scarcityScore: 45, confidenceScore: 80
   },
   {
-    name: 'Samsung 990 Pro 2TB PCIe 4.0 NVMe M.2 SSD',
-    title: 'Samsung 990 Pro 2TB PCIe 4.0 NVMe M.2 SSD',
-    price: 169.99, originalPrice: 199.99, estimatedMSRP: 199.99,
-    url: 'https://www.amazon.com/dp/B0BHJTHD3D',
-    affiliateLink: 'https://www.amazon.com/dp/B0BHJTHD3D?tag=' + AFFILIATE_TAG,
+    name: 'Samsung 990 Pro 1TB PCIe 4.0 NVMe M.2 SSD',
+    title: 'Samsung 990 Pro 1TB PCIe 4.0 NVMe M.2 SSD',
+    price: 89.99, originalPrice: 109.99, estimatedMSRP: 109.99,
+    url: 'https://www.amazon.com/dp/B0BHC5P3H3',
+    affiliateLink: 'https://www.amazon.com/dp/B0BHC5P3H3?tag=' + AFFILIATE_TAG,
     image: 'https://m.media-amazon.com/images/I/71I1k6L7RBL._AC_SL1500_.jpg',
     retailer: 'Amazon', category: 'electronics', inStock: true,
     isCollectible: false, flipScore: 35, demandScore: 70, scarcityScore: 20, confidenceScore: 90
   },
   {
-    name: 'Funko Pop! Marvel: Deadpool & Wolverine 2-Pack',
-    title: 'Funko Pop! Marvel: Deadpool & Wolverine 2-Pack',
-    price: 24.99, originalPrice: 29.99, estimatedMSRP: 29.99,
-    url: 'https://www.amazon.com/dp/B0B5H5R5N5',
-    affiliateLink: 'https://www.amazon.com/dp/B0B5H5R5N5?tag=' + AFFILIATE_TAG,
+    name: 'Funko Pop! Star Wars: The Mandalorian - The Child',
+    title: 'Funko Pop! Star Wars: The Mandalorian - The Child',
+    price: 14.99, originalPrice: 19.99, estimatedMSRP: 19.99,
+    url: 'https://www.amazon.com/dp/B08D9T4P9G',
+    affiliateLink: 'https://www.amazon.com/dp/B08D9T4P9G?tag=' + AFFILIATE_TAG,
     image: 'https://m.media-amazon.com/images/I/71cMq8yH2tL._AC_SL1500_.jpg',
     retailer: 'Amazon', category: 'collectibles', inStock: true,
     isCollectible: true, flipScore: 65, demandScore: 72, scarcityScore: 55, confidenceScore: 75
@@ -109,8 +109,8 @@ const BOOTSTRAP_PRODUCTS = [
     isCollectible: false, flipScore: 25, demandScore: 85, scarcityScore: 10, confidenceScore: 95
   },
   {
-    name: 'One Piece TCG: Awakening of the New Era OP-05 Booster Box',
-    title: 'One Piece TCG: Awakening of the New Era OP-05 Booster Box',
+    name: 'One Piece TCG: OP-05 Awakening of the New Era Booster Box',
+    title: 'One Piece TCG: OP-05 Awakening of the New Era Booster Box',
     price: 119.99, originalPrice: 143.99, estimatedMSRP: 143.99,
     url: 'https://www.amazon.com/dp/B0CH3RFQ9L',
     affiliateLink: 'https://www.amazon.com/dp/B0CH3RFQ9L?tag=' + AFFILIATE_TAG,
