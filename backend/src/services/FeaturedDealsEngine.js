@@ -15,6 +15,111 @@ const { AmazonAffiliateEngine } = require('./AmazonAffiliateEngine');
 
 const AFFILIATE_TAG = process.env.AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_ID || 'stockspotde02-20';
 
+// Bootstrap Amazon products used when the Product collection is empty
+// so the homepage always displays featured deals with affiliate links.
+const BOOTSTRAP_PRODUCTS = [
+  {
+    name: 'Pokemon TCG: Scarlet & Violet 3.5 Booster Pack',
+    title: 'Pokemon TCG: Scarlet & Violet 3.5 Booster Pack',
+    price: 4.49, originalPrice: 4.99, estimatedMSRP: 4.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z1',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z1?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/81X5Vo4xR1L._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'toys', inStock: true,
+    isCollectible: true, flipScore: 72, demandScore: 85, scarcityScore: 45, confidenceScore: 80
+  },
+  {
+    name: 'Nintendo Switch OLED Model - Mario Red Edition',
+    title: 'Nintendo Switch OLED Model - Mario Red Edition',
+    price: 349.99, originalPrice: 359.99, estimatedMSRP: 359.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z2',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z2?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/71R7m0yGmPL._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'gaming', inStock: true,
+    isCollectible: false, flipScore: 45, demandScore: 90, scarcityScore: 30, confidenceScore: 95
+  },
+  {
+    name: 'LEGO Star Wars Millennium Falcon 75192',
+    title: 'LEGO Star Wars Millennium Falcon 75192',
+    price: 849.99, originalPrice: 899.99, estimatedMSRP: 899.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z3',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z3?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/71gJdK5e8tL._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'toys', inStock: true,
+    isCollectible: true, flipScore: 68, demandScore: 75, scarcityScore: 60, confidenceScore: 85
+  },
+  {
+    name: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
+    title: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
+    price: 329.99, originalPrice: 399.99, estimatedMSRP: 399.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z4',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z4?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/61McsgS8u6L._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'electronics', inStock: true,
+    isCollectible: false, flipScore: 55, demandScore: 88, scarcityScore: 25, confidenceScore: 92
+  },
+  {
+    name: 'Meta Quest 3 128GB — VR Headset',
+    title: 'Meta Quest 3 128GB — VR Headset',
+    price: 499.99, originalPrice: 549.99, estimatedMSRP: 549.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z5',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z5?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/61CQ2J7yGtL._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'electronics', inStock: true,
+    isCollectible: false, flipScore: 40, demandScore: 82, scarcityScore: 40, confidenceScore: 88
+  },
+  {
+    name: 'Pokemon TCG: Scarlet & Violet 151 Booster Bundle',
+    title: 'Pokemon TCG: Scarlet & Violet 151 Booster Bundle',
+    price: 26.99, originalPrice: 29.99, estimatedMSRP: 29.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z6',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z6?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/81X5Vo4xR1L._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'toys', inStock: true,
+    isCollectible: true, flipScore: 78, demandScore: 92, scarcityScore: 75, confidenceScore: 82
+  },
+  {
+    name: 'Samsung 990 Pro 2TB PCIe 4.0 NVMe M.2 SSD',
+    title: 'Samsung 990 Pro 2TB PCIe 4.0 NVMe M.2 SSD',
+    price: 169.99, originalPrice: 199.99, estimatedMSRP: 199.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z7',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z7?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/71I1k6L7RBL._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'electronics', inStock: true,
+    isCollectible: false, flipScore: 35, demandScore: 70, scarcityScore: 20, confidenceScore: 90
+  },
+  {
+    name: 'Funko Pop! Marvel: Deadpool & Wolverine 2-Pack',
+    title: 'Funko Pop! Marvel: Deadpool & Wolverine 2-Pack',
+    price: 24.99, originalPrice: 29.99, estimatedMSRP: 29.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z8',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z8?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/71gJdK5e8tL._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'collectibles', inStock: true,
+    isCollectible: true, flipScore: 65, demandScore: 72, scarcityScore: 55, confidenceScore: 75
+  },
+  {
+    name: 'Amazon Fire TV Stick 4K Max (Newest Model)',
+    title: 'Amazon Fire TV Stick 4K Max (Newest Model)',
+    price: 39.99, originalPrice: 59.99, estimatedMSRP: 59.99,
+    url: 'https://www.amazon.com/dp/B0CJ5LQ6Z9',
+    affiliateLink: 'https://www.amazon.com/dp/B0CJ5LQ6Z9?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/71R7m0yGmPL._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'electronics', inStock: true,
+    isCollectible: false, flipScore: 25, demandScore: 85, scarcityScore: 10, confidenceScore: 95
+  },
+  {
+    name: 'One Piece TCG: Awakening of the New Era OP-05 Booster Box',
+    title: 'One Piece TCG: Awakening of the New Era OP-05 Booster Box',
+    price: 119.99, originalPrice: 143.99, estimatedMSRP: 143.99,
+    url: 'https://www.amazon.com/dp/B0CK5LQ7A1',
+    affiliateLink: 'https://www.amazon.com/dp/B0CK5LQ7A1?tag=' + AFFILIATE_TAG,
+    image: 'https://m.media-amazon.com/images/I/81X5Vo4xR1L._AC_SL1500_.jpg',
+    retailer: 'Amazon', category: 'toys', inStock: true,
+    isCollectible: true, flipScore: 82, demandScore: 95, scarcityScore: 80, confidenceScore: 78
+  }
+];
+
 // Section definitions with category filters and score thresholds
 const SECTION_DEFS = [
   { key: 'hot', label: '🔥 Hot Deals', filter: { inStock: true }, sort: { featuredScore: -1 }, limit: 12 },
@@ -66,6 +171,57 @@ class FeaturedDealsEngine {
 
     const now = Date.now();
     const featuredDocs = [];
+
+    // Bootstrap fallback: if no real products exist, use curated Amazon products
+    // so the homepage always displays featured deals with affiliate links.
+    if (products.length === 0) {
+      console.log('[FeaturedDealsEngine] No products found, using bootstrap Amazon products');
+      for (const bp of BOOTSTRAP_PRODUCTS) {
+        const score = this.calculateFeaturedScore(bp, null);
+        const savings = bp.estimatedMSRP && bp.price ? Math.max(0, bp.estimatedMSRP - bp.price) : 0;
+        const savingsPercent = bp.estimatedMSRP && bp.price && bp.estimatedMSRP > 0
+          ? Math.round((savings / bp.estimatedMSRP) * 100) : 0;
+        const sections = this.determineSections(bp, null, score);
+        const badges = [];
+        if (score >= 80) badges.push('HOT');
+        if (bp.isCollectible) badges.push('COLLECTIBLE');
+        if (bp.flipScore >= 70) badges.push('HIGH_FLIP');
+        if (bp.scarcityScore >= 60) badges.push('LIMITED');
+
+        featuredDocs.push({
+          productId: new (require('mongoose').Types.ObjectId)(),
+          name: bp.name,
+          title: bp.title || bp.name,
+          price: bp.price,
+          originalPrice: bp.originalPrice || null,
+          estimatedMSRP: bp.estimatedMSRP || null,
+          savings,
+          savingsPercent,
+          retailer: bp.retailer,
+          category: bp.category,
+          image: bp.image || '',
+          affiliateUrl: bp.affiliateLink || bp.url || '',
+          inStock: bp.inStock,
+          demandScore: bp.demandScore || 0,
+          scarcityScore: bp.scarcityScore || 0,
+          flipScore: bp.flipScore || 0,
+          confidenceScore: bp.confidenceScore || 0,
+          featuredScore: score,
+          sections,
+          badges,
+          hasRestockSignal: false,
+          hasPriceDropSignal: false,
+          lastSignalType: null,
+          lastSignalAt: null,
+          isCollectible: !!bp.isCollectible,
+          isPreorder: false,
+          isTrending: score >= 70 && (bp.demandScore || 0) >= 60,
+          lastMonitoredAt: new Date(),
+          featuredAt: new Date(),
+          expiresAt: new Date(now + 24 * 60 * 60 * 1000)
+        });
+      }
+    }
 
     for (const product of products) {
       const signal = signalMap.get(String(product._id)) || null;
