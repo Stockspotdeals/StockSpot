@@ -51,10 +51,7 @@ class CreatorsApiClient {
     this._tokenPromise = null;
 
     // Determine which required vars are missing (names only — never values).
-    this._missing = [];
-    if (!this.credentialId) this._missing.push('AMAZON_CREDENTIAL_ID');
-    if (!this.secret) this._missing.push('AMAZON_SECRET');
-    if (!this.apiVersion) this._missing.push('AMAZON_API_VERSION');
+    this._missing = this._computeMissingEnvVars();
 
     if (this._missing.length > 0) {
       console.warn(`[CreatorsApiClient] Missing required env var(s): ${this._missing.join(', ')}. Token/API calls will fail cleanly until configured.`);
@@ -63,8 +60,21 @@ class CreatorsApiClient {
     }
   }
 
-  /** True when all required env vars are present. */
+  /**
+   * Recompute missing required env vars from the current environment.
+   * Names only — never values.
+   */
+  _computeMissingEnvVars() {
+    const missing = [];
+    if (!process.env.AMAZON_CREDENTIAL_ID) missing.push('AMAZON_CREDENTIAL_ID');
+    if (!process.env.AMAZON_SECRET) missing.push('AMAZON_SECRET');
+    if (!process.env.AMAZON_API_VERSION) missing.push('AMAZON_API_VERSION');
+    return missing;
+  }
+
+  /** True when all required env vars are present (checked against current env). */
   get isConfigured() {
+    this._missing = this._computeMissingEnvVars();
     return this._missing.length === 0;
   }
 
@@ -73,6 +83,7 @@ class CreatorsApiClient {
    * Never includes values.
    */
   get missingEnvVars() {
+    this._missing = this._computeMissingEnvVars();
     return [...this._missing];
   }
 

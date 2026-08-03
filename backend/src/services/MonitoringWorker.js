@@ -2,17 +2,20 @@ const { initEnvironment } = require('../utils/envInit');
 initEnvironment({ requireMongoUri: true, logMongoStatus: false });
 
 const cron = require('node-cron');
+const mongoose = require('mongoose');
 const { ProductMonitor } = require('./ProductMonitor');
 const { CategoryDiscovery } = require('./CategoryDiscovery');
 const { NotificationService } = require('./NotificationService');
 const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
 const { upsertProduct } = require('./productUpsert');
+const { AmazonConnector } = require('./AmazonConnector');
 
 class UniversalMonitoringWorker {
   constructor() {
     this.productMonitor = new ProductMonitor();
     this.categoryDiscovery = new CategoryDiscovery(this.productMonitor);
     this.notificationService = new NotificationService();
+    this.amazonConnector = new AmazonConnector();
     this.isRunning = false;
     this.isStarted = false;
     this.currentJob = null;
@@ -223,8 +226,108 @@ class UniversalMonitoringWorker {
       console.warn('⚠️ Category discovery error (non-fatal):', discoveryError.message);
     }
     // --- End Discovery Phase ---
-    
+
+    // --- Phase 3: Amazon Creators API ingestion (seed ASINs) ---
+    // Uses AmazonConnector → normalize → TrackedProduct-shaped object → upsertProduct → Product collection.
+    // Does NOT use the BestBuy signal connector pattern.
+    try {
+      const seedAsins = (process.env.AMAZON_SEED_ASINS || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (seedAsins.length === 0) {
+        console.log('[AmazonConnector] No seed ASINs configured (AMAZON_SEED_ASINS) — skipping Amazon ingestion');
+      } else if (!this.amazonConnector.isConfigured) {
+        console.log(`[AmazonConnector] Skipping Amazon ingestion — missing env var(s): ${this.amazonConnector.missingEnvVars.join(', ')}`);
+      } else {
+        console.log(`[AmazonConnector] Importing ${seedAsins.length} seed ASIN(s) via Creators API`);
+        const results = await this.amazonConnector.getProductsByASIN(seedAsins);
+
+        for (const product of results) {
+          try {
+            const trackedProduct = await this._toTrackedProductShape(product);
+            if (!trackedProduct) {
+              console.log(`[AmazonConnector] Skipped ASIN ${product.asin} reason missing required fields`);
+              continue;
+            }
+            const saved = await upsertProduct(trackedProduct);
+            if (saved) {
+              console.log(`[AmazonConnector] Imported ASIN ${product.asin} into Product collection`);
+            } else {
+              console.log(`[AmazonConnector] Skipped ASIN ${product.asin} reason upsert returned no document`);
+            }
+          } catch (err) {
+            console.warn(`[AmazonConnector] Import failed for ASIN ${product.asin}: ${err.message}`);
+          }
+        }
+      }
+    } catch (amazonError) {
+      console.warn('[AmazonConnector] Import failed:', amazonError.message);
+    }
+    // --- End Amazon Ingestion Phase ---
+
     this.isRunning = false;
+  }
+
+  /**
+   * Convert a normalized AmazonConnector product into the exact object shape
+   * expected by productUpsert(). Reuses an existing TrackedProduct _id when
+   * one already exists for the ASIN/URL; otherwise creates a new ObjectId and
+   * persists a TrackedProduct so the _id stays stable across runs.
+   */
+  async _toTrackedProductShape(product) {
+    if (!product || !product.asin) return null;
+
+    const url = product.url || `https://www.amazon.com/dp/${product.asin}`;
+    const asinUrl = `https://www.amazon.com/dp/${product.asin}`;
+
+    const existing = await TrackedProduct.findOne({
+      retailer: 'amazon',
+      $or: [{ url }, { url: asinUrl }]
+    }).lean();
+
+    const trackedProduct = {
+      _id: existing ? existing._id : new mongoose.Types.ObjectId(),
+      title: product.title || product.name || '',
+      retailer: 'amazon',
+      category: product.category || '',
+      price: product.price,
+      isAvailable: !!product.isAvailable,
+      affiliateLink: product.affiliateLink || '',
+      image: product.image || '',
+      url,
+      confidence: product.confidence || 0,
+      pageText: product.pageText || ''
+    };
+
+    if (!existing) {
+      try {
+        await TrackedProduct.create({
+          _id: trackedProduct._id,
+          url,
+          title: trackedProduct.title,
+          source: 'auto',
+          retailer: 'amazon',
+          category: trackedProduct.category,
+          affiliateLink: trackedProduct.affiliateLink,
+          image: trackedProduct.image,
+          price: trackedProduct.price,
+          isAvailable: trackedProduct.isAvailable,
+          trackingType: 'restock',
+          isActive: true,
+          checkInterval: 60,
+          nextCheck: new Date()
+        });
+      } catch (err) {
+        // Duplicate key race is fine — another run may have created it.
+        if (err.code !== 11000) {
+          console.warn(`[AmazonConnector] Failed to persist TrackedProduct for ASIN ${product.asin}: ${err.message}`);
+        }
+      }
+    }
+
+    return trackedProduct;
   }
 
   /**
