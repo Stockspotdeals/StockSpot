@@ -316,6 +316,7 @@ class ProductMonitor {
       const availabilityText = this.extractAvailability($, pageText, config);
       const inStock = this.parseAvailability(availabilityText || pageText, config.selectors?.outOfStock || []);
       const category = CategoryDetector.detectCategory(title || trackedProduct.title || '', url, pageText);
+      const image = this.extractImage($, trackedProduct, config);
 
       let affiliateLink = url;
       if (trackedProduct.retailer === RETAILER_TYPES.AMAZON) {
@@ -328,6 +329,7 @@ class ProductMonitor {
         availability: availabilityText || (inStock ? 'Available' : 'Unavailable'),
         inStock,
         category,
+        image,
         affiliateLink,
         lastChecked: new Date(),
         pageType: page.pageType,
@@ -583,6 +585,7 @@ class ProductMonitor {
       lastChecked: data.lastChecked || new Date(),
       availability: data.availability || (data.inStock ? 'Available' : 'Unavailable'),
       category: data.category || CategoryDetector.detectCategory(data.title || trackedProduct.title || '', trackedProduct.url, ''),
+      image: data.image || trackedProduct.image || '',
       affiliateLink: data.affiliateLink || trackedProduct.affiliateLink || trackedProduct.url,
       pageType: data.pageType || 'unknown',
       fetchStatus: data.fetchStatus || null,
@@ -658,6 +661,29 @@ class ProductMonitor {
     }
 
     return pageText;
+  }
+
+  /**
+   * Extract product image URL from the page.
+   * Priority: og:image → twitter:image → schema.org image.
+   */
+  extractImage($, trackedProduct, config) {
+    const selectorCandidates = [
+      'meta[property="og:image"]',
+      'meta[name="twitter:image"]',
+      'meta[itemprop="image"]',
+      '[itemprop="image"]',
+      'link[rel="image_src"]'
+    ].filter(Boolean);
+
+    for (const candidate of selectorCandidates) {
+      const src = this.extractTextOrMeta($, candidate);
+      if (src) {
+        return src;
+      }
+    }
+
+    return trackedProduct.image || null;
   }
 
   extractTextOrMeta($, selector) {

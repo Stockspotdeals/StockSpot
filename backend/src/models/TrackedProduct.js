@@ -74,6 +74,10 @@ const TrackedProductSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  image: {
+    type: String,
+    default: ''
+  },
   
   // Current state
   price: {
