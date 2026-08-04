@@ -10,25 +10,31 @@
  *  - It does NOT write to MongoDB. It returns StockSpot-compatible normalized objects
  *    that can later be handed to productUpsert().
  *
- * Affiliate links are produced by the existing AmazonAffiliateEngine
- * (generateAffiliateUrl) — this class deliberately does NOT duplicate affiliate
- * URL logic.
+ * Official Creators API (per Amazon docs at affiliate-program.amazon.com/creatorsapi):
+ *  - Base URL: https://creatorsapi.amazon
+ *  - GetItems:    POST /catalog/v1/getItems
+ *  - SearchItems: POST /catalog/v1/searchItems
+ *  - Both operations use a JSON request body (NOT query-string parameters).
  *
- * RESPONSE ASSUMPTIONS (documented — Amazon Creators API response shape is not
- * fully public; the normalizer is defensive and tolerant of multiple shapes):
- *   - The API returns an object whose items are found at one of:
- *       response.items | response.data.items | response.data | response.results | response.products
- *   - Each item may expose fields as snake_case, camelCase, or nested objects:
- *       asin:        asin | ASIN | id | productId
- *       title/name:  title | name | Title | ItemInfo.Title.DisplayValue
- *       price:       price.amount | price | amount | salePrice.amount | Price.Amount
- *                    (string "$19.99" or number)
- *       image:       image.url | imageUrl | image | images.primary.url | large URL
- *       availability: isAvailable | available | availability.State | sourceAvailability
- *       category:    category | categoryId | categoryKey
- *   - Endpoint paths are configurable (env override or constructor option):
- *       search: products/search  (GET ?keyword=...)
- *       items:  products         (GET ?asins=B0...,B0...)
+ * GetItems body:
+ *   { itemIds: [...], itemIdType: "ASIN", partnerTag, resources: [...] }
+ *
+ * SearchItems body:
+ *   { keywords: "...", partnerTag, resources: [...] }
+ *
+ * Response structure:
+ *   Items are nested under response.itemResults.items[].item.
+ *   Each item exposes:
+ *     - ASIN
+ *     - detailPageURL (canonical product URL, already includes affiliate tag)
+ *     - itemInfo.title
+ *     - images.primary.large
+ *     - offersV2.listings[].price / .availability
+ *     - browseNodeInfo.browseNodes
+ *
+ * Affiliate links: detailPageURL already contains the affiliate tag, so it is used
+ * directly as both url and affiliateLink. We do NOT regenerate Amazon URLs when
+ * detailPageURL exists.
  *
  * Error handling:
  *   - Missing/empty API response                        -> throws AMAZON_CONNECTOR_EMPTY_RESPONSE
@@ -40,9 +46,18 @@
 const { CreatorsApiClient } = require('./CreatorsApiClient');
 const { AmazonAffiliateEngine } = require('./AmazonAffiliateEngine');
 
-const DEFAULT_SEARCH_PATH = 'products/search';
-const DEFAULT_ITEMS_PATH = 'products';
+const DEFAULT_SEARCH_PATH = 'catalog/v1/searchItems';
+const DEFAULT_ITEMS_PATH = 'catalog/v1/getItems';
 const DEFAULT_CONFIDENCE = 0.9; // Deterministic value for API-sourced data
+
+// Resources requested from the Creators API for both operations.
+const DEFAULT_RESOURCES = [
+  'images.primary.large',
+  'itemInfo.title',
+  'offersV2.listings.price',
+  'offersV2.listings.availability',
+  'browseNodeInfo.browseNodes'
+];
 
 class AmazonConnector {
   /**
@@ -74,7 +89,7 @@ class AmazonConnector {
    *
    * @param {string} keyword - search term
    * @param {object} [options]
-   *   - limit: max results (pageSize)
+   *   - limit: max results (itemCount)
    *   - headers: extra request headers
    * @returns {Promise<Array<object>>} normalized StockSpot-compatible products
    */
@@ -86,16 +101,21 @@ class AmazonConnector {
       throw err;
     }
 
-    const params = new URLSearchParams();
-    params.set('keyword', keyword.trim());
+    const body = {
+      keywords: keyword.trim(),
+      partnerTag: this._getPartnerTag(),
+      resources: DEFAULT_RESOURCES
+    };
+
     const limit = Number(options.limit);
     if (Number.isInteger(limit) && limit > 0) {
-      params.set('pageSize', String(limit));
+      body.itemCount = limit;
     }
 
-    const response = await this.client.request(`${this.searchPath}?${params.toString()}`, {
-      method: options.method || 'GET',
-      headers: options.headers
+    const response = await this.client.request(this.searchPath, {
+      method: 'POST',
+      headers: options.headers,
+      body
     });
 
     const items = this._extractItems(response);
@@ -125,18 +145,31 @@ class AmazonConnector {
       throw err;
     }
 
-    const params = new URLSearchParams();
-    params.set('asins', [...new Set(ids)].join(','));
+    const body = {
+      itemIds: [...new Set(ids)],
+      itemIdType: 'ASIN',
+      partnerTag: this._getPartnerTag(),
+      resources: DEFAULT_RESOURCES
+    };
 
-    const response = await this.client.request(`${this.itemsPath}?${params.toString()}`, {
-      method: options.method || 'GET',
-      headers: options.headers
+    const response = await this.client.request(this.itemsPath, {
+      method: 'POST',
+      headers: options.headers,
+      body
     });
 
     const items = this._extractItems(response);
     this._assertNonEmptyResponse(items, 'getProductsByASIN');
 
     return this._normalizeItems(items);
+  }
+
+  /**
+   * Returns the partner tag used in request bodies.
+   * Falls back to the affiliate engine's associate id when AMAZON_ASSOCIATE_TAG is unset.
+   */
+  _getPartnerTag() {
+    return process.env.AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_ID || this.affiliateEngine.associateId || '';
   }
 
   // ----------------------------------------------------------------
@@ -157,12 +190,19 @@ class AmazonConnector {
 
   /**
    * Defensively locate the item array in a Creators API response.
+   * Official structure: response.itemResults.items[].item
+   * Also tolerates legacy/alternate shapes for robustness.
    * Returns [] when no array is found.
    */
   _extractItems(response) {
     if (!response || typeof response !== 'object') return [];
 
     const candidates = [
+      // Official Creators API shape: itemResults.items[].item
+      response.itemResults && response.itemResults.items && response.itemResults.items.map(i => i && i.item),
+      // Alternate: itemResults.items directly
+      response.itemResults && response.itemResults.items,
+      // Legacy/alternate shapes
       response.items,
       response.products,
       response.results,
@@ -205,6 +245,8 @@ class AmazonConnector {
       }
 
       const title = this._extractTitle(raw);
+      const detailPageURL = this._extractDetailPageURL(raw);
+      const url = detailPageURL || this._buildProductUrl(raw, asin);
 
       const normalizedItem = {
         asin,
@@ -214,15 +256,14 @@ class AmazonConnector {
         category: this._extractCategory(raw),
         price: this._extractPrice(raw),
         image: this._extractImage(raw),
-        url: this._buildProductUrl(raw, asin),
-        affiliateLink: '', // filled below using existing AmazonAffiliateEngine
+        url,
+        // Use detailPageURL directly when present (it already includes the affiliate tag).
+        // Only fall back to the affiliate engine when no detailPageURL is available.
+        affiliateLink: detailPageURL || this.affiliateEngine.generateAffiliateUrl(url),
         isAvailable: this._extractAvailability(raw),
         confidence: DEFAULT_CONFIDENCE,
         pageText: ''
       };
-
-      // Delegate affiliate URL construction to the existing engine.
-      normalizedItem.affiliateLink = this.affiliateEngine.generateAffiliateUrl(normalizedItem.url);
 
       // Graceful per-item issue tracking.
       const issues = [];
@@ -248,8 +289,8 @@ class AmazonConnector {
 
   _extractAsin(item) {
     const raw =
-      item.asin ||
       item.ASIN ||
+      item.asin ||
       item.productId ||
       item.id;
     if (typeof raw === 'string') return raw.trim();
@@ -258,6 +299,8 @@ class AmazonConnector {
 
   _extractTitle(item) {
     const candidates = [
+      // Official Creators API shape: itemInfo.title.DisplayValue
+      item.itemInfo && item.itemInfo.title && item.itemInfo.title.DisplayValue,
       // Nested PA-API-like shape: ItemInfo.Title.DisplayValue
       item.ItemInfo && item.ItemInfo.Title && item.ItemInfo.Title.DisplayValue,
       // Direct nested objects
@@ -280,14 +323,19 @@ class AmazonConnector {
 
   _extractPrice(item) {
     const candidates = [
+      // Official Creators API shape: offersV2.listings[].price.Amount
+      item.offersV2 && item.offersV2.listings && item.offersV2.listings[0] && item.offersV2.listings[0].price && item.offersV2.listings[0].price.Amount,
+      item.offersV2 && item.offersV2.listings && item.offersV2.listings[0] && item.offersV2.listings[0].price && item.offersV2.listings[0].price.DisplayAmount,
+      // Nested PA-API-like shape: Offers.Listings[0].Price.Amount
+      item.Offers && item.Offers.Listings && item.Offers.Listings[0] && item.Offers.Listings[0].Price && item.Offers.Listings[0].Price.Amount,
+      // Direct nested objects
       item.price && item.price.amount,
       item.price && item.price.value,
       item.Price && item.Price.Amount,
       item.salePrice && item.salePrice.amount,
       item.amount,
       item.price,
-      item.salePrice,
-      item.Offers && item.Offers.Listings && item.Offers.Listings[0] && item.Offers.Listings[0].Price && item.Offers.Listings[0].Price.Amount
+      item.salePrice
     ];
 
     for (const candidate of candidates) {
@@ -312,6 +360,9 @@ class AmazonConnector {
 
   _extractImage(item) {
     const candidates = [
+      // Official Creators API shape: images.primary.large.URL
+      item.images && item.images.primary && item.images.primary.large && item.images.primary.large.URL,
+      item.images && item.images.primary && item.images.primary.medium && item.images.primary.medium.URL,
       // Nested PA-API-like shape: Images.Primary.Large.URL
       item.Images && item.Images.Primary && item.Images.Primary.Large && item.Images.Primary.Large.URL,
       item.Images && item.Images.Primary && item.Images.Primary.Medium && item.Images.Primary.Medium.URL,
@@ -337,13 +388,15 @@ class AmazonConnector {
 
   _extractCategory(item) {
     const candidates = [
+      // Official Creators API shape: browseNodeInfo.browseNodes[0].DisplayName
+      item.browseNodeInfo && item.browseNodeInfo.browseNodes && item.browseNodeInfo.browseNodes[0] && item.browseNodeInfo.browseNodes[0].DisplayName,
+      // Nested PA-API-like shape: BrowseNodeInfo.BrowseNodes[0]
+      item.BrowseNodeInfo && item.BrowseNodeInfo.BrowseNodes && item.BrowseNodeInfo.BrowseNodes[0] && item.BrowseNodeInfo.BrowseNodes[0].DisplayName,
       item.categoryKey,
       item.categoryId,
       item.category,
       item.categoryName,
-      item.browseNode,
-      // Nested PA-API-like shape: BrowseNodeInfo.BrowseNodes[0]
-      item.BrowseNodeInfo && item.BrowseNodeInfo.BrowseNodes && item.BrowseNodeInfo.BrowseNodes[0] && item.BrowseNodeInfo.BrowseNodes[0].DisplayName
+      item.browseNode
     ];
 
     for (const candidate of candidates) {
@@ -361,6 +414,8 @@ class AmazonConnector {
 
   _extractAvailability(item) {
     const candidates = [
+      // Official Creators API shape: offersV2.listings[].availability
+      item.offersV2 && item.offersV2.listings && item.offersV2.listings[0] && item.offersV2.listings[0].availability,
       item.isAvailable,
       item.available,
       item.inStock,
@@ -388,8 +443,20 @@ class AmazonConnector {
   }
 
   /**
-   * Build a canonical Amazon product URL. Uses raw.url when it looks like an
-   * Amazon product URL; otherwise constructs one from the ASIN.
+   * Extract the canonical product URL from the official Creators API response.
+   * detailPageURL already includes the affiliate tag.
+   */
+  _extractDetailPageURL(item) {
+    const raw = item.detailPageURL || item.DetailPageURL || item.detailPageUrl;
+    if (typeof raw === 'string' && /^https?:\/\//i.test(raw.trim())) {
+      return raw.trim();
+    }
+    return '';
+  }
+
+  /**
+   * Build a canonical Amazon product URL. Used only when detailPageURL is absent.
+   * Uses raw.url when it looks like an Amazon product URL; otherwise constructs one from the ASIN.
    */
   _buildProductUrl(item, asin) {
     const rawUrl = item.url || item.productUrl || item.link || item.urlString;

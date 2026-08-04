@@ -15,7 +15,7 @@
  *
  * Optional environment variables:
  *   AMAZON_API_SCOPE       - OAuth scope override (defaults to amazon.creators.pdp)
- *   AMAZON_API_BASE_URL    - API base URL override (defaults to https://creators-api.amazon.com)
+ *   AMAZON_API_BASE_URL    - API base URL override (defaults to https://creatorsapi.amazon)
  *
  * The class:
  *   - Requests an OAuth bearer token from the Amazon auth token endpoint.
@@ -28,7 +28,7 @@
 
 const AMAZON_TOKEN_ENDPOINT = 'https://api.amazon.com/auth/o2/token';
 const DEFAULT_SCOPE = 'amazon.creators.pdp';
-const DEFAULT_API_BASE_URL = 'https://creators-api.amazon.com';
+const DEFAULT_API_BASE_URL = 'https://creatorsapi.amazon';
 const TOKEN_REFRESH_MARGIN_MS = 60 * 1000; // Refresh 60s before expiry
 const DEFAULT_EXPIRES_IN_S = 3600;
 
@@ -36,7 +36,7 @@ class CreatorsApiClient {
   /**
    * @param {object} [options]
    *   - scope: OAuth scope override (defaults to env AMAZON_API_SCOPE or amazon.creators.pdp)
-   *   - baseUrl: API base URL override (defaults to env AMAZON_API_BASE_URL or https://creators-api.amazon.com)
+   *   - baseUrl: API base URL override (defaults to env AMAZON_API_BASE_URL or https://creatorsapi.amazon)
    */
   constructor(options = {}) {
     this.credentialId = process.env.AMAZON_CREDENTIAL_ID || '';
