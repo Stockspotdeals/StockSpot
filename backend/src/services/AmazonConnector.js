@@ -23,12 +23,12 @@
  *   { keywords: "...", partnerTag, resources: [...] }
  *
  * Response structure:
- *   Items are nested under response.itemResults.items[].item.
+ *   Items are nested under response.itemsResult.items[].
  *   Each item exposes:
- *     - ASIN
+ *     - asin
  *     - detailPageURL (canonical product URL, already includes affiliate tag)
- *     - itemInfo.title
- *     - images.primary.large
+ *     - itemInfo.title.displayValue
+ *     - images.primary.large.url
  *     - offersV2.listings[].price / .availability
  *     - browseNodeInfo.browseNodes
  *
@@ -148,6 +148,7 @@ class AmazonConnector {
     const body = {
       itemIds: [...new Set(ids)],
       itemIdType: 'ASIN',
+      marketplace: 'www.amazon.com',
       partnerTag: this._getPartnerTag(),
       resources: DEFAULT_RESOURCES
     };
@@ -159,6 +160,10 @@ class AmazonConnector {
     });
 
     const items = this._extractItems(response);
+    if (items.length > 0) {
+      const firstAsin = this._extractAsin(items[0]);
+      console.log(`[AmazonConnector] Received ${items.length} item(s) from Creators API${firstAsin ? ` (first ASIN: ${firstAsin})` : ''}`);
+    }
     this._assertNonEmptyResponse(items, 'getProductsByASIN');
 
     return this._normalizeItems(items);
@@ -190,7 +195,7 @@ class AmazonConnector {
 
   /**
    * Defensively locate the item array in a Creators API response.
-   * Official structure: response.itemResults.items[].item
+   * Official structure: response.itemsResult.items (product objects directly)
    * Also tolerates legacy/alternate shapes for robustness.
    * Returns [] when no array is found.
    */
@@ -198,11 +203,11 @@ class AmazonConnector {
     if (!response || typeof response !== 'object') return [];
 
     const candidates = [
-      // Official Creators API shape: itemResults.items[].item
-      response.itemResults && response.itemResults.items && response.itemResults.items.map(i => i && i.item),
-      // Alternate: itemResults.items directly
-      response.itemResults && response.itemResults.items,
+      // Official Creators API shape: itemsResult.items (product objects directly)
+      response.itemsResult && response.itemsResult.items,
       // Legacy/alternate shapes
+      response.itemResults && response.itemResults.items && response.itemResults.items.map(i => i && i.item),
+      response.itemResults && response.itemResults.items,
       response.items,
       response.products,
       response.results,
@@ -299,7 +304,9 @@ class AmazonConnector {
 
   _extractTitle(item) {
     const candidates = [
-      // Official Creators API shape: itemInfo.title.DisplayValue
+      // Official Creators API shape: itemInfo.title.displayValue
+      item.itemInfo && item.itemInfo.title && item.itemInfo.title.displayValue,
+      // Alternate casing: itemInfo.title.DisplayValue
       item.itemInfo && item.itemInfo.title && item.itemInfo.title.DisplayValue,
       // Nested PA-API-like shape: ItemInfo.Title.DisplayValue
       item.ItemInfo && item.ItemInfo.Title && item.ItemInfo.Title.DisplayValue,
@@ -360,7 +367,9 @@ class AmazonConnector {
 
   _extractImage(item) {
     const candidates = [
-      // Official Creators API shape: images.primary.large.URL
+      // Official Creators API shape: images.primary.large.url
+      item.images && item.images.primary && item.images.primary.large && item.images.primary.large.url,
+      // Alternate casing: images.primary.large.URL
       item.images && item.images.primary && item.images.primary.large && item.images.primary.large.URL,
       item.images && item.images.primary && item.images.primary.medium && item.images.primary.medium.URL,
       // Nested PA-API-like shape: Images.Primary.Large.URL
