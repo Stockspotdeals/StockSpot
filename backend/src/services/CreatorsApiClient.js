@@ -14,7 +14,7 @@
  *   AMAZON_API_VERSION     - Creators API version segment, e.g. 'v1'
  *
  * Optional environment variables:
- *   AMAZON_API_SCOPE       - OAuth scope override (defaults to amazon.creators.pdp)
+ *   AMAZON_API_SCOPE       - OAuth scope override (defaults to creatorsapi::default)
  *   AMAZON_API_BASE_URL    - API base URL override (defaults to https://creatorsapi.amazon)
  *
  * The class:
@@ -27,7 +27,7 @@
  */
 
 const AMAZON_TOKEN_ENDPOINT = 'https://api.amazon.com/auth/o2/token';
-const DEFAULT_SCOPE = 'amazon.creators.pdp';
+const DEFAULT_SCOPE = 'creatorsapi::default';
 const DEFAULT_API_BASE_URL = 'https://creatorsapi.amazon';
 const TOKEN_REFRESH_MARGIN_MS = 60 * 1000; // Refresh 60s before expiry
 const DEFAULT_EXPIRES_IN_S = 3600;
@@ -35,7 +35,7 @@ const DEFAULT_EXPIRES_IN_S = 3600;
 class CreatorsApiClient {
   /**
    * @param {object} [options]
-   *   - scope: OAuth scope override (defaults to env AMAZON_API_SCOPE or amazon.creators.pdp)
+   *   - scope: OAuth scope override (defaults to env AMAZON_API_SCOPE or creatorsapi::default)
    *   - baseUrl: API base URL override (defaults to env AMAZON_API_BASE_URL or https://creatorsapi.amazon)
    */
   constructor(options = {}) {
@@ -129,18 +129,19 @@ class CreatorsApiClient {
   async _fetchAccessToken() {
     this._assertConfigured();
 
-    const body = new URLSearchParams();
-    body.set('grant_type', 'client_credentials');
-    body.set('client_id', this.credentialId);
-    body.set('client_secret', this.secret);
-    body.set('scope', this.scope);
+    const body = JSON.stringify({
+      grant_type: 'client_credentials',
+      client_id: this.credentialId,
+      client_secret: this.secret,
+      scope: this.scope
+    });
 
     let response;
     try {
       response = await fetch(AMAZON_TOKEN_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString()
+        headers: { 'Content-Type': 'application/json' },
+        body
       });
     } catch (err) {
       const error = new Error(`Amazon Creators API token request failed (network): ${err.message}`);
