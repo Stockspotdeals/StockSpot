@@ -16,6 +16,7 @@
  * Optional environment variables:
  *   AMAZON_API_SCOPE       - OAuth scope override (defaults to creatorsapi::default)
  *   AMAZON_API_BASE_URL    - API base URL override (defaults to https://creatorsapi.amazon)
+ *   AMAZON_API_MARKETPLACE - Marketplace domain for x-marketplace header (defaults to www.amazon.com)
  *
  * The class:
  *   - Requests an OAuth bearer token from the Amazon auth token endpoint.
@@ -29,6 +30,7 @@
 const AMAZON_TOKEN_ENDPOINT = 'https://api.amazon.com/auth/o2/token';
 const DEFAULT_SCOPE = 'creatorsapi::default';
 const DEFAULT_API_BASE_URL = 'https://creatorsapi.amazon';
+const DEFAULT_MARKETPLACE = 'www.amazon.com';
 const TOKEN_REFRESH_MARGIN_MS = 60 * 1000; // Refresh 60s before expiry
 const DEFAULT_EXPIRES_IN_S = 3600;
 
@@ -37,6 +39,7 @@ class CreatorsApiClient {
    * @param {object} [options]
    *   - scope: OAuth scope override (defaults to env AMAZON_API_SCOPE or creatorsapi::default)
    *   - baseUrl: API base URL override (defaults to env AMAZON_API_BASE_URL or https://creatorsapi.amazon)
+   *   - marketplace: Marketplace domain for x-marketplace header (defaults to env AMAZON_API_MARKETPLACE or www.amazon.com)
    */
   constructor(options = {}) {
     this.credentialId = process.env.AMAZON_CREDENTIAL_ID || '';
@@ -44,6 +47,7 @@ class CreatorsApiClient {
     this.apiVersion = process.env.AMAZON_API_VERSION || '';
     this.scope = options.scope || process.env.AMAZON_API_SCOPE || DEFAULT_SCOPE;
     this.baseUrl = options.baseUrl || process.env.AMAZON_API_BASE_URL || DEFAULT_API_BASE_URL;
+    this.marketplace = options.marketplace || process.env.AMAZON_API_MARKETPLACE || DEFAULT_MARKETPLACE;
 
     // In-memory token cache: { accessToken, expiresAt }
     this._token = null;
@@ -219,6 +223,7 @@ class CreatorsApiClient {
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      'x-marketplace': this.marketplace,
       ...(options.headers || {})
     };
 
