@@ -23,7 +23,7 @@
  *   { keywords: "...", partnerTag, resources: [...] }
  *
  * Response structure:
- *   Items are nested under response.itemsResult.items[].
+ *   Items are nested under response.Output.itemsResult.items[].
  *   Each item exposes:
  *     - asin
  *     - detailPageURL (canonical product URL, already includes affiliate tag)
@@ -163,11 +163,12 @@ class AmazonConnector {
     // Do NOT log tokens, secrets, credentials, or affiliate IDs.
     if (response && typeof response === 'object') {
       console.log('[AmazonConnector DEBUG] Response keys:', Object.keys(response));
-      console.log('[AmazonConnector DEBUG] itemsResult exists:', !!response.itemsResult);
-      console.log('[AmazonConnector DEBUG] itemsResult.items exists:', !!(response.itemsResult && response.itemsResult.items));
-      console.log('[AmazonConnector DEBUG] items count:', (response.itemsResult && response.itemsResult.items && response.itemsResult.items.length) || 0);
-      if (response.itemsResult && response.itemsResult.items && response.itemsResult.items.length > 0) {
-        const firstItem = response.itemsResult.items[0];
+      console.log('[AmazonConnector DEBUG] Output keys:', Object.keys(response.Output || {}));
+      console.log('[AmazonConnector DEBUG] Output.itemsResult exists:', !!(response.Output && response.Output.itemsResult));
+      console.log('[AmazonConnector DEBUG] Output.itemsResult.items exists:', !!(response.Output && response.Output.itemsResult && response.Output.itemsResult.items));
+      console.log('[AmazonConnector DEBUG] items count:', (response.Output && response.Output.itemsResult && response.Output.itemsResult.items && response.Output.itemsResult.items.length) || 0);
+      if (response.Output && response.Output.itemsResult && response.Output.itemsResult.items && response.Output.itemsResult.items.length > 0) {
+        const firstItem = response.Output.itemsResult.items[0];
         console.log('[AmazonConnector DEBUG] first item ASIN:', (firstItem && firstItem.asin) || 'N/A');
       }
       if (Array.isArray(response.errors) && response.errors.length > 0) {
@@ -216,7 +217,7 @@ class AmazonConnector {
 
   /**
    * Defensively locate the item array in a Creators API response.
-   * Official structure: response.itemsResult.items (product objects directly)
+   * Official structure: response.Output.itemsResult.items (product objects directly)
    * Also tolerates legacy/alternate shapes for robustness.
    * Returns [] when no array is found.
    */
@@ -224,7 +225,9 @@ class AmazonConnector {
     if (!response || typeof response !== 'object') return [];
 
     const candidates = [
-      // Official Creators API shape: itemsResult.items (product objects directly)
+      // Official Creators API shape: Output.itemsResult.items (product objects directly)
+      response.Output && response.Output.itemsResult && response.Output.itemsResult.items,
+      // Alternate: itemsResult.items (product objects directly)
       response.itemsResult && response.itemsResult.items,
       // Legacy/alternate shapes
       response.itemResults && response.itemResults.items && response.itemResults.items.map(i => i && i.item),
