@@ -245,6 +245,11 @@ class CreatorsApiClient {
     const text = await response.text().catch(() => '');
 
     if (response.status === 401) {
+      // DEBUG: Expose Amazon error response body (no secrets are in the response body).
+      console.log(
+        '[CreatorsApiClient ERROR RESPONSE]',
+        JSON.stringify({ status: response.status, body: text }, null, 2)
+      );
       const error = new Error('Amazon Creators API request was unauthorized (HTTP 401)');
       error.name = 'CreatorsApiRequestError';
       error.code = 'CREATORS_API_UNAUTHORIZED';
@@ -253,6 +258,11 @@ class CreatorsApiClient {
     }
 
     if (!response.ok) {
+      // DEBUG: Expose Amazon error response body (no secrets are in the response body).
+      console.log(
+        '[CreatorsApiClient ERROR RESPONSE]',
+        JSON.stringify({ status: response.status, body: text }, null, 2)
+      );
       const snippet = text ? `: ${text.slice(0, 300)}` : '';
       const error = new Error(`Amazon Creators API request failed with HTTP ${response.status}${snippet}`);
       error.name = 'CreatorsApiRequestError';
