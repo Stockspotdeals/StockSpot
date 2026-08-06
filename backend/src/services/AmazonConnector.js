@@ -159,6 +159,27 @@ class AmazonConnector {
       body
     });
 
+    // TEMPORARY DEBUG: Inspect raw Amazon Creators API response before parsing.
+    // Do NOT log tokens, secrets, credentials, or affiliate IDs.
+    if (response && typeof response === 'object') {
+      console.log('[AmazonConnector DEBUG] Response keys:', Object.keys(response));
+      console.log('[AmazonConnector DEBUG] itemsResult exists:', !!response.itemsResult);
+      console.log('[AmazonConnector DEBUG] itemsResult.items exists:', !!(response.itemsResult && response.itemsResult.items));
+      console.log('[AmazonConnector DEBUG] items count:', (response.itemsResult && response.itemsResult.items && response.itemsResult.items.length) || 0);
+      if (response.itemsResult && response.itemsResult.items && response.itemsResult.items.length > 0) {
+        const firstItem = response.itemsResult.items[0];
+        console.log('[AmazonConnector DEBUG] first item ASIN:', (firstItem && firstItem.asin) || 'N/A');
+      }
+      if (Array.isArray(response.errors) && response.errors.length > 0) {
+        for (const err of response.errors) {
+          console.log('[AmazonConnector DEBUG] API error type:', err && err.type || 'unknown');
+          console.log('[AmazonConnector DEBUG] API error message:', err && err.message || 'unknown');
+        }
+      }
+    } else {
+      console.log('[AmazonConnector DEBUG] Response is not an object:', typeof response);
+    }
+
     const items = this._extractItems(response);
     if (items.length > 0) {
       const firstAsin = this._extractAsin(items[0]);
