@@ -6,12 +6,16 @@ const { OwnerIntelligence } = require('./OwnerIntelligence');
 
 // Lazy load cheerio — only loaded when actually needed for HTML parsing
 let cheerio = null;
+let cheerioWarned = false;
 function getCheerio() {
   if (!cheerio) {
     try {
       cheerio = require('cheerio');
     } catch (e) {
-      console.warn('[CategoryDiscovery] cheerio not available — HTML parsing disabled');
+      if (!cheerioWarned) {
+        cheerioWarned = true;
+        console.warn('[CategoryDiscovery] cheerio not available — HTML parsing disabled');
+      }
       return null;
     }
   }
@@ -1278,7 +1282,8 @@ class CategoryDiscovery {
     const responseTimeMs = Date.now() - fetchStartTime;
 
     if (!page || page.pageType === 'blocked' || page.pageType === 'bot_interstitial' || !page.html) {
-      console.warn(`[CategoryDiscovery] Could not fetch category page: ${retailer} ${categoryUrl} (${page?.pageType || 'no response'})`);
+      // Expected retailer responses (403, 404, 500, timeout) are informational, not backend failures.
+      console.log(`[CategoryDiscovery] Skipped category page (expected response): ${retailer} ${categoryUrl} (${page?.pageType || 'no response'})`);
 
       // Determine HTTP status from page response
       const httpStatus = page?.statusCode || (page?.pageType === 'blocked' ? 403 : 0);

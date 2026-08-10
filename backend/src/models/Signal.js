@@ -57,7 +57,7 @@ const signalSchema = new mongoose.Schema({
   signalType: {
     type: String,
     required: true,
-    enum: ['restock', 'price-drop', 'price-increase', 'out-of-stock'],
+    enum: ['restock', 'price-drop', 'price-increase', 'out-of-stock', 'demand-spike', 'sentiment'],
     index: true
   },
   status: {

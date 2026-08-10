@@ -159,7 +159,7 @@ class AmazonConnector {
       body
     });
 
-    // TEMPORARY DEBUG: Inspect raw Amazon Creators API response before parsing.
+    // DIAGNOSTICS: Log complete Amazon error payloads for debugging.
     // Do NOT log tokens, secrets, credentials, or affiliate IDs.
     if (response && typeof response === 'object') {
       console.log('[AmazonConnector DEBUG] Response keys:', Object.keys(response));
@@ -167,15 +167,14 @@ class AmazonConnector {
       console.log('[AmazonConnector DEBUG] Output.itemsResult exists:', !!(response.Output && response.Output.itemsResult));
       console.log('[AmazonConnector DEBUG] Output.itemsResult.items exists:', !!(response.Output && response.Output.itemsResult && response.Output.itemsResult.items));
       console.log('[AmazonConnector DEBUG] items count:', (response.Output && response.Output.itemsResult && response.Output.itemsResult.items && response.Output.itemsResult.items.length) || 0);
-      if (response.Output && response.Output.itemsResult && response.Output.itemsResult.items && response.Output.itemsResult.items.length > 0) {
-        const firstItem = response.Output.itemsResult.items[0];
-        console.log('[AmazonConnector DEBUG] first item ASIN:', (firstItem && firstItem.asin) || 'N/A');
-      }
-      if (Array.isArray(response.errors) && response.errors.length > 0) {
-        for (const err of response.errors) {
-          console.log('[AmazonConnector DEBUG] API error type:', err && err.type || 'unknown');
-          console.log('[AmazonConnector DEBUG] API error message:', err && err.message || 'unknown');
-        }
+
+      // Log error fields if present: __type, message, code, requestId
+      const err = response.error || response.errors && response.errors[0];
+      if (err) {
+        console.log('[AmazonConnector DEBUG] error __type:', err.__type || err.type || 'N/A');
+        console.log('[AmazonConnector DEBUG] error message:', err.message || 'N/A');
+        console.log('[AmazonConnector DEBUG] error code:', err.code || 'N/A');
+        console.log('[AmazonConnector DEBUG] error requestId:', err.requestId || 'N/A');
       }
     } else {
       console.log('[AmazonConnector DEBUG] Response is not an object:', typeof response);

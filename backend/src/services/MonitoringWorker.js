@@ -132,6 +132,20 @@ class UniversalMonitoringWorker {
     try {
       console.log('🔄 Starting monitoring cycle...');
       
+      // DIAGNOSTICS: Log product counts to verify monitoring schedule.
+      const { TrackedProduct } = require('../models/TrackedProduct');
+      const totalProducts = await TrackedProduct.countDocuments();
+      const activeProducts = await TrackedProduct.countDocuments({ isActive: true });
+      const withNextCheck = await TrackedProduct.countDocuments({ nextCheck: { $exists: true } });
+      const dueNow = await TrackedProduct.countDocuments({
+        isActive: true,
+        $or: [
+          { nextCheck: { $lte: new Date() } },
+          { nextCheck: { $exists: false } }
+        ]
+      });
+      console.log(`[Monitoring] DIAGNOSTICS: total=${totalProducts} active=${activeProducts} withNextCheck=${withNextCheck} dueNow=${dueNow}`);
+
       const productsDue = await this.productMonitor.getProductsDueForCheck();
       
       if (productsDue.length > 0) {

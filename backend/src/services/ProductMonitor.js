@@ -6,12 +6,16 @@ const { SmartFetchRouter } = require('./SmartFetchRouter');
 
 // Lazy load cheerio - only loaded when actually needed
 let cheerio = null;
+let cheerioWarned = false;
 function getCheerio() {
   if (!cheerio) {
     try {
       cheerio = require('cheerio');
     } catch (e) {
-      console.warn('cheerio not available - HTML parsing disabled');
+      if (!cheerioWarned) {
+        cheerioWarned = true;
+        console.warn('cheerio not available - HTML parsing disabled');
+      }
       return null;
     }
   }

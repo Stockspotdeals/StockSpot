@@ -99,6 +99,16 @@ async function upsertAlertSignalFromSignal(signal) {
     dedupeWindowStart
   };
 
+  // Build initial delivery state, excluding fields that are already
+  // explicitly set in $set below to avoid upsert path conflicts
+  // (e.g. "Updating the path 'userId' would create a conflict at 'userId'").
+  const { userId: _ignoredUserId, plan: _ignoredPlan, ...initialDeliveryState } = AlertDispatcher.getInitialDeliveryState({
+    tier: signal.tier || 'MEDIUM',
+    premiumOnly: !!signal.premiumOnly,
+    userId: signal.userId || null,
+    plan: AlertDispatcher.normalizePlan(signal.plan, signal.subscriptionStatus)
+  });
+
   const update = {
     $set: {
       sourceSignalId: signal._id,
@@ -122,12 +132,7 @@ async function upsertAlertSignalFromSignal(signal) {
     },
     $setOnInsert: {
       dedupeWindowStart,
-      ...AlertDispatcher.getInitialDeliveryState({
-        tier: signal.tier || 'MEDIUM',
-        premiumOnly: !!signal.premiumOnly,
-        userId: signal.userId || null,
-        plan: AlertDispatcher.normalizePlan(signal.plan, signal.subscriptionStatus)
-      }),
+      ...initialDeliveryState,
       createdAt: signal.createdAt || new Date()
     }
   };
