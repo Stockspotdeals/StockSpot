@@ -162,14 +162,19 @@ class AmazonConnector {
     // DIAGNOSTICS: Log complete Amazon error payloads for debugging.
     // Do NOT log tokens, secrets, credentials, or affiliate IDs.
     if (response && typeof response === 'object') {
+      console.log('[AmazonConnector DEBUG] HTTP status:', response._httpStatus || 'N/A');
       console.log('[AmazonConnector DEBUG] Response keys:', Object.keys(response));
       console.log('[AmazonConnector DEBUG] Output keys:', Object.keys(response.Output || {}));
       console.log('[AmazonConnector DEBUG] Output.itemsResult exists:', !!(response.Output && response.Output.itemsResult));
       console.log('[AmazonConnector DEBUG] Output.itemsResult.items exists:', !!(response.Output && response.Output.itemsResult && response.Output.itemsResult.items));
       console.log('[AmazonConnector DEBUG] items count:', (response.Output && response.Output.itemsResult && response.Output.itemsResult.items && response.Output.itemsResult.items.length) || 0);
 
-      // Log error fields if present: __type, message, code, requestId
-      const err = response.error || response.errors && response.errors[0];
+      // Log error fields if present: __type, message, code, requestId.
+      // Amazon error envelopes may be nested under Output (e.g. { Output: { __type: ... } })
+      // or under response.error / response.errors[0].
+      const err = (response.Output && (response.Output.__type || response.Output.message || response.Output.code || response.Output.requestId))
+        ? response.Output
+        : (response.error || (response.errors && response.errors[0]));
       if (err) {
         console.log('[AmazonConnector DEBUG] error __type:', err.__type || err.type || 'N/A');
         console.log('[AmazonConnector DEBUG] error message:', err.message || 'N/A');

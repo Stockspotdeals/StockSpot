@@ -11,7 +11,9 @@
  * Required environment variables:
  *   AMAZON_CREDENTIAL_ID   - OAuth client id (Credential ID)
  *   AMAZON_SECRET          - OAuth client secret
- *   AMAZON_API_VERSION     - Creators API version segment, e.g. 'v1'
+ *   AMAZON_API_VERSION     - Creators API version (informational only; official operation paths
+ *                            already embed the version, e.g. /catalog/v1/getItems, so it is
+ *                            NOT appended as a separate URL segment)
  *
  * Optional environment variables:
  *   AMAZON_API_SCOPE       - OAuth scope override (defaults to creatorsapi::default)
@@ -273,21 +275,29 @@ class CreatorsApiClient {
 
     if (!text) return null;
     try {
-      return JSON.parse(text);
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object') {
+        // Expose the HTTP status for downstream diagnostics (e.g. 2xx error envelopes).
+        parsed._httpStatus = response.status;
+      }
+      return parsed;
     } catch {
       return text;
     }
   }
 
   /**
-   * Builds a full URL: base URL + version + normalized path.
+   * Builds a full URL: base URL + normalized path.
+   *
+   * NOTE: The official Creators API operation paths already include the API
+   * version segment (e.g. /catalog/v1/getItems), so AMAZON_API_VERSION is NOT
+   * prepended here. Prepending it produced duplicate version segments such as
+   * https://creatorsapi.amazon/v1/catalog/v1/getItems.
    */
   _buildUrl(path) {
     const base = String(this.baseUrl || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
-    const version = String(this.apiVersion || '').replace(/^\/+|\/+$/g, '');
     const cleanedPath = String(path || '').replace(/^\/+/, '');
     const segments = [base];
-    if (version) segments.push(version);
     if (cleanedPath) segments.push(cleanedPath);
     return segments.join('/');
   }
