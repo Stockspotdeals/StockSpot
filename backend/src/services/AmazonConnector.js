@@ -45,6 +45,7 @@
 
 const { CreatorsApiClient } = require('./CreatorsApiClient');
 const { AmazonAffiliateEngine } = require('./AmazonAffiliateEngine');
+const { CategoryDetector } = require('./CategoryDetector');
 
 const DEFAULT_SEARCH_PATH = 'catalog/v1/searchItems';
 const DEFAULT_ITEMS_PATH = 'catalog/v1/getItems';
@@ -286,7 +287,7 @@ class AmazonConnector {
         title,
         name: title, // StockSpot Product.name is required; title acts as name
         retailer: 'amazon',
-        category: this._extractCategory(raw),
+        category: this._extractCategory(raw, title, url),
         price: this._extractPrice(raw),
         image: this._extractImage(raw),
         url,
@@ -301,7 +302,11 @@ class AmazonConnector {
       // Graceful per-item issue tracking.
       const issues = [];
       if (!normalizedItem.title) issues.push('missing_title');
-      if (normalizedItem.price === null || normalizedItem.price === undefined) issues.push('missing_price');
+      if (normalizedItem.price === null || normalizedItem.price === undefined) {
+        issues.push('missing_price');
+        // Improved diagnostic: explain exactly why no current price is available.
+        console.warn(`[AmazonConnector] Item ${asin} no current price — ${this._priceUnavailableReason(raw)}`);
+      }
       if (!normalizedItem.image) issues.push('missing_image');
       if (!normalizedItem.isAvailable) issues.push('unavailable');
 
@@ -357,12 +362,45 @@ class AmazonConnector {
   }
 
   _extractPrice(item) {
+    if (!item || typeof item !== 'object') return null;
+
+    // Official Creators API shape: offersV2.listings[].price.{Amount|DisplayAmount}
+    // Iterate ALL listings — the current offer may not be at index 0.
+    const listings = item.offersV2 && item.offersV2.listings;
+    if (Array.isArray(listings)) {
+      for (const listing of listings) {
+        const price = listing && listing.price;
+        if (!price) continue;
+        const parsed = this._parsePrice(
+          price.Amount !== undefined ? price.Amount :
+          price.DisplayAmount !== undefined ? price.DisplayAmount :
+          price.amount !== undefined ? price.amount :
+          price.value !== undefined ? price.value :
+          price.displayAmount !== undefined ? price.displayAmount : null
+        );
+        if (parsed !== null) return parsed;
+      }
+    }
+
+    // Official Creators API shape: offersV2.summaries[].{price|lowestPrice|offerPrice}
+    const summaries = item.offersV2 && item.offersV2.summaries;
+    if (Array.isArray(summaries)) {
+      for (const summary of summaries) {
+        const price = summary && (summary.price || summary.lowestPrice || summary.offerPrice);
+        if (!price) continue;
+        const parsed = this._parsePrice(
+          price.Amount !== undefined ? price.Amount :
+          price.DisplayAmount !== undefined ? price.DisplayAmount :
+          price.amount !== undefined ? price.amount :
+          price.value !== undefined ? price.value : null
+        );
+        if (parsed !== null) return parsed;
+      }
+    }
+
     const candidates = [
-      // Official Creators API shape: offersV2.listings[].price.Amount
-      item.offersV2 && item.offersV2.listings && item.offersV2.listings[0] && item.offersV2.listings[0].price && item.offersV2.listings[0].price.Amount,
-      item.offersV2 && item.offersV2.listings && item.offersV2.listings[0] && item.offersV2.listings[0].price && item.offersV2.listings[0].price.DisplayAmount,
-      // Nested PA-API-like shape: Offers.Listings[0].Price.Amount
-      item.Offers && item.Offers.Listings && item.Offers.Listings[0] && item.Offers.Listings[0].Price && item.Offers.Listings[0].Price.Amount,
+      // Nested PA-API-like shape: Offers.Listings[].Price.Amount
+      ...(item.Offers && item.Offers.Listings ? this._extractPricesFromOffers(item.Offers.Listings) : []),
       // Direct nested objects
       item.price && item.price.amount,
       item.price && item.price.value,
@@ -379,6 +417,48 @@ class AmazonConnector {
       if (parsed !== null) return parsed;
     }
     return null;
+  }
+
+  /**
+   * Iterate a PA-API-like Offers.Listings array and return candidate price values.
+   */
+  _extractPricesFromOffers(listings) {
+    const prices = [];
+    if (!Array.isArray(listings)) return prices;
+    for (const listing of listings) {
+      const price = listing && listing.Price;
+      if (price) {
+        if (price.Amount !== undefined) prices.push(price.Amount);
+        if (price.DisplayAmount !== undefined) prices.push(price.DisplayAmount);
+      }
+    }
+    return prices;
+  }
+
+  /**
+   * Explain why no current offer price could be extracted (diagnostic only —
+   * never invents or logs secrets).
+   */
+  _priceUnavailableReason(item) {
+    if (!item || typeof item !== 'object') return 'raw item is not an object';
+    const offersV2 = item.offersV2;
+    if (offersV2 === null || offersV2 === undefined) return 'offersV2 is absent (Amazon returned no offer data)';
+    if (typeof offersV2 !== 'object') return `offersV2 is not an object (${typeof offersV2})`;
+
+    const listings = offersV2.listings;
+    if (!Array.isArray(listings) || listings.length === 0) {
+      const summaries = offersV2.summaries;
+      if (Array.isArray(summaries) && summaries.length > 0) {
+        return 'offersV2.summaries present but no extractable price';
+      }
+      return `offersV2.listings is ${Array.isArray(listings) ? 'empty' : 'missing'} and no summaries present`;
+    }
+
+    const priced = listings.filter(l => l && l.price &&
+      (l.price.Amount !== undefined || l.price.DisplayAmount !== undefined ||
+       l.price.amount !== undefined || l.price.value !== undefined ||
+       l.price.displayAmount !== undefined));
+    return `offersV2.listings=${listings.length} but only ${priced.length} listing(s) include a price`;
   }
 
   _parsePrice(value) {
@@ -423,12 +503,34 @@ class AmazonConnector {
     return '';
   }
 
-  _extractCategory(item) {
+  /**
+   * Determine a safe StockSpot category for an Amazon product.
+   *
+   * Deterministic mapping that ALWAYS returns one of the existing valid
+   * TrackedProduct enum values (never '' and never an invented value):
+   *
+   *   1. Collect Amazon-provided category metadata (browse node names, category fields).
+   *   2. If a candidate directly matches a valid enum value, use it.
+   *   3. Otherwise feed the product title/url AND the Amazon metadata through the
+   *      existing project CategoryDetector, which returns a valid enum value
+   *      and defaults to the safe fallback 'other'.
+   *
+   * @param {object} item raw Creators API item
+   * @param {string} title normalized product title
+   * @param {string} url normalized product url
+   * @returns {string} one of: pokemon_tcg | one_piece_tcg | sports_cards | gaming |
+   *                   electronics | collectibles | toys | other
+   */
+  _extractCategory(item, title = '', url = '') {
+    const VALID_ENUMS = new Set(['pokemon_tcg', 'one_piece_tcg', 'sports_cards', 'gaming', 'electronics', 'collectibles', 'toys', 'other']);
+
+    if (!item || typeof item !== 'object') {
+      return CategoryDetector.detectCategory(title, url, '');
+    }
+
     const candidates = [
-      // Official Creators API shape: browseNodeInfo.browseNodes[0].DisplayName
-      item.browseNodeInfo && item.browseNodeInfo.browseNodes && item.browseNodeInfo.browseNodes[0] && item.browseNodeInfo.browseNodes[0].DisplayName,
-      // Nested PA-API-like shape: BrowseNodeInfo.BrowseNodes[0]
-      item.BrowseNodeInfo && item.BrowseNodeInfo.BrowseNodes && item.BrowseNodeInfo.BrowseNodes[0] && item.BrowseNodeInfo.BrowseNodes[0].DisplayName,
+      // Official Creators API shape: browseNodeInfo.browseNodes[].DisplayName
+      ...this._collectBrowseNodeNames(item),
       item.categoryKey,
       item.categoryId,
       item.category,
@@ -436,17 +538,37 @@ class AmazonConnector {
       item.browseNode
     ];
 
+    // Direct match on one of the existing valid enum values.
     for (const candidate of candidates) {
-      if (typeof candidate === 'string' && candidate.trim()) {
-        return candidate.trim();
-      }
-      // Convert numeric/other ids to string
-      if (candidate !== null && candidate !== undefined) {
-        const str = String(candidate).trim();
-        if (str && str !== 'null' && str !== 'undefined') return str;
-      }
+      if (typeof candidate !== 'string') continue;
+      const normalized = candidate.trim().toLowerCase();
+      if (VALID_ENUMS.has(normalized)) return normalized;
     }
-    return ''; // ProductIntelligence will classify from title downstream
+
+    // Feed all Amazon metadata into the existing deterministic CategoryDetector.
+    const amazonMetadata = candidates
+      .filter(Value => typeof Value === 'string' && Value.trim())
+      .join(' ');
+
+    return CategoryDetector.detectCategory(title, url, amazonMetadata);
+  }
+
+  /**
+   * Collect all Amazon browse node display names from a Creators API item.
+   */
+  _collectBrowseNodeNames(item) {
+    const names = [];
+    const nodes = (item && item.browseNodeInfo && item.browseNodeInfo.browseNodes) ||
+                  (item && item.BrowseNodeInfo && item.BrowseNodeInfo.BrowseNodes) ||
+                  null;
+    if (!Array.isArray(nodes)) return names;
+    for (const node of nodes) {
+      if (!node || typeof node !== 'object') continue;
+      if (typeof node.DisplayName === 'string') names.push(node.DisplayName);
+      if (typeof node.displayName === 'string') names.push(node.displayName);
+      if (typeof node.name === 'string') names.push(node.name);
+    }
+    return names;
   }
 
   _extractAvailability(item) {

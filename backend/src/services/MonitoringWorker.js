@@ -7,6 +7,7 @@ const { ProductMonitor } = require('./ProductMonitor');
 const { CategoryDiscovery } = require('./CategoryDiscovery');
 const { NotificationService } = require('./NotificationService');
 const { TrackedProduct, ProductEvent } = require('../models/TrackedProduct');
+const { CategoryDetector } = require('./CategoryDetector');
 const { upsertProduct } = require('./productUpsert');
 const { AmazonConnector } = require('./AmazonConnector');
 
@@ -305,7 +306,12 @@ class UniversalMonitoringWorker {
       _id: existing ? existing._id : new mongoose.Types.ObjectId(),
       title: product.title || product.name || '',
       retailer: 'amazon',
-      category: product.category || '',
+      // Never persist an empty/invalid category: fall back to the safe valid enum
+      // value. AmazonConnector already normalizes via CategoryDetector, but this
+      // guards against any future producer that forgets to set a category.
+      category: (product.category && String(product.category).trim())
+        ? product.category
+        : CategoryDetector.detectCategory(product.title || product.name || '', url, ''),
       price: product.price,
       isAvailable: !!product.isAvailable,
       affiliateLink: product.affiliateLink || '',
