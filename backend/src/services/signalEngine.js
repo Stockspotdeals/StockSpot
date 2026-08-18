@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Product = require("../models/Product"); // products collection
 const Signal = require("../models/Signal");   // signals collection
 const { processSignal } = require('./signalPipeline');
+const { isValidProductPrice } = require('./productPrice');
 
 async function runSignalEngine() {
   console.log('🚀 Starting Smart Signal Engine...');
@@ -44,6 +45,16 @@ async function runSignalEngine() {
       // Heal legacy records so validation does not fail when saving tracking fields.
       if (!product.name) {
         product.name = product.title || product.productName || 'Unknown Product';
+      }
+
+      // Phase 12.6.6 — Price integrity contract.
+      // A product without a usable current numeric price cannot safely participate
+      // in price-driven signal calculations, and `product.save()` below would fail
+      // Product.price validation — previously killing the entire run. Skip it
+      // gracefully so one malformed/incomplete record never terminates the batch.
+      if (!isValidProductPrice(product.price)) {
+        console.warn(`⚠️ Skipping signal processing for product ${product._id}${product.name ? ` (${product.name})` : ''}: no usable current price (${product.price})`);
+        continue;
       }
 
       // Example logic for restock detection

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const { TrackedProduct } = require('../models/TrackedProduct');
+const { isValidProductPrice } = require('./productPrice');
 const { ProductIntelligence } = require('./ProductIntelligence');
 const { OwnerIntelligence } = require('./OwnerIntelligence');
 const { processSignal } = require('./signalPipeline');
@@ -22,6 +23,15 @@ async function upsertProduct(trackedProduct) {
     // Load existing product to compute previousPrice / preserve lastStock
     const existing = await Product.findOne(filter).exec();
 
+    // Price integrity contract (Phase 12.6.6):
+    // Product.price is required and numeric. A product without a valid current
+    // price must never be inserted into the Product collection (which feeds the
+    // price-driven Signal Engine). We skip creation instead of writing null.
+    if (!existing && !isValidProductPrice(price)) {
+      console.warn(`⚠️ Skipping Product creation for ${trackedProduct._id}: no valid current price (${price})`);
+      return null;
+    }
+
     const name = trackedProduct.title || trackedProduct.productName || trackedProduct.name || 'Unknown Product';
     const update = {
       $set: {
@@ -30,7 +40,6 @@ async function upsertProduct(trackedProduct) {
         title: trackedProduct.title || trackedProduct.productName || trackedProduct.name || '',
         retailer: trackedProduct.retailer || '',
         category: trackedProduct.category || '',
-        price: price,
         inStock,
         stock,
         affiliateLink: trackedProduct.affiliateLink || '',
@@ -42,19 +51,30 @@ async function upsertProduct(trackedProduct) {
       }
     };
 
+    // Only set/overwrite the price when the incoming value is a valid current
+    // price. A later Amazon refresh with no current price must NOT destroy an
+    // existing valid price — so we simply omit price from $set in that case.
+    if (isValidProductPrice(price)) {
+      update.$set.price = price;
+    }
+
     if (existing) {
       // Preserve lastStock if present; set previousPrice when price changes
-      if (typeof existing.price !== 'undefined' && existing.price !== null && price !== null && existing.price !== price) {
+      // (only for valid incoming prices so a null refresh can't corrupt it).
+      if (isValidProductPrice(price) && typeof existing.price === 'number' && existing.price !== price) {
         update.$set.previousPrice = existing.price;
       }
       // Do not overwrite existing.lastStock; signalEngine updates lastStock itself.
     } else {
-      // New insert defaults
+      // New insert defaults. At this point price is guaranteed valid (guarded above).
+      update.$set.price = price;
       update.$set.previousPrice = trackedProduct.previousPrice || null;
       update.$set.lastStock = 0;
     }
 
-    const opts = { upsert: true, new: true, setDefaultsOnInsert: true };
+    // runValidators enforces the schema (e.g. price required/min) on upserts,
+    // keeping the Product schema authoritative for the signal data contract.
+    const opts = { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true };
     const product = await Product.findOneAndUpdate(filter, update, opts).exec();
 
     // ── Campaign B: Compute Product Intelligence ──
@@ -96,8 +116,8 @@ async function upsertProduct(trackedProduct) {
       if (intelligence) {
         const previousStock = typeof existing?.stock === 'number' ? existing.stock : 0;
         const currentStock = typeof stock === 'number' ? stock : 0;
-        const previousPrice = existing && typeof existing.price === 'number' ? existing.price : null;
-        const currentPrice = typeof price === 'number' ? price : null;
+        const previousPrice = isValidProductPrice(existing && existing.price) ? existing.price : null;
+        const currentPrice = isValidProductPrice(price) ? price : null;
 
         let signalType = null;
         let threshold = 0;
