@@ -22,19 +22,25 @@
  * SearchItems body:
  *   { keywords: "...", partnerTag, resources: [...] }
  *
- * Response structure:
- *   Items are nested under response.Output.itemsResult.items[].
+ * Response structure (per the official docs):
+ *   Items are nested under response.itemsResult.items[].
  *   Each item exposes:
  *     - asin
  *     - detailPageURL (canonical product URL, already includes affiliate tag)
  *     - itemInfo.title.displayValue
  *     - images.primary.large.url
- *     - offersV2.listings[].price / .availability
+ *     - offersV2.listings[].price.money.{amount,currency,displayAmount}
  *     - browseNodeInfo.browseNodes
  *
  * Affiliate links: detailPageURL already contains the affiliate tag, so it is used
  * directly as both url and affiliateLink. We do NOT regenerate Amazon URLs when
  * detailPageURL exists.
+ *
+ * Price selection (Phase 12.6.6):
+ *   1. Prefer the Buy Box winner listing (isBuyBoxWinner === true) with a valid price.
+ *   2. Otherwise use the first valid New-condition listing with a valid price.
+ *   3. Otherwise fall back to any listing with a valid price.
+ *   4. Only accept Number.isFinite(Number(amount)) && amount > 0.
  *
  * Error handling:
  *   - Missing/empty API response                        -> throws AMAZON_CONNECTOR_EMPTY_RESPONSE
@@ -160,15 +166,15 @@ class AmazonConnector {
       body
     });
 
-    // DIAGNOSTICS: Log complete Amazon error payloads for debugging.
+    // DIAGNOSTICS: Report the actual response object being processed.
     // Do NOT log tokens, secrets, credentials, or affiliate IDs.
+    const items = this._extractItems(response);
     if (response && typeof response === 'object') {
-      console.log('[AmazonConnector DEBUG] HTTP status:', response._httpStatus || 'N/A');
-      console.log('[AmazonConnector DEBUG] Response keys:', Object.keys(response));
-      console.log('[AmazonConnector DEBUG] Output keys:', Object.keys(response.Output || {}));
-      console.log('[AmazonConnector DEBUG] Output.itemsResult exists:', !!(response.Output && response.Output.itemsResult));
-      console.log('[AmazonConnector DEBUG] Output.itemsResult.items exists:', !!(response.Output && response.Output.itemsResult && response.Output.itemsResult.items));
-      console.log('[AmazonConnector DEBUG] items count:', (response.Output && response.Output.itemsResult && response.Output.itemsResult.items && response.Output.itemsResult.items.length) || 0);
+      const itemsResult = response.itemsResult || (response.Output && response.Output.itemsResult);
+      console.log('[AmazonConnector] Creators API response:');
+      console.log(`  HTTP ${response._httpStatus || 'N/A'}`);
+      console.log(`  itemsResult present: ${!!itemsResult}`);
+      console.log(`  items returned: ${items.length}`);
 
       // Log error fields if present: __type, message, code, requestId.
       // Amazon error envelopes may be nested under Output (e.g. { Output: { __type: ... } })
@@ -186,11 +192,18 @@ class AmazonConnector {
       console.log('[AmazonConnector DEBUG] Response is not an object:', typeof response);
     }
 
-    const items = this._extractItems(response);
     if (items.length > 0) {
       const firstAsin = this._extractAsin(items[0]);
       console.log(`[AmazonConnector] Received ${items.length} item(s) from Creators API${firstAsin ? ` (first ASIN: ${firstAsin})` : ''}`);
     }
+
+    // TEMPORARY DIAGNOSTIC (Phase 12.6.6): Log the raw item structure for the
+    // FIRST returned ASIN only, to verify the actual Creators API price path.
+    // Logs ONLY relevant item structure — never tokens, secrets, or credentials.
+    if (items.length > 0) {
+      this._logItemStructureDiagnostic(items[0]);
+    }
+
     this._assertNonEmptyResponse(items, 'getProductsByASIN');
 
     return this._normalizeItems(items);
@@ -202,6 +215,62 @@ class AmazonConnector {
    */
   _getPartnerTag() {
     return process.env.AMAZON_ASSOCIATE_TAG || process.env.AMAZON_ASSOCIATE_ID || this.affiliateEngine.associateId || '';
+  }
+
+  /**
+   * TEMPORARY DIAGNOSTIC (Phase 12.6.6): Log the relevant structure of a single
+   * raw Creators API item to verify the actual price path.
+   *
+   * Logs ONLY the fields needed to diagnose pricing — never tokens, secrets,
+   * credentials, or authorization headers.
+   *
+   * @param {object} item - a single raw Creators API item
+   */
+  _logItemStructureDiagnostic(item) {
+    if (!item || typeof item !== 'object') {
+      console.log('[AmazonConnector DIAG] item is not an object:', typeof item);
+      return;
+    }
+
+    const asin = this._extractAsin(item);
+    const title = this._extractTitle(item);
+    const detailPageURL = this._extractDetailPageURL(item);
+    const offersV2 = item.offersV2;
+    const listings = offersV2 && Array.isArray(offersV2.listings) ? offersV2.listings : [];
+
+    console.log('[AmazonConnector DIAG] === Item structure diagnostic (first ASIN only) ===');
+    console.log('[AmazonConnector DIAG] asin:', asin || 'N/A');
+    console.log('[AmazonConnector DIAG] detailPageURL present:', !!detailPageURL);
+    console.log('[AmazonConnector DIAG] itemInfo.title present:', !!(item.itemInfo && item.itemInfo.title));
+    console.log('[AmazonConnector DIAG] title:', title ? title.slice(0, 80) : 'N/A');
+    console.log('[AmazonConnector DIAG] offersV2 present:', offersV2 !== null && offersV2 !== undefined);
+    console.log('[AmazonConnector DIAG] offersV2.listings count:', listings.length);
+
+    for (let i = 0; i < listings.length; i++) {
+      const listing = listings[i];
+      if (!listing || typeof listing !== 'object') {
+        console.log(`[AmazonConnector DIAG]   listing[${i}]: not an object`);
+        continue;
+      }
+      const price = listing.price;
+      const money = price && price.money;
+      console.log(`[AmazonConnector DIAG]   listing[${i}]:`);
+      console.log(`[AmazonConnector DIAG]     availability:`, listing.availability !== undefined ? JSON.stringify(listing.availability) : 'N/A');
+      console.log(`[AmazonConnector DIAG]     condition:`, listing.condition !== undefined ? JSON.stringify(listing.condition) : 'N/A');
+      console.log(`[AmazonConnector DIAG]     isBuyBoxWinner:`, listing.isBuyBoxWinner !== undefined ? listing.isBuyBoxWinner : 'N/A');
+      console.log(`[AmazonConnector DIAG]     merchantInfo present:`, !!(listing.merchantInfo && typeof listing.merchantInfo === 'object'));
+      console.log(`[AmazonConnector DIAG]     price present:`, !!price);
+      console.log(`[AmazonConnector DIAG]     price object keys:`, price && typeof price === 'object' ? Object.keys(price) : 'N/A');
+      console.log(`[AmazonConnector DIAG]     price.money present:`, !!money);
+      if (money && typeof money === 'object') {
+        console.log(`[AmazonConnector DIAG]     price.money.amount:`, money.amount !== undefined ? money.amount : 'N/A');
+        console.log(`[AmazonConnector DIAG]     price.money.currency:`, money.currency !== undefined ? money.currency : 'N/A');
+        console.log(`[AmazonConnector DIAG]     price.money.displayAmount:`, money.displayAmount !== undefined ? money.displayAmount : 'N/A');
+      }
+      console.log(`[AmazonConnector DIAG]     savingBasis present:`, !!(listing.savingBasis && typeof listing.savingBasis === 'object'));
+      console.log(`[AmazonConnector DIAG]     dealDetails present:`, !!(listing.dealDetails && typeof listing.dealDetails === 'object'));
+    }
+    console.log('[AmazonConnector DIAG] === End item structure diagnostic ===');
   }
 
   // ----------------------------------------------------------------
@@ -222,7 +291,7 @@ class AmazonConnector {
 
   /**
    * Defensively locate the item array in a Creators API response.
-   * Official structure: response.Output.itemsResult.items (product objects directly)
+   * Official structure: response.itemsResult.items (product objects directly)
    * Also tolerates legacy/alternate shapes for robustness.
    * Returns [] when no array is found.
    */
@@ -230,10 +299,10 @@ class AmazonConnector {
     if (!response || typeof response !== 'object') return [];
 
     const candidates = [
-      // Official Creators API shape: Output.itemsResult.items (product objects directly)
-      response.Output && response.Output.itemsResult && response.Output.itemsResult.items,
-      // Alternate: itemsResult.items (product objects directly)
+      // Official Creators API shape: itemsResult.items (product objects directly)
       response.itemsResult && response.itemsResult.items,
+      // Alternate (older wrapper): Output.itemsResult.items
+      response.Output && response.Output.itemsResult && response.Output.itemsResult.items,
       // Legacy/alternate shapes
       response.itemResults && response.itemResults.items && response.itemResults.items.map(i => i && i.item),
       response.itemResults && response.itemResults.items,
@@ -361,23 +430,44 @@ class AmazonConnector {
     return '';
   }
 
+  /**
+   * Extract the best current price from a Creators API item.
+   *
+   * Official price path: offersV2.listings[].price.money.amount
+   *
+   * Selection rules (Phase 12.6.6):
+   *   1. Prefer the Buy Box winner listing (isBuyBoxWinner === true) with a valid price.
+   *   2. Otherwise use the first valid New-condition listing with a valid price.
+   *   3. Otherwise fall back to any listing with a valid price.
+   *
+   * Only accepts Number.isFinite(Number(amount)) && amount > 0.
+   * displayAmount is never used as the numeric source.
+   */
   _extractPrice(item) {
     if (!item || typeof item !== 'object') return null;
 
-    // Official Creators API shape: offersV2.listings[].price.{Amount|DisplayAmount}
-    // Iterate ALL listings — the current offer may not be at index 0.
+    // Official Creators API shape: offersV2.listings[].price.money.amount
     const listings = item.offersV2 && item.offersV2.listings;
     if (Array.isArray(listings)) {
+      // 1) Prefer the Buy Box winner listing with a valid price.
+      const buyBoxWinner = listings.find(l => l && l.isBuyBoxWinner === true);
+      if (buyBoxWinner) {
+        const buyBoxPrice = this._extractPriceFromListing(buyBoxWinner);
+        if (buyBoxPrice !== null) return buyBoxPrice;
+      }
+
+      // 2) Otherwise use the first valid New-condition listing with a valid price.
       for (const listing of listings) {
-        const price = listing && listing.price;
-        if (!price) continue;
-        const parsed = this._parsePrice(
-          price.Amount !== undefined ? price.Amount :
-          price.DisplayAmount !== undefined ? price.DisplayAmount :
-          price.amount !== undefined ? price.amount :
-          price.value !== undefined ? price.value :
-          price.displayAmount !== undefined ? price.displayAmount : null
-        );
+        if (!listing) continue;
+        const condition = this._extractListingCondition(listing);
+        if (condition && condition.toLowerCase() !== 'new') continue;
+        const parsed = this._extractPriceFromListing(listing);
+        if (parsed !== null) return parsed;
+      }
+
+      // 3) Fall back to any listing with a valid price.
+      for (const listing of listings) {
+        const parsed = this._extractPriceFromListing(listing);
         if (parsed !== null) return parsed;
       }
     }
@@ -420,6 +510,57 @@ class AmazonConnector {
   }
 
   /**
+   * Extract a numeric price from a single Creators API offer listing.
+   *
+   * Official Creators API price path: listing.price.money.amount
+   * (money is a nested object with amount / currency / displayAmount).
+   *
+   * Only accepts a price when Number.isFinite(Number(amount)) AND amount > 0.
+   * displayAmount is never used as the numeric source.
+   *
+   * @param {object} listing - a single offersV2.listings[] entry
+   * @returns {number|null} numeric price, or null when no usable price exists
+   */
+  _extractPriceFromListing(listing) {
+    if (!listing || typeof listing !== 'object') return null;
+    const price = listing.price;
+    if (!price || typeof price !== 'object') return null;
+
+    // Official Creators API shape: price.money.amount
+    const money = price.money;
+    if (money && typeof money === 'object') {
+      const amount = money.amount;
+      if (amount !== undefined && amount !== null && amount !== '') {
+        const num = Number(amount);
+        if (Number.isFinite(num) && num > 0) {
+          return Math.round(num * 100) / 100;
+        }
+      }
+    }
+
+    // Tolerate alternate/legacy shapes (PA-API-like) for robustness.
+    const parsed = this._parsePrice(
+      price.Amount !== undefined ? price.Amount :
+      price.DisplayAmount !== undefined ? price.DisplayAmount :
+      price.amount !== undefined ? price.amount :
+      price.value !== undefined ? price.value :
+      price.displayAmount !== undefined ? price.displayAmount : null
+    );
+    return parsed;
+  }
+
+  /**
+   * Extract the condition of a Creators API offer listing (e.g. "New", "Used").
+   */
+  _extractListingCondition(listing) {
+    if (!listing || typeof listing !== 'object') return '';
+    const raw = listing.condition || listing.conditionType || (listing.condition && listing.condition.value);
+    if (typeof raw === 'string') return raw.trim();
+    if (raw && typeof raw === 'object' && typeof raw.value === 'string') return raw.value.trim();
+    return '';
+  }
+
+  /**
    * Iterate a PA-API-like Offers.Listings array and return candidate price values.
    */
   _extractPricesFromOffers(listings) {
@@ -455,9 +596,7 @@ class AmazonConnector {
     }
 
     const priced = listings.filter(l => l && l.price &&
-      (l.price.Amount !== undefined || l.price.DisplayAmount !== undefined ||
-       l.price.amount !== undefined || l.price.value !== undefined ||
-       l.price.displayAmount !== undefined));
+      (this._extractPriceFromListing(l) !== null));
     return `offersV2.listings=${listings.length} but only ${priced.length} listing(s) include a price`;
   }
 

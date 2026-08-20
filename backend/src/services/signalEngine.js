@@ -53,7 +53,18 @@ async function runSignalEngine() {
       // Product.price validation — previously killing the entire run. Skip it
       // gracefully so one malformed/incomplete record never terminates the batch.
       if (!isValidProductPrice(product.price)) {
-        console.warn(`⚠️ Skipping signal processing for product ${product._id}${product.name ? ` (${product.name})` : ''}: no usable current price (${product.price})`);
+        // Clearly identify the reason for skipping (Phase 12.6.6).
+        let reason = 'invalid price';
+        if (product.price === null || product.price === undefined) {
+          reason = 'missing price';
+        } else if (product.priceStatus === 'unavailable') {
+          reason = 'unavailable';
+        } else if (product.priceStatus === 'error') {
+          reason = 'API error';
+        } else if (product.priceStatus === 'missing') {
+          reason = 'missing price';
+        }
+        console.warn(`⚠️ Skipping signal processing for product ${product._id}${product.name ? ` (${product.name})` : ''}: no usable current price (${product.price}) — reason: ${reason}`);
         continue;
       }
 

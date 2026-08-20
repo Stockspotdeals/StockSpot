@@ -18,10 +18,22 @@ const productSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // price is optional so that valid product metadata (ASIN, title, URL, images,
+  // availability) can still be stored when Amazon returns no usable price.
+  // Such products are explicitly marked via priceStatus (e.g. 'missing').
   price: {
     type: Number,
-    required: true,
     min: 0
+  },
+  // Price state classification (Phase 12.6.6):
+  //   available   - a valid current numeric price exists
+  //   unavailable - item exists but is out of stock / unavailable
+  //   missing     - item exists but Amazon returned no usable price
+  //   error       - API request failed or returned an item-level error
+  priceStatus: {
+    type: String,
+    enum: ['available', 'unavailable', 'missing', 'error'],
+    default: 'missing'
   },
   originalPrice: {
     type: Number,

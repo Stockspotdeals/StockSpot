@@ -23,13 +23,16 @@ async function upsertProduct(trackedProduct) {
     // Load existing product to compute previousPrice / preserve lastStock
     const existing = await Product.findOne(filter).exec();
 
-    // Price integrity contract (Phase 12.6.6):
-    // Product.price is required and numeric. A product without a valid current
-    // price must never be inserted into the Product collection (which feeds the
-    // price-driven Signal Engine). We skip creation instead of writing null.
-    if (!existing && !isValidProductPrice(price)) {
-      console.warn(`⚠️ Skipping Product creation for ${trackedProduct._id}: no valid current price (${price})`);
-      return null;
+    // Price state classification (Phase 12.6.6):
+    //   available   - a valid current numeric price exists
+    //   unavailable - item exists but is out of stock / unavailable
+    //   missing     - item exists but Amazon returned no usable price
+    //   error       - API request failed or returned an item-level error
+    let priceStatus = 'missing';
+    if (isValidProductPrice(price)) {
+      priceStatus = 'available';
+    } else if (!inStock) {
+      priceStatus = 'unavailable';
     }
 
     const name = trackedProduct.title || trackedProduct.productName || trackedProduct.name || 'Unknown Product';
@@ -47,7 +50,8 @@ async function upsertProduct(trackedProduct) {
         url: trackedProduct.url || trackedProduct.originalUrl || '',
         detectedAt: new Date(),
         updatedAt: new Date(),
-        confidence: trackedProduct.confidence || 0
+        confidence: trackedProduct.confidence || 0,
+        priceStatus
       }
     };
 
@@ -66,8 +70,7 @@ async function upsertProduct(trackedProduct) {
       }
       // Do not overwrite existing.lastStock; signalEngine updates lastStock itself.
     } else {
-      // New insert defaults. At this point price is guaranteed valid (guarded above).
-      update.$set.price = price;
+      // New insert defaults. price is only set when valid (guarded above).
       update.$set.previousPrice = trackedProduct.previousPrice || null;
       update.$set.lastStock = 0;
     }

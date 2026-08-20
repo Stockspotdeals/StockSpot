@@ -1,8 +1,10 @@
 /**
- * Focused tests for AmazonConnector post-ingestion fixes:
+ * Focused tests for AmazonConnector post-ingestion fixes (Phase 12.6.6):
  *  - category normalization (never '', always a valid TrackedProduct enum value)
  *  - price extraction from the actual Creators API offersV2 response structure
+ *  - Buy Box winner price preference
  *  - missing-price diagnostic
+ *  - invalid/non-numeric price handling
  */
 const { AmazonConnector } = require('./AmazonConnector');
 
@@ -69,7 +71,6 @@ describe('AmazonConnector category normalization', () => {
   });
 
   it('returns the safe fallback even when a producer passes an empty product category', () => {
-    // Simulates AmazonConnector output with empty category reaching MonitoringWorker logic.
     const connector = makeConnector();
     const item = {
       asin: 'B09EXAMPLE',
@@ -83,7 +84,20 @@ describe('AmazonConnector category normalization', () => {
 });
 
 describe('AmazonConnector price extraction (actual Creators API structure)', () => {
-  it('extracts a price from offersV2.listings[0].price.Amount', () => {
+  it('extracts a price from offersV2.listings[0].price.money.amount (official Creators API path)', () => {
+    const connector = makeConnector();
+    const item = {
+      asin: 'B0123456789',
+      offersV2: {
+        listings: [
+          { price: { money: { amount: 39.99, currency: 'USD', displayAmount: '$39.99' } } }
+        ]
+      }
+    };
+    expect(connector._extractPrice(item)).toBe(39.99);
+  });
+
+  it('extracts a price from offersV2.listings[0].price.Amount (legacy fallback)', () => {
     const connector = makeConnector();
     const item = {
       asin: 'B0123456789',
@@ -96,17 +110,31 @@ describe('AmazonConnector price extraction (actual Creators API structure)', () 
     expect(connector._extractPrice(item)).toBe(39.99);
   });
 
-  it('extracts a price from offersV2.listings[].price.DisplayAmount (string currency)', () => {
+  it('prefers the Buy Box winner listing price over other listings', () => {
     const connector = makeConnector();
     const item = {
       offersV2: {
         listings: [
-          { price: { DisplayAmount: '$19.99' } },
-          { price: { DisplayAmount: '$24.99' } }
+          { isBuyBoxWinner: false, price: { money: { amount: 24.99, currency: 'USD' } } },
+          { isBuyBoxWinner: true, price: { money: { amount: 19.99, currency: 'USD' } } }
         ]
       }
     };
     expect(connector._extractPrice(item)).toBe(19.99);
+  });
+
+  it('uses the first valid New-condition listing when no Buy Box winner has a price', () => {
+    const connector = makeConnector();
+    const item = {
+      offersV2: {
+        listings: [
+          { isBuyBoxWinner: true, price: null },
+          { condition: 'New', price: { money: { amount: 25.49, currency: 'USD' } } },
+          { condition: 'Used', price: { money: { amount: 15.99, currency: 'USD' } } }
+        ]
+      }
+    };
+    expect(connector._extractPrice(item)).toBe(25.49);
   });
 
   it('finds a price in a later listing when the first listing has none', () => {
@@ -115,7 +143,7 @@ describe('AmazonConnector price extraction (actual Creators API structure)', () 
       offersV2: {
         listings: [
           { price: null },
-          { price: { DisplayAmount: '$25.49' } }
+          { price: { money: { amount: 25.49, currency: 'USD' } } }
         ]
       }
     };
@@ -171,6 +199,32 @@ describe('AmazonConnector price extraction (actual Creators API structure)', () 
     const connector = makeConnector();
     expect(connector._extractPrice({})).toBeNull();
   });
+
+  it('returns null for a non-numeric / invalid price (NaN, 0, negative)', () => {
+    const connector = makeConnector();
+    const item = {
+      offersV2: {
+        listings: [
+          { price: { money: { amount: 'not-a-number', currency: 'USD' } } },
+          { price: { money: { amount: 0, currency: 'USD' } } },
+          { price: { money: { amount: -5, currency: 'USD' } } }
+        ]
+      }
+    };
+    expect(connector._extractPrice(item)).toBeNull();
+  });
+
+  it('does not use displayAmount as the numeric source', () => {
+    const connector = makeConnector();
+    const item = {
+      offersV2: {
+        listings: [
+          { price: { money: { amount: 12.34, currency: 'USD', displayAmount: '$12.34' } } }
+        ]
+      }
+    };
+    expect(connector._extractPrice(item)).toBe(12.34);
+  });
 });
 
 describe('AmazonConnector normalization flags missing prices', () => {
@@ -197,12 +251,49 @@ describe('AmazonConnector normalization flags missing prices', () => {
       asin: 'B0EXAMPLEOK',
       itemInfo: { title: { displayValue: 'Test Product' } },
       detailPageURL: 'https://www.amazon.com/dp/B0EXAMPLEOK',
-      offersV2: { listings: [{ price: { Amount: 12.34 } }] },
+      offersV2: { listings: [{ price: { money: { amount: 12.34, currency: 'USD' } } }] },
       images: { primary: { large: { url: 'https://img.test/2.jpg' } } }
     };
     const [normalized] = connector._normalizeItems([raw]);
     expect(normalized.price).toBe(12.34);
     // `issues` is only attached when non-empty; treat undefined as no issues.
     expect(normalized.issues || []).not.toContain('missing_price');
+  });
+});
+
+describe('AmazonConnector response item extraction', () => {
+  it('extracts items from the official itemsResult.items shape', () => {
+    const connector = makeConnector();
+    const response = {
+      itemsResult: {
+        items: [{ asin: 'B0000000001' }, { asin: 'B0000000002' }]
+      },
+      _httpStatus: 200
+    };
+    const items = connector._extractItems(response);
+    expect(items).toHaveLength(2);
+    expect(items[0].asin).toBe('B0000000001');
+  });
+
+  it('extracts items from the legacy Output.itemsResult.items shape', () => {
+    const connector = makeConnector();
+    const response = {
+      Output: {
+        itemsResult: {
+          items: [{ asin: 'B0000000003' }]
+        }
+      },
+      _httpStatus: 200
+    };
+    const items = connector._extractItems(response);
+    expect(items).toHaveLength(1);
+    expect(items[0].asin).toBe('B0000000003');
+  });
+
+  it('returns empty array when no items are present', () => {
+    const connector = makeConnector();
+    expect(connector._extractItems({})).toEqual([]);
+    expect(connector._extractItems(null)).toEqual([]);
+    expect(connector._extractItems(undefined)).toEqual([]);
   });
 });
