@@ -465,6 +465,16 @@ try {
   console.warn('Admin route not mounted:', err.message);
 }
 
+// TEMPORARY: Phase 12.6.7 production diagnostic endpoint (READ-ONLY).
+// REMOVE after the diagnostic has been collected — see the route file header.
+// Route: GET /api/admin/phase-12-6-7-diagnostic
+try {
+  const phase1267DiagnosticRoutes = require('./src/routes/phase1267Diagnostic');
+  app.use('/api/admin', phase1267DiagnosticRoutes);
+} catch (err) {
+  console.warn('Phase 12.6.7 diagnostic route not mounted:', err.message);
+}
+
 // Initialize automated signal ingestion scheduler after routes are mounted
 try {
   initializeSignalScheduler();

@@ -13,5 +13,7 @@ services:
         value: https://stockspotdeals.com
       - key: JWT_SECRET
         generateValue: true
+      - key: STOCKSPOT_DIAGNOSTIC_TOKEN
+        sync: false # TEMPORARY diagnostic endpoint token; set manually, remove with the endpoint
       - key: PORT
         value: 10000

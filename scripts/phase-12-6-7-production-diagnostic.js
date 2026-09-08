@@ -17,6 +17,11 @@
 
 const path = require('path');
 
+// True when executed directly (`node scripts/phase-12-6-7-production-diagnostic.js`).
+// When false, this module was imported by the temporary diagnostic HTTP route
+// running inside the deployed web service.
+const IS_MAIN = require.main === module;
+
 const repoRoot = path.resolve(__dirname, '..');
 const backendRoot = path.resolve(repoRoot, 'backend');
 const backendSrc = path.resolve(backendRoot, 'src');
@@ -35,7 +40,45 @@ try {
 }
 
 // Read-only guarantee: never let model compile-time trigger index creation.
-mongoose.set('autoIndex', false);
+// Only mutated for the standalone process. When imported by the running server
+// the models are already compiled (cached), so this global must not be changed.
+if (IS_MAIN) {
+  mongoose.set('autoIndex', false);
+}
+
+// ---------------------------------------------------------------------------
+// Report capture (TEMPORARY — used by the diagnostic HTTP route only).
+//
+// When this module is imported (not run directly), console.log is wrapped so
+// the diagnostic's full report can be returned as JSON by the route. Capture is
+// only active between resetDiagnosticReport() and stopDiagnosticReport();
+// outside that window the wrapper is a transparent pass-through so normal
+// server logging is unaffected. Direct execution leaves console.log untouched,
+// so standalone output is byte-for-byte identical to before.
+// ---------------------------------------------------------------------------
+const __reportLines = [];
+let __captureActive = false;
+
+function resetDiagnosticReport() {
+  __reportLines.length = 0;
+  __captureActive = true;
+}
+
+function stopDiagnosticReport() {
+  __captureActive = false;
+}
+
+function getDiagnosticReport() {
+  return __reportLines.join('\n');
+}
+
+if (!IS_MAIN) {
+  const __realConsoleLog = console.log;
+  console.log = (...args) => {
+    __realConsoleLog.apply(console, args);
+    if (__captureActive) __reportLines.push(args.map(String).join(' '));
+  };
+}
 
 // Existing model definitions (read-only usage only).
 const Product = require(path.resolve(backendSrc, 'models/Product'));
@@ -208,23 +251,46 @@ const IN_STOCK_ORDER = ['true', 'false', 'null/missing'];
 // MAIN (all 17 parts)
 // ===========================================================================
 
-async function runDiagnostic() {
+async function runDiagnostic(options = {}) {
+  // closeConnection: standalone runs always close their own mongoose
+  // connection. When invoked from the temporary HTTP route inside the deployed
+  // server, the mongoose connection is the server's SHARED connection and must
+  // be left open (default true = standalone behavior, unchanged).
+  const closeConnection = options.closeConnection !== false;
+
   // ---------- PART 1 — CONNECTION ----------
   console.log('\n==============================');
   console.log('PART 1 — CONNECTION');
   if (!process.env.MONGO_URI) {
     console.log('MONGO_URI is not configured');
-    process.exit(1);
+    if (IS_MAIN) process.exit(1);
+    return { ok: false, error: 'MONGO_URI is not configured' };
   }
+
+  // Reuse an already-open mongoose connection (e.g. the deployed server's own
+  // connection). Only connect here when nothing is connected yet.
+  let alreadyConnected = false;
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 20000,
-      connectTimeoutMS: 20000
-    });
-  } catch (err) {
-    console.log('MONGODB CONNECTION FAILED: ' + sanitizeError(err));
-    process.exit(1);
+    const rs = mongoose.connection && typeof mongoose.connection.readyState === 'number'
+      ? mongoose.connection.readyState : 0;
+    alreadyConnected = rs === 1 || rs === 2;
+  } catch (_) {
+    alreadyConnected = false;
   }
+
+  if (!alreadyConnected) {
+    try {
+      await mongoose.connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 20000,
+        connectTimeoutMS: 20000
+      });
+    } catch (err) {
+      console.log('MONGODB CONNECTION FAILED: ' + sanitizeError(err));
+      if (IS_MAIN) process.exit(1);
+      return { ok: false, error: sanitizeError(err) };
+    }
+  }
+
   console.log('PRODUCTION MONGODB CONNECTION: SUCCESS');
   try {
     const conn = mongoose.connection;
@@ -255,6 +321,13 @@ async function runDiagnostic() {
   const productColName = Product.collection.name;
   const trackedColName = TrackedProduct.collection.name;
   const featuredColName = FeaturedProduct.collection.name;
+
+  // Single read-only snapshot of ALL Product documents (raw, lean).
+  // Declared before the inventory print below so `AMAZON:` uses the same
+  // retailer classification as Part 3.
+  const allProducts = await Product.find({}).sort({ updatedAt: -1, _id: -1 }).lean();
+  const amazonProducts = allProducts.filter(d => isAmazonDoc(d));
+
   console.log(`PRODUCT COLLECTION: ${productColName}`);
   console.log(`TOTAL: ${totalProductDocs}`);
   console.log(`AMAZON: ${amazonProducts.length}`);
@@ -263,9 +336,6 @@ async function runDiagnostic() {
   console.log(`FEATURED PRODUCT COLLECTION: ${featuredColName}`);
   console.log(`TOTAL: ${totalFeaturedDocs}`);
 
-  // Single read-only snapshot of ALL Product documents (raw, lean).
-  const allProducts = await Product.find({}).sort({ updatedAt: -1, _id: -1 }).lean();
-  const amazonProducts = allProducts.filter(d => isAmazonDoc(d));
   const seedProductMap = new Map(); // asin -> docs
   for (const asin of SEED_ASINS) {
     seedProductMap.set(asin, allProducts.filter(d => matchesAsin(d, asin)));
@@ -771,14 +841,33 @@ async function runDiagnostic() {
   console.log('This script is strictly read-only and used the production process.env.MONGO_URI.');
 
   // ---------- PART 17 — EXIT CLEANLY ----------
-  try {
-    await mongoose.disconnect();
-  } catch (_) { /* best effort */ }
-  console.log('\nDiagnostic complete. Mongoose connection closed. Exiting 0.');
-  process.exit(0);
+  if (closeConnection) {
+    try {
+      await mongoose.disconnect();
+    } catch (_) { /* best effort */ }
+  }
+  console.log(closeConnection
+    ? '\nDiagnostic complete. Mongoose connection closed. Exiting 0.'
+    : '\nDiagnostic complete. Shared server connection preserved (read-only).');
+  return { ok: true };
 }
 
-runDiagnostic().catch((err) => {
-  console.log('FATAL UNHANDLED ERROR (read-only diagnostic): ' + sanitizeError(err));
-  process.exit(1);
-});
+// Standalone entry point — direct execution keeps its original behavior and
+// exit codes (0 on success, 1 on any failure).
+if (IS_MAIN) {
+  runDiagnostic()
+    .then((result) => process.exit(result && result.ok ? 0 : 1))
+    .catch((err) => {
+      console.log('FATAL UNHANDLED ERROR (read-only diagnostic): ' + sanitizeError(err));
+      process.exit(1);
+    });
+}
+
+// TEMPORARY export surface for the diagnostic HTTP route. Do not build
+// permanent consumers against this module.
+module.exports = {
+  runDiagnostic,
+  resetDiagnosticReport,
+  stopDiagnosticReport,
+  getDiagnosticReport
+};
