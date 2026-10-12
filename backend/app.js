@@ -346,9 +346,15 @@ try {
   app.get('/admin/tracked-products', authenticateToken, requireAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin-tracked-products.html'));
   });
-  // Manual deal publishing UI (admin-only; requireAdmin enforces plan === 'admin').
+  // Manual deal publishing UI. The static page shell is served without auth
+  // middlewares so an admin can reach its login form: localStorage tokens are
+  // origin-scoped, so the GitHub Pages site's token is invisible to this
+  // (Render) origin, and a 401 here would make the login form unreachable.
+  // Admin access is still enforced server-side — POST /api/admin/deals keeps
+  // authenticateToken + requireAdmin — and the page blocks non-admin logins
+  // client-side via the plan check in admin-manual-deals.js.
   // Publishes via POST /api/admin/deals — see backend/src/routes/adminDeals.js
-  app.get('/admin/manual-deals', authenticateToken, requireAdmin, (req, res) => {
+  app.get('/admin/manual-deals', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin-manual-deals.html'));
   });
 } catch (err) {
