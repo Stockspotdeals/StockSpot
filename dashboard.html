@@ -473,6 +473,7 @@
               <h1>StockSpot Dashboard</h1>
             </div>
             <div class="header-meta">
+              <button type="button" id="logoutBtn" class="button-secondary" style="cursor:pointer; font-family:inherit;">Logout</button>
               <a href="index.html" class="button-secondary">Return to Landing</a>
             </div>
           </header>
@@ -520,7 +521,43 @@
 
         // Render signals after DOM is ready
         renderSignals();
+
+        // Wire logout (established flow: best-effort server logout, then clear local session)
+        const logoutButton = document.getElementById('logoutBtn');
+        if (logoutButton) {
+          logoutButton.addEventListener('click', handleLogout);
+        }
       }
+    }
+
+    /**
+     * Logout handler.
+     * 1. Best-effort POST /auth/logout so the server revokes the refresh token.
+     * 2. Always clear locally stored tokens (never leave a stale session behind),
+     *    matching the frontend authService.logout() flow.
+     * 3. Return to the landing page.
+     */
+    async function handleLogout() {
+      const token = localStorage.getItem('token') || localStorage.getItem('stockspotAccessToken');
+
+      if (token) {
+        try {
+          await fetch(`${BACKEND_URL}/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+        } catch (err) {
+          // Continue with local logout even if the API call fails
+          console.warn('Logout request failed; clearing local session anyway:', err.message);
+        }
+      }
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('stockspotAccessToken');
+      window.location.href = 'index.html';
     }
 
     /**

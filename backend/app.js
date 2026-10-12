@@ -346,6 +346,11 @@ try {
   app.get('/admin/tracked-products', authenticateToken, requireAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin-tracked-products.html'));
   });
+  // Manual deal publishing UI (admin-only; requireAdmin enforces plan === 'admin').
+  // Publishes via POST /api/admin/deals — see backend/src/routes/adminDeals.js
+  app.get('/admin/manual-deals', authenticateToken, requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-manual-deals.html'));
+  });
 } catch (err) {
   console.warn('Tracked product admin route not mounted:', err.message);
 }

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockSpot Admin — Publish Manual Deal</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 2rem; background: #f4f6fb; color: #1f2937; }
+    h1 { margin-bottom: 1.5rem; }
+    h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+    .panel { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.25rem; max-width: 640px; }
+    .field { display: flex; flex-direction: column; margin-bottom: 1rem; }
+    .field label { font-weight: 600; margin-bottom: 0.4rem; font-size: 0.9rem; }
+    .field input, .field select { padding: 0.65rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
+    .field .hint { font-size: 0.8rem; color: #6b7280; margin-top: 0.3rem; }
+    .btn { cursor: pointer; border: none; border-radius: 6px; padding: 0.75rem 1.25rem; background: #2563eb; color: white; font-size: 0.95rem; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .message { margin-bottom: 1rem; padding: 0.85rem 1rem; border-radius: 6px; }
+    .success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    /* Login form */
+    #login-section { max-width: 420px; margin: 3rem auto; }
+    #login-section .field input { width: 100%; box-sizing: border-box; }
+    .admin-link { font-size: 0.85rem; margin-top: 1rem; }
+    .admin-link a { color: #2563eb; }
+  </style>
+</head>
+<body>
+
+  <!-- Login gate -->
+  <div id="login-section" style="display:none;">
+    <div class="panel">
+      <h2>Admin Login</h2>
+      <div id="login-message"></div>
+      <form id="login-form">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" required autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main admin section -->
+  <div id="admin-section" style="display:none;">
+    <h1>StockSpot Admin — Publish Manual Deal</h1>
+
+    <div class="panel">
+      <h2>Publish Deal</h2>
+      <div id="form-message"></div>
+      <form id="deal-form">
+        <div class="field">
+          <label for="deal-url">Deal URL</label>
+          <input id="deal-url" name="dealUrl" type="url" placeholder="https://…" required />
+        </div>
+        <div class="field">
+          <label for="deal-category">Category</label>
+          <select id="deal-category" name="category" required>
+            <option value="">— select category —</option>
+            <option value="drops">Drops</option>
+            <option value="food">Food</option>
+            <option value="home">Home</option>
+            <option value="auto">Auto</option>
+            <option value="pet">Pet</option>
+            <option value="toys">Toys</option>
+            <option value="collectibles">Collectibles</option>
+            <option value="electronics">Electronics</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="deal-promo">Promo Code (optional)</label>
+          <input id="deal-promo" name="promoCode" type="text" placeholder="e.g. SAVE20" />
+          <span class="hint">Leave blank if the deal has no promo code.</span>
+        </div>
+        <button type="submit" class="btn" id="publish-btn">Publish Deal</button>
+      </form>
+    </div>
+
+    <p class="admin-link">
+      <a href="/admin/tracked-products">Owner Intelligence Dashboard</a>
+    </p>
+  </div>
+
+  <script src="/admin/js/admin-manual-deals.js"></script>
+</body>
+</html>
