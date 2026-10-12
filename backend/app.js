@@ -26,6 +26,14 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID || process.env.STRIP
 })();
 const STRIPE_LIFETIME_PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID;
 
+// ─── MVP pivot — Step 1: legacy automation OFF by default ─────────────
+// All old automated discovery/monitoring/refresh jobs are disabled unless
+// ENABLE_AUTO_DISCOVERY=true, so they can never write to or overwrite the
+// new manually curated deal feed. Service files stay on disk untouched;
+// this single env flag (set to 'true') is the only switch needed to bring
+// the old pipeline back.
+const ENABLE_AUTO_DISCOVERY = process.env.ENABLE_AUTO_DISCOVERY === 'true';
+
 let monitoringWorkerInstance = null;
 let activeServerPort = 'not-listening';
 let mongoConnectionStatus = 'pending';
@@ -475,25 +483,50 @@ try {
   console.warn('Phase 12.6.7 diagnostic route not mounted:', err.message);
 }
 
-// Initialize automated signal ingestion scheduler after routes are mounted
+// MVP: Admin publish-deal endpoint (manually curated deals).
+// POST /api/admin/deals — see backend/src/routes/adminDeals.js
 try {
-  initializeSignalScheduler();
+  const adminDealsRoutes = require('./src/routes/adminDeals');
+  app.use('/api/admin/deals', adminDealsRoutes);
+  console.log('[AdminDeals] POST /api/admin/deals mounted');
 } catch (err) {
-  console.error('Failed to initialize automated signal ingestion scheduler:', err.message);
+  console.warn('Admin deals route not mounted:', err.message);
 }
 
-// Initialize automated AI sourcing scheduler after routes are mounted
-try {
-  initializeAISourcingScheduler();
-} catch (err) {
-  console.error('Failed to initialize AI signal sourcing scheduler:', err.message);
+// MVP pivot: automated signal ingestion scheduler disabled by default.
+// Re-enable with ENABLE_AUTO_DISCOVERY=true.
+if (ENABLE_AUTO_DISCOVERY) {
+  try {
+    initializeSignalScheduler();
+  } catch (err) {
+    console.error('Failed to initialize automated signal ingestion scheduler:', err.message);
+  }
+} else {
+  console.log('[Scheduler] Automated signal ingestion scheduler disabled (ENABLE_AUTO_DISCOVERY != true)');
 }
 
-// Initialize automated external connector scheduler after routes are mounted
-try {
-  initializeConnectorScheduler();
-} catch (err) {
-  console.error('Failed to initialize external data connector scheduler:', err.message);
+// MVP pivot: automated AI sourcing scheduler disabled by default.
+// Re-enable with ENABLE_AUTO_DISCOVERY=true.
+if (ENABLE_AUTO_DISCOVERY) {
+  try {
+    initializeAISourcingScheduler();
+  } catch (err) {
+    console.error('Failed to initialize AI signal sourcing scheduler:', err.message);
+  }
+} else {
+  console.log('[Scheduler] Automated AI sourcing scheduler disabled (ENABLE_AUTO_DISCOVERY != true)');
+}
+
+// MVP pivot: automated external connector (Amazon/Creators) scheduler disabled by default.
+// Re-enable with ENABLE_AUTO_DISCOVERY=true.
+if (ENABLE_AUTO_DISCOVERY) {
+  try {
+    initializeConnectorScheduler();
+  } catch (err) {
+    console.error('Failed to initialize external data connector scheduler:', err.message);
+  }
+} else {
+  console.log('[Scheduler] External data connector scheduler disabled (ENABLE_AUTO_DISCOVERY != true)');
 }
 
 // Initialize alert dispatcher scheduler after routes are mounted
@@ -504,27 +537,33 @@ try {
   console.error('Failed to initialize alert dispatcher scheduler:', err.message);
 }
 
-// Initialize featured deals engine and scheduler (refreshes every 30 minutes)
+// MVP pivot: FeaturedDealsEngine is kept for its read API (/api/featured) and the
+// manual POST /api/featured/refresh, but its automatic startup + 30-minute
+// auto-refresh is disabled so it never rebuilds/overwrites the curated feed.
 try {
   const { getFeaturedDealsEngine } = require('./src/services/FeaturedDealsEngine');
   const featuredEngine = getFeaturedDealsEngine();
   console.log('[FeaturedDeals] Engine initialized');
 
-  // Refresh immediately on startup (non-blocking, after 30s delay)
-  setTimeout(() => {
-    featuredEngine.refreshFeaturedFeed().catch(err => {
-      console.error('[FeaturedDeals] Initial refresh failed:', err.message);
-    });
-  }, 30000);
+  if (ENABLE_AUTO_DISCOVERY) {
+    // Refresh immediately on startup (non-blocking, after 30s delay)
+    setTimeout(() => {
+      featuredEngine.refreshFeaturedFeed().catch(err => {
+        console.error('[FeaturedDeals] Initial refresh failed:', err.message);
+      });
+    }, 30000);
 
-  // Schedule refresh every 30 minutes
-  setInterval(() => {
-    featuredEngine.refreshFeaturedFeed().catch(err => {
-      console.error('[FeaturedDeals] Scheduled refresh failed:', err.message);
-    });
-  }, 30 * 60 * 1000);
+    // Schedule refresh every 30 minutes
+    setInterval(() => {
+      featuredEngine.refreshFeaturedFeed().catch(err => {
+        console.error('[FeaturedDeals] Scheduled refresh failed:', err.message);
+      });
+    }, 30 * 60 * 1000);
 
-  console.log('[FeaturedDeals] Scheduler: refresh every 30 minutes');
+    console.log('[FeaturedDeals] Scheduler: refresh every 30 minutes');
+  } else {
+    console.log('[FeaturedDeals] Auto-refresh disabled (ENABLE_AUTO_DISCOVERY != true); manual POST /api/featured/refresh still available.');
+  }
 } catch (err) {
   console.error('Failed to initialize featured deals engine:', err.message);
 }
@@ -614,40 +653,52 @@ const startServer = async () => {
       logStartupStatus();
 
       // Start monitoring worker once, but never block backend startup on worker errors.
-      try {
-        if (!monitoringWorkerInstance) {
-          monitoringWorkerInstance = new MonitoringWorker();
-          monitoringWorkerInstance.start();
-          console.log('✅ MonitoringWorker initialized and started');
-        } else {
-          console.log('ℹ️ MonitoringWorker already initialized, skipping duplicate startup');
+      // MVP pivot: automatic MonitoringWorker startup disabled by default.
+      // Re-enable with ENABLE_AUTO_DISCOVERY=true.
+      if (ENABLE_AUTO_DISCOVERY) {
+        try {
+          if (!monitoringWorkerInstance) {
+            monitoringWorkerInstance = new MonitoringWorker();
+            monitoringWorkerInstance.start();
+            console.log('✅ MonitoringWorker initialized and started');
+          } else {
+            console.log('ℹ️ MonitoringWorker already initialized, skipping duplicate startup');
+          }
+        } catch (err) {
+          console.error('⚠️ MonitoringWorker failed to start. Backend will continue running:', err.message);
         }
-      } catch (err) {
-        console.error('⚠️ MonitoringWorker failed to start. Backend will continue running:', err.message);
+      } else {
+        console.log('[MonitoringWorker] Automatic startup disabled (ENABLE_AUTO_DISCOVERY != true)');
       }
       
       // Start Layer 2 Smart Signal Engine
-      try {
-        const runSignalEngine = require('./src/services/signalEngine');
-        
-        // Run signal engine every 5 minutes in production, every 30 minutes in development
-        const intervalMinutes = process.env.NODE_ENV === 'production' ? 5 : 30;
-        const intervalMs = intervalMinutes * 60 * 1000;
-        
-        console.log(`🎯 Layer 2 Smart Signal Engine scheduled to run every ${intervalMinutes} minutes`);
-        
-        // Run immediately on startup
-        setTimeout(() => {
-          runSignalEngine().catch(err => console.error('Initial signal engine run failed:', err));
-        }, 10000); // Wait 10 seconds after startup
-        
-        // Schedule recurring runs
-        setInterval(() => {
-          runSignalEngine().catch(err => console.error('Scheduled signal engine run failed:', err));
-        }, intervalMs);
-        
-      } catch (err) {
-        console.warn('⚠️  Layer 2 Signal Engine not available:', err.message);
+      // MVP pivot: Layer 2 signal-engine scheduling disabled by default.
+      // Re-enable with ENABLE_AUTO_DISCOVERY=true.
+      if (ENABLE_AUTO_DISCOVERY) {
+        try {
+          const runSignalEngine = require('./src/services/signalEngine');
+          
+          // Run signal engine every 5 minutes in production, every 30 minutes in development
+          const intervalMinutes = process.env.NODE_ENV === 'production' ? 5 : 30;
+          const intervalMs = intervalMinutes * 60 * 1000;
+          
+          console.log(`🎯 Layer 2 Smart Signal Engine scheduled to run every ${intervalMinutes} minutes`);
+          
+          // Run immediately on startup
+          setTimeout(() => {
+            runSignalEngine().catch(err => console.error('Initial signal engine run failed:', err));
+          }, 10000); // Wait 10 seconds after startup
+          
+          // Schedule recurring runs
+          setInterval(() => {
+            runSignalEngine().catch(err => console.error('Scheduled signal engine run failed:', err));
+          }, intervalMs);
+          
+        } catch (err) {
+          console.warn('⚠️  Layer 2 Signal Engine not available:', err.message);
+        }
+      } else {
+        console.log('[SignalEngine] Layer 2 automatic scheduling disabled (ENABLE_AUTO_DISCOVERY != true)');
       }
     });
     
