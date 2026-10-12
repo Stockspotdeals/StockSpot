@@ -301,6 +301,69 @@
       color: #fecaca;
     }
 
+    /* Subscription status (regular users) */
+    .subscription-status {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .subscription-status-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .subscription-status-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .subscription-status-detail {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .subscription-badge {
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid transparent;
+    }
+
+    .subscription-badge--active {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(134, 239, 172, 0.3);
+      color: #86efac;
+    }
+
+    .subscription-badge--expired,
+    .subscription-badge--inactive {
+      background: rgba(239, 68, 68, 0.14);
+      border-color: rgba(252, 165, 165, 0.3);
+      color: #fca5a5;
+    }
+
+    .subscription-badge--cancelled {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(253, 230, 138, 0.3);
+      color: #fcd34d;
+    }
+
+    .subscription-badge--free {
+      background: rgba(148, 163, 184, 0.14);
+      border-color: rgba(148, 163, 184, 0.3);
+      color: var(--muted);
+    }
+
+    .subscription-status .button-primary {
+      margin-top: 0.85rem;
+    }
+
     @media (max-width: 760px) {
       .status-grid {
         grid-template-columns: 1fr;
@@ -474,7 +537,16 @@
         }
 
         const data = await res.json();
-        AppState.signals = Array.isArray(data) ? data : (data.signals || []);
+        const signals = Array.isArray(data) ? data : (data.signals || []);
+
+        // Newest to oldest by the actual creation timestamp from the API.
+        // Signals with missing/invalid timestamps are treated as oldest
+        // (treated as time 0) so they sink to the end without breaking the feed.
+        const signalTime = (signal) => {
+          const t = new Date(signal && signal.createdAt ? signal.createdAt : 0).getTime();
+          return Number.isFinite(t) ? t : 0;
+        };
+        AppState.signals = signals.sort((a, b) => signalTime(b) - signalTime(a));
 
       } catch (err) {
         console.error('Signal loading failed:', err);
@@ -543,6 +615,8 @@
     function renderDashboard() {
       const pageWrap = document.querySelector('.page-wrap');
       if (pageWrap) {
+        const isAdmin = AppState.user.plan === 'admin';
+        const subscription = getSubscriptionInfo(AppState.user);
         pageWrap.innerHTML = `
           <header>
             <div>
@@ -566,36 +640,29 @@
               </div>
               <div class="status-card">
                 <strong>Subscription</strong>
-                <span>${AppState.user.plan === 'admin' ? 'Admin' : (AppState.user.subscriptionStatus || 'free')}</span>
+                <span>${isAdmin ? 'Admin' : (AppState.user.subscriptionStatus || 'free')}</span>
               </div>
               <div class="status-card">
                 <strong>Dashboard</strong>
                 <span>${AppState.isPremium ? 'Premium access granted ✓' : 'Upgrade to premium for full access'}</span>
               </div>
             </div>
-          </section>
-
-          <section class="panel" style="position:relative; overflow:hidden;">
-            <div class="section-title">
-              <h2>Signals Feed</h2>
-            </div>
-            <div id="signalsGrid" class="signals-grid"></div>
-            ${!AppState.isPremium ? `
-              <div id="premiumOverlay" class="overlay-box" style="display:flex;">
-                <strong>Upgrade to unlock premium signals</strong>
-                <span>Premium users see all market signals and full insights.</span>
+            ${!isAdmin ? `
+            <div class="subscription-status">
+              <div class="subscription-status-row">
+                <span class="subscription-status-label">Subscription status:</span>
+                <span class="subscription-badge subscription-badge--${subscription.key}">${subscription.label}</span>
+                <span class="subscription-status-detail">${subscription.detail}</span>
               </div>
+              ${subscription.showRenew ? `
+              <div id="renew-message" class="form-message"></div>
+              <button type="button" id="renew-sub-btn" class="button-primary">Renew Subscription</button>
+              ` : ''}
+            </div>
             ` : ''}
           </section>
 
-          <section class="panel">
-            <div class="section-title">
-              <h2>Premium Locked Content</h2>
-            </div>
-            <p>Premium users enjoy advanced alerts, priority signal delivery, and exclusive market insights. Free users can still view basic alerts but must upgrade to unlock the full feed.</p>
-          </section>
-
-          ${AppState.user.plan === 'admin' ? `
+          ${isAdmin ? `
           <section class="panel">
             <div class="section-title">
               <h2>Admin Controls → Publish Deal</h2>
@@ -630,6 +697,26 @@
             </form>
           </section>
           ` : ''}
+
+          <section class="panel" style="position:relative; overflow:hidden;">
+            <div class="section-title">
+              <h2>Signals Feed</h2>
+            </div>
+            <div id="signalsGrid" class="signals-grid"></div>
+            ${!AppState.isPremium ? `
+              <div id="premiumOverlay" class="overlay-box" style="display:flex;">
+                <strong>Upgrade to unlock premium signals</strong>
+                <span>Premium users see all market signals and full insights.</span>
+              </div>
+            ` : ''}
+          </section>
+
+          <section class="panel">
+            <div class="section-title">
+              <h2>Premium Locked Content</h2>
+            </div>
+            <p>Premium users enjoy advanced alerts, priority signal delivery, and exclusive market insights. Free users can still view basic alerts but must upgrade to unlock the full feed.</p>
+          </section>
         `;
 
         // Render signals after DOM is ready
@@ -645,6 +732,12 @@
         const publishDealForm = document.getElementById('publish-deal-form');
         if (publishDealForm) {
           publishDealForm.addEventListener('submit', handlePublishDeal);
+        }
+
+        // Wire subscription renewal (only rendered for eligible non-admin users)
+        const renewButton = document.getElementById('renew-sub-btn');
+        if (renewButton) {
+          renewButton.addEventListener('click', handleRenewSubscription);
         }
       }
     }
@@ -680,11 +773,11 @@
     }
 
     /**
-     * Show a message in the publish form. Uses textContent (never innerHTML)
-     * so server-provided error strings can't inject markup.
+     * Show a message in a form/status area by element id. Uses textContent
+     * (never innerHTML) so server-provided error strings can't inject markup.
      */
-    function showPublishMessage(text, type) {
-      const msgEl = document.getElementById('publish-deal-message');
+    function showFormMessage(elId, text, type) {
+      const msgEl = document.getElementById(elId);
       if (!msgEl) return;
       msgEl.innerHTML = '';
       const div = document.createElement('div');
@@ -696,6 +789,117 @@
           msgEl.innerHTML = '';
         }
       }, 6000);
+    }
+
+    function showPublishMessage(text, type) {
+      showFormMessage('publish-deal-message', text, type);
+    }
+
+    /**
+     * Derive display-only subscription info from the backend-provided user
+     * record (/auth/me). Display only — premium access is always enforced
+     * server-side; this never grants access on its own.
+     */
+    function getSubscriptionInfo(user) {
+      const endDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null;
+      const hasEndDate = Boolean(endDate) && !isNaN(endDate.getTime());
+      const endLabel = hasEndDate ? endDate.toLocaleDateString() : '';
+
+      if (user.subscriptionStatus === 'premium') {
+        return {
+          key: 'active',
+          label: 'Active',
+          detail: hasEndDate
+            ? `Premium access active — current period ends ${endLabel}.`
+            : 'Premium access is active.',
+          showRenew: false
+        };
+      }
+
+      if (hasEndDate && endDate.getTime() <= Date.now()) {
+        return {
+          key: 'expired',
+          label: 'Expired',
+          detail: `Your subscription expired on ${endLabel}. Renew to restore premium access.`,
+          showRenew: true
+        };
+      }
+
+      if (hasEndDate) {
+        return {
+          key: 'cancelled',
+          label: 'Cancelled',
+          detail: `Your subscription was cancelled. Access ends on ${endLabel}.`,
+          showRenew: true
+        };
+      }
+
+      if (user.stripeCustomerId) {
+        // Stripe customer on record but no active subscription and no
+        // recorded end date — treat as inactive and offer renewal.
+        return {
+          key: 'inactive',
+          label: 'Inactive',
+          detail: 'No active subscription found on your account.',
+          showRenew: true
+        };
+      }
+
+      return {
+        key: 'free',
+        label: 'Free',
+        detail: 'You are on the free plan.',
+        showRenew: false
+      };
+    }
+
+    /**
+     * Start subscription renewal via the existing POST /create-checkout-session
+     * endpoint (reuses the user's Stripe customer when present) and redirect to
+     * the Stripe-hosted checkout page. Checkout is fully handled by Stripe —
+     * premium access is only granted after backend webhook verification.
+     */
+    async function handleRenewSubscription() {
+      const renewBtn = document.getElementById('renew-sub-btn');
+      const token = localStorage.getItem('token') || localStorage.getItem('stockspotAccessToken');
+
+      if (renewBtn) renewBtn.disabled = true;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/create-checkout-session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ plan: 'monthly' })
+        });
+
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('stockspotAccessToken');
+          AppState.error = 'Your session has expired. Please log in again.';
+          AppState.user = null;
+          renderGuest();
+          return;
+        }
+
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.url) {
+          throw new Error(data.error || data.message || 'Could not start checkout. Please try again.');
+        }
+
+        window.location.href = data.url;
+      } catch (err) {
+        showFormMessage(
+          'renew-message',
+          err instanceof TypeError
+            ? 'Could not reach the server. Check your connection and try again.'
+            : (err.message || 'Could not start checkout. Please try again.'),
+          'error'
+        );
+        if (renewBtn) renewBtn.disabled = false;
+      }
     }
 
     /**
