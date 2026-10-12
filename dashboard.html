@@ -489,7 +489,7 @@
               </div>
               <div class="status-card">
                 <strong>Subscription</strong>
-                <span>${AppState.user.subscriptionStatus || 'free'}</span>
+                <span>${AppState.user.plan === 'admin' ? 'Admin' : (AppState.user.subscriptionStatus || 'free')}</span>
               </div>
               <div class="status-card">
                 <strong>Dashboard</strong>
