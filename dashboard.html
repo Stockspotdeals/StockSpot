@@ -224,6 +224,83 @@
       margin-bottom: 1.25rem;
     }
 
+    /* Admin controls — publish deal form */
+    .admin-form .field {
+      margin-bottom: 1rem;
+    }
+
+    .admin-form label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .admin-form input,
+    .admin-form select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.7rem 0.9rem;
+      border-radius: 0.6rem;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    .admin-form .field .hint {
+      display: block;
+      margin-top: 0.3rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .button-primary {
+      padding: 0.9rem 1.4rem;
+      border-radius: 0.75rem;
+      background: var(--accent);
+      border: 1px solid transparent;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .button-primary:hover {
+      transform: translateY(-1px);
+      background: var(--accent-strong);
+    }
+
+    .button-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .form-message:empty {
+      display: none;
+    }
+
+    .form-message .message {
+      padding: 0.85rem 1rem;
+      border-radius: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-message .success {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(134, 239, 172, 0.25);
+      color: #bbf7d0;
+    }
+
+    .form-message .error {
+      background: rgba(220, 38, 38, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+      color: #fecaca;
+    }
+
     @media (max-width: 760px) {
       .status-grid {
         grid-template-columns: 1fr;
@@ -517,6 +594,42 @@
             </div>
             <p>Premium users enjoy advanced alerts, priority signal delivery, and exclusive market insights. Free users can still view basic alerts but must upgrade to unlock the full feed.</p>
           </section>
+
+          ${AppState.user.plan === 'admin' ? `
+          <section class="panel">
+            <div class="section-title">
+              <h2>Admin Controls → Publish Deal</h2>
+            </div>
+            <p>Publish a manually curated deal to the StockSpot feed. Each category keeps up to 20 active deals — publishing beyond the cap archives the oldest deal in that category.</p>
+            <div id="publish-deal-message" class="form-message"></div>
+            <form id="publish-deal-form" class="admin-form">
+              <div class="field">
+                <label for="deal-url">Deal URL</label>
+                <input id="deal-url" name="dealUrl" type="url" placeholder="https://…" required />
+              </div>
+              <div class="field">
+                <label for="deal-category">Category</label>
+                <select id="deal-category" name="category" required>
+                  <option value="">— select category —</option>
+                  <option value="drops">Drops</option>
+                  <option value="food">Food</option>
+                  <option value="home">Home</option>
+                  <option value="auto">Auto</option>
+                  <option value="pet">Pet</option>
+                  <option value="toys">Toys</option>
+                  <option value="collectibles">Collectibles</option>
+                  <option value="electronics">Electronics</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="deal-promo">Promo Code (optional)</label>
+                <input id="deal-promo" name="promoCode" type="text" placeholder="e.g. SAVE20" />
+                <span class="hint">Leave blank if the deal has no promo code.</span>
+              </div>
+              <button type="submit" class="button-primary" id="publish-deal-btn">Publish Deal</button>
+            </form>
+          </section>
+          ` : ''}
         `;
 
         // Render signals after DOM is ready
@@ -526,6 +639,12 @@
         const logoutButton = document.getElementById('logoutBtn');
         if (logoutButton) {
           logoutButton.addEventListener('click', handleLogout);
+        }
+
+        // Wire admin publish form (only rendered when plan === 'admin')
+        const publishDealForm = document.getElementById('publish-deal-form');
+        if (publishDealForm) {
+          publishDealForm.addEventListener('submit', handlePublishDeal);
         }
       }
     }
@@ -558,6 +677,92 @@
       localStorage.removeItem('token');
       localStorage.removeItem('stockspotAccessToken');
       window.location.href = 'index.html';
+    }
+
+    /**
+     * Show a message in the publish form. Uses textContent (never innerHTML)
+     * so server-provided error strings can't inject markup.
+     */
+    function showPublishMessage(text, type) {
+      const msgEl = document.getElementById('publish-deal-message');
+      if (!msgEl) return;
+      msgEl.innerHTML = '';
+      const div = document.createElement('div');
+      div.className = 'message ' + type;
+      div.textContent = text;
+      msgEl.appendChild(div);
+      setTimeout(function () {
+        if (div.parentNode === msgEl) {
+          msgEl.innerHTML = '';
+        }
+      }, 6000);
+    }
+
+    /**
+     * Publish a manual deal via POST /api/admin/deals using the same Bearer
+     * token pattern as /auth/me. The publish button is disabled while a
+     * request is in flight to prevent duplicate submissions.
+     */
+    async function handlePublishDeal(event) {
+      event.preventDefault();
+
+      const publishBtn = document.getElementById('publish-deal-btn');
+      const dealUrl = document.getElementById('deal-url').value.trim();
+      const category = document.getElementById('deal-category').value;
+      const promoCode = document.getElementById('deal-promo').value.trim();
+
+      if (!dealUrl || !category) {
+        showPublishMessage('Deal URL and category are required.', 'error');
+        return;
+      }
+
+      const token = localStorage.getItem('token') || localStorage.getItem('stockspotAccessToken');
+      const body = { dealUrl: dealUrl, category: category };
+      if (promoCode) body.promoCode = promoCode;
+
+      if (publishBtn) publishBtn.disabled = true;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/deals`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('stockspotAccessToken');
+          AppState.error = 'Your session has expired. Please log in again.';
+          AppState.user = null;
+          renderGuest();
+          return;
+        }
+
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          throw new Error(data.message || data.error || ('Failed to publish deal (HTTP ' + res.status + ')'));
+        }
+
+        event.target.reset();
+        let successText = 'Deal published successfully.';
+        if (data.retired && data.retired.archivedCount > 0) {
+          successText += ' Archived ' + data.retired.archivedCount +
+            ' older deal(s) in this category to stay within the active cap.';
+        }
+        showPublishMessage(successText, 'success');
+      } catch (err) {
+        showPublishMessage(
+          err instanceof TypeError
+            ? 'Could not reach the server. Check your connection and try again.'
+            : (err.message || 'Failed to publish deal. Please try again.'),
+          'error'
+        );
+      } finally {
+        if (publishBtn) publishBtn.disabled = false;
+      }
     }
 
     /**
