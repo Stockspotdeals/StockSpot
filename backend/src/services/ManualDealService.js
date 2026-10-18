@@ -22,10 +22,23 @@
 
 const Product = require('../models/Product');
 
-const {
-  MVP_CATEGORIES,
-  PRODUCT_SOURCE_TYPES
-} = Product;
+// Canonical MVP constants. The Product model is the intended source of truth;
+// fall back to the identical canonical definitions when the model version in
+// use does not export them (regression fix for the Phase 12.6.8 publish error
+// "Cannot read properties of undefined (reading 'includes')", caused by
+// destructuring the constants off a model that lacked them). Categories and
+// source-type values are unchanged.
+const MVP_CATEGORIES = (
+  Array.isArray(Product.MVP_CATEGORIES) && Product.MVP_CATEGORIES.length > 0
+)
+  ? Product.MVP_CATEGORIES
+  : Object.freeze(['drops', 'food', 'home', 'auto', 'pet', 'toys', 'collectibles', 'electronics']);
+
+const PRODUCT_SOURCE_TYPES = (
+  Product.PRODUCT_SOURCE_TYPES && Product.PRODUCT_SOURCE_TYPES.MANUAL
+)
+  ? Product.PRODUCT_SOURCE_TYPES
+  : Object.freeze({ AUTO: 'auto', MANUAL: 'manual' });
 
 const MAX_ACTIVE_MANUAL_DEALS_PER_CATEGORY = 20;
 
