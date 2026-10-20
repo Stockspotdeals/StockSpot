@@ -706,6 +706,7 @@
             <div class="section-title" style="margin-top:1.5rem;">
               <h2>Published Deals</h2>
             </div>
+            <div id="remove-deal-message" class="form-message"></div>
             <div id="published-deals-list">
               <p style="color: var(--muted); margin:0;">Loading published deals…</p>
             </div>
@@ -748,6 +749,11 @@
           publishDealForm.addEventListener('submit', handlePublishDeal);
           // Show the deals that are already live (admin-only panel).
           loadPublishedDeals();
+          // Delegate removal clicks (rows are re-rendered on each refresh).
+          const publishedDealsList = document.getElementById('published-deals-list');
+          if (publishedDealsList) {
+            publishedDealsList.addEventListener('click', handleRemoveDeal);
+          }
         }
 
         // Wire subscription renewal (only rendered for eligible non-admin users)
@@ -856,11 +862,57 @@
           if (link) {
             parts.push('<a href="' + escapeDealHtml(link) + '" target="_blank" rel="noopener sponsored">View deal</a>');
           }
+          parts.push('<button type="button" class="remove-deal-btn" data-deal-id="' + escapeDealHtml(String(deal._id || '')) + '" style="cursor:pointer;border:1px solid #dc2626;background:transparent;color:#dc2626;border-radius:6px;padding:0.25rem 0.7rem;font-size:0.8rem;font-weight:600;">Remove</button>');
           return '<div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; padding:0.6rem 0; border-top:1px solid rgba(148,163,184,0.35);">' +
             parts.join('') + '</div>';
         }).join('');
       } catch (err) {
         list.innerHTML = '<p style="color: var(--muted); margin:0;">Could not load published deals.</p>';
+      }
+    }
+
+    // Deal ids with an in-flight removal — blocks duplicate submissions.
+    const removingDealIds = new Set();
+
+    /**
+     * Remove (archive) a published manual deal after confirmation.
+     * Uses DELETE /api/admin/deals/:id (admin Bearer auth, same pattern as
+     * handlePublishDeal); refreshes the list on success and shows the server
+     * error when the removal fails.
+     */
+    async function handleRemoveDeal(event) {
+      const btn = event.target.closest('.remove-deal-btn');
+      if (!btn) return;
+      const dealId = btn.getAttribute('data-deal-id');
+      if (!dealId || removingDealIds.has(dealId)) return;
+      if (!window.confirm('Remove this deal from the public feeds? The record is archived, not deleted.')) {
+        return;
+      }
+
+      removingDealIds.add(dealId);
+      btn.disabled = true;
+      const token = localStorage.getItem('token') || localStorage.getItem('stockspotAccessToken');
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/deals/${encodeURIComponent(dealId)}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          throw new Error(data.error || data.message || ('Remove failed (HTTP ' + res.status + ')'));
+        }
+        showFormMessage('remove-deal-message', 'Deal removed from the feed.', 'success');
+        // Refresh: the archived deal is excluded here (archivedAt: null) and
+        // from the public homepage feed by the same filter.
+        loadPublishedDeals();
+      } catch (err) {
+        showFormMessage('remove-deal-message', err.message || 'Failed to remove deal.', 'error');
+        if (btn.isConnected) btn.disabled = false;
+      } finally {
+        removingDealIds.delete(dealId);
       }
     }
 

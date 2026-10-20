@@ -16,12 +16,13 @@ jest.mock('../services/ManualDealService', () => {
 
   return {
     MVP_CATEGORIES,
-    publishManualDeal: jest.fn()
+    publishManualDeal: jest.fn(),
+    archiveManualDeal: jest.fn()
   };
 });
 
 const { AuthUserModel } = require('../models/AuthUser');
-const { publishManualDeal, MVP_CATEGORIES } = require('../services/ManualDealService');
+const { publishManualDeal, archiveManualDeal, MVP_CATEGORIES } = require('../services/ManualDealService');
 const adminDealsRouter = require('./adminDeals');
 
 describe('POST /api/admin/deals', () => {
@@ -313,5 +314,112 @@ describe('POST /api/admin/deals', () => {
       expect(bad.status).toBe(400);
       expect(bad.body.error).toBe('name must be a string');
     });
+  });
+});
+
+describe('DELETE /api/admin/deals/:id', () => {
+  let app;
+  let adminToken;
+  let nonAdminToken;
+
+  const VALID_ID = '656e4f1a2c8d3f0012345678';
+
+  beforeAll(() => {
+    app = express();
+    app.use(express.json());
+    app.use(cookieParser());
+    app.use('/api/admin/deals', adminDealsRouter);
+
+    adminToken = generateAccessToken({ userId: 'admin-user-id' });
+    nonAdminToken = generateAccessToken({ userId: 'regular-user-id' });
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    AuthUserModel.findById.mockImplementation((id) => {
+      if (id === 'admin-user-id') {
+        return Promise.resolve({
+          _id: 'admin-user-id',
+          email: 'admin@stockspot.com',
+          status: 'active',
+          plan: 'admin'
+        });
+      }
+      if (id === 'regular-user-id') {
+        return Promise.resolve({
+          _id: 'regular-user-id',
+          email: 'user@stockspot.com',
+          status: 'active',
+          plan: 'free'
+        });
+      }
+      return Promise.resolve(null);
+    });
+  });
+
+  it('archives the deal for an authenticated admin', async () => {
+    archiveManualDeal.mockResolvedValue({ archived: true, alreadyArchived: false, dealId: VALID_ID });
+
+    const res = await request(app)
+      .delete(`/api/admin/deals/${VALID_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.archived).toBe(true);
+    expect(archiveManualDeal).toHaveBeenCalledWith(VALID_ID);
+  });
+
+  it('rejects requests without a token (401) and never archives', async () => {
+    const res = await request(app).delete(`/api/admin/deals/${VALID_ID}`);
+
+    expect(res.status).toBe(401);
+    expect(archiveManualDeal).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-admin users (403) and never archives', async () => {
+    const res = await request(app)
+      .delete(`/api/admin/deals/${VALID_ID}`)
+      .set('Authorization', `Bearer ${nonAdminToken}`);
+
+    expect(res.status).toBe(403);
+    expect(archiveManualDeal).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid ObjectIds (400) without calling the service', async () => {
+    const res = await request(app)
+      .delete('/api/admin/deals/not-a-valid-id')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid deal id');
+    expect(archiveManualDeal).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when the product is not a manual deal', async () => {
+    archiveManualDeal.mockRejectedValue(
+      Object.assign(new Error('not manual'), { code: 'NOT_MANUAL' })
+    );
+
+    const res = await request(app)
+      .delete(`/api/admin/deals/${VALID_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/manual deals/);
+  });
+
+  it('returns 404 when no deal exists with that id', async () => {
+    archiveManualDeal.mockRejectedValue(
+      Object.assign(new Error('missing'), { code: 'NOT_FOUND' })
+    );
+
+    const res = await request(app)
+      .delete(`/api/admin/deals/${VALID_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('Deal not found');
   });
 });

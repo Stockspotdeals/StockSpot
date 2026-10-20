@@ -48,6 +48,7 @@ function showMsg(el, text, type) {
 function showAdmin() {
   loginSection.style.display = 'none';
   adminSection.style.display = 'block';
+  loadPublishedDeals();
 }
 
 function showLogin(msg) {
@@ -125,6 +126,79 @@ dealForm.addEventListener('submit', async function (e) {
     showMsg(formMsg, err.message, 'error');
   } finally {
     publishBtn.disabled = false;
+  }
+});
+
+// ── Published deals list & removal ────────────────────────────
+var removeMsg = document.getElementById('remove-message');
+var removingIds = {};   // in-flight removals — blocks duplicate submissions
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Neutral label for legacy deals whose stored name is a URL/hostname.
+function dealLabel(raw) {
+  if (!raw || /^https?:\/\//i.test(raw)) return 'Untitled Deal';
+  if (!/\s/.test(raw) && /^[a-z0-9-]+(\.[a-z0-9-]+)+([\/?#].*)?$/i.test(raw)) return 'Untitled Deal';
+  return raw;
+}
+
+async function loadPublishedDeals() {
+  var list = document.getElementById('published-deals-list');
+  if (!list) return;
+  try {
+    var res = await fetch(BACKEND_URL + '/api/deals');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var deals = Array.isArray(data.deals) ? data.deals : [];
+    if (!deals.length) {
+      list.innerHTML = '<p class="hint">No published deals yet.</p>';
+      return;
+    }
+    list.innerHTML = deals.map(function (deal) {
+      var parts = ['<strong>' + escapeHtml(dealLabel(deal.title || deal.name || '')) + '</strong>'];
+      if (deal.category) parts.push('<span>' + escapeHtml(deal.category) + '</span>');
+      if (deal.promoCode) parts.push('<span>Code: ' + escapeHtml(deal.promoCode) + '</span>');
+      if (deal.postedAt) parts.push('<span>' + new Date(deal.postedAt).toLocaleDateString() + '</span>');
+      var link = deal.affiliateLink || deal.url || '';
+      if (link) parts.push('<a href="' + escapeHtml(link) + '" target="_blank" rel="noopener sponsored">View deal</a>');
+      parts.push('<button type="button" class="btn remove-btn" data-deal-id="' + escapeHtml(String(deal._id || '')) + '" style="background:#dc2626;padding:0.35rem 0.8rem;font-size:0.85rem;">Remove</button>');
+      return '<div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;padding:0.6rem 0;border-top:1px solid #e5e7eb;">' +
+        parts.join('') + '</div>';
+    }).join('');
+  } catch (err) {
+    list.innerHTML = '<p class="hint">Could not load published deals.</p>';
+  }
+}
+
+document.getElementById('published-deals-list').addEventListener('click', async function (e) {
+  var btn = e.target.closest('.remove-btn');
+  if (!btn) return;
+  var dealId = btn.getAttribute('data-deal-id');
+  if (!dealId || removingIds[dealId]) return;
+  if (!window.confirm('Remove this deal from the public feeds? The record is archived, not deleted.')) return;
+
+  removingIds[dealId] = true;
+  btn.disabled = true;
+  try {
+    var res = await fetch(BACKEND_URL + '/api/admin/deals/' + encodeURIComponent(dealId), {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (res.status === 401) { clearToken(); showLogin('Session expired.'); return; }
+    if (!res.ok) throw new Error(data.error || data.message || ('Remove failed (HTTP ' + res.status + ')'));
+
+    showMsg(removeMsg, 'Deal removed from the feed.', 'success');
+    loadPublishedDeals();
+  } catch (err) {
+    showMsg(removeMsg, err.message || 'Failed to remove deal.', 'error');
+    btn.disabled = false;
+  } finally {
+    delete removingIds[dealId];
   }
 });
 

@@ -10,8 +10,11 @@ jest.mock('../models/Product', () => {
     MVP_CATEGORIES,
     PRODUCT_SOURCE_TYPES,
     find: jest.fn(),
+    findOne: jest.fn(),
     create: jest.fn(),
     updateMany: jest.fn(),
+    updateOne: jest.fn(),
+    deleteMany: jest.fn(),
     countDocuments: jest.fn()
   };
 });
@@ -24,6 +27,7 @@ const {
   getActiveManualDeals,
   countActiveManualDeals,
   retireExcessManualDeals,
+  archiveManualDeal,
   publishManualDeal
 } = require('./ManualDealService');
 
@@ -194,6 +198,92 @@ describe('ManualDealService', () => {
         isAdminCurated: true,
         category: 'home',
         archivedAt: null
+      });
+    });
+  });
+
+  describe('archiveManualDeal (admin removal)', () => {
+    it('archives an active manual deal by setting archivedAt — never deletes', async () => {
+      Product.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          _id: 'deal-1',
+          sourceType: 'manual',
+          isAdminCurated: true,
+          archivedAt: null
+        })
+      });
+      Product.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+      const result = await archiveManualDeal('deal-1');
+
+      expect(Product.findOne).toHaveBeenCalledWith({ _id: 'deal-1' });
+      expect(Product.updateOne).toHaveBeenCalledWith(
+        { _id: 'deal-1', sourceType: 'manual', isAdminCurated: true },
+        { $set: { archivedAt: expect.any(Date) } }
+      );
+      expect(result.archived).toBe(true);
+      expect(result.alreadyArchived).toBe(false);
+      expect(Product.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses to archive auto-sourced products (NOT_MANUAL)', async () => {
+      Product.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          _id: 'auto-1',
+          sourceType: 'auto',
+          isAdminCurated: false
+        })
+      });
+
+      await expect(archiveManualDeal('auto-1')).rejects.toMatchObject({ code: 'NOT_MANUAL' });
+      expect(Product.updateOne).not.toHaveBeenCalled();
+      expect(Product.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('throws NOT_FOUND when no product exists with that id', async () => {
+      Product.findOne.mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
+
+      await expect(archiveManualDeal('507f1f77bcf86cd799439011'))
+        .rejects.toMatchObject({ code: 'NOT_FOUND' });
+      expect(Product.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent for an already-archived deal', async () => {
+      Product.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          _id: 'deal-2',
+          sourceType: 'manual',
+          isAdminCurated: true,
+          archivedAt: new Date()
+        })
+      });
+
+      const result = await archiveManualDeal('deal-2');
+
+      expect(result.archived).toBe(true);
+      expect(result.alreadyArchived).toBe(true);
+      expect(Product.updateOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('public feed excludes archived deals', () => {
+    it('getActiveManualDeals queries only archivedAt: null manual deals', async () => {
+      Product.find.mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      });
+
+      await getActiveManualDeals({ category: 'electronics' });
+
+      // archivedAt: null excludes every archived/removed deal (removed deals
+      // gain archivedAt, so they drop out of GET /api/deals and the homepage).
+      expect(Product.find).toHaveBeenCalledWith({
+        sourceType: 'manual',
+        isAdminCurated: true,
+        archivedAt: null,
+        category: 'electronics'
       });
     });
   });

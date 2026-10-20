@@ -1,7 +1,9 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
 const {
   publishManualDeal,
+  archiveManualDeal,
   MVP_CATEGORIES
 } = require('../services/ManualDealService');
 
@@ -107,6 +109,39 @@ router.post(['/', '/deals'], authenticateToken, requireAdmin, async (req, res) =
       error: 'Failed to publish deal',
       message: error.message
     });
+  }
+});
+
+/**
+ * DELETE /api/admin/deals/:id
+ *
+ * Soft-removes a manual deal from the feeds by archiving it (sets
+ * archivedAt) — records are never deleted and auto-sourced products are
+ * rejected by archiveManualDeal(). Same admin auth as publishing.
+ * 400 invalid ObjectId | 403 non-manual product | 404 unknown id.
+ */
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid deal id' });
+    }
+
+    const result = await archiveManualDeal(id);
+    return res.json({
+      success: true,
+      message: 'Deal removed from feed',
+      ...result
+    });
+  } catch (error) {
+    if (error.code === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    if (error.code === 'NOT_MANUAL') {
+      return res.status(403).json({ error: 'Only admin-curated manual deals can be removed' });
+    }
+    console.error('[AdminDeals] Error removing deal:', error);
+    return res.status(500).json({ error: 'Failed to remove deal', message: error.message });
   }
 });
 

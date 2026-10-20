@@ -132,6 +132,43 @@ async function retireExcessManualDeals(category, maxActive = MAX_ACTIVE_MANUAL_D
 }
 
 /**
+ * Archives (never deletes) a single admin-curated manual deal by setting
+ * archivedAt — the same retirement mechanism used by the 20-deal cap, and the
+ * same field the public feed filter ({ archivedAt: null }) already excludes.
+ * Auto-sourced products can never be archived: both the lookup and the write
+ * are scoped to sourceType 'manual' + isAdminCurated true.
+ *
+ * Idempotent: re-archiving an already-archived deal resolves without a write.
+ *
+ * Throws Errors carrying `code` for route-level mapping:
+ *   - 'NOT_FOUND'  no product exists with that id
+ *   - 'NOT_MANUAL' the product exists but is not an admin-curated manual deal
+ */
+async function archiveManualDeal(dealId) {
+  const deal = await Product.findOne({ _id: dealId }).lean();
+  if (!deal) {
+    const notFound = new Error(`Manual deal ${dealId} not found`);
+    notFound.code = 'NOT_FOUND';
+    throw notFound;
+  }
+  if (deal.sourceType !== PRODUCT_SOURCE_TYPES.MANUAL || deal.isAdminCurated !== true) {
+    const notManual = new Error('Product is not an admin-curated manual deal');
+    notManual.code = 'NOT_MANUAL';
+    throw notManual;
+  }
+  if (deal.archivedAt) {
+    return { archived: true, alreadyArchived: true, dealId: String(deal._id) };
+  }
+
+  const result = await Product.updateOne(
+    { _id: dealId, sourceType: PRODUCT_SOURCE_TYPES.MANUAL, isAdminCurated: true },
+    { $set: { archivedAt: new Date() } }
+  );
+  const modified = (result.modifiedCount || result.n || 0) > 0;
+  return { archived: modified, alreadyArchived: !modified, dealId: String(deal._id) };
+}
+
+/**
  * Persists a manually curated deal as the source-of-truth record in the
  * Product collection and enforces the per-category cap. Intended to be called
  * by the future admin publish endpoint.
@@ -200,5 +237,6 @@ module.exports = {
   getActiveManualDeals,
   countActiveManualDeals,
   retireExcessManualDeals,
+  archiveManualDeal,
   publishManualDeal
 };
