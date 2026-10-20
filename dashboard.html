@@ -695,6 +695,12 @@
               </div>
               <button type="submit" class="button-primary" id="publish-deal-btn">Publish Deal</button>
             </form>
+            <div class="section-title" style="margin-top:1.5rem;">
+              <h2>Published Deals</h2>
+            </div>
+            <div id="published-deals-list">
+              <p style="color: var(--muted); margin:0;">Loading published deals…</p>
+            </div>
           </section>
           ` : ''}
 
@@ -732,6 +738,8 @@
         const publishDealForm = document.getElementById('publish-deal-form');
         if (publishDealForm) {
           publishDealForm.addEventListener('submit', handlePublishDeal);
+          // Show the deals that are already live (admin-only panel).
+          loadPublishedDeals();
         }
 
         // Wire subscription renewal (only rendered for eligible non-admin users)
@@ -793,6 +801,51 @@
 
     function showPublishMessage(text, type) {
       showFormMessage('publish-deal-message', text, type);
+    }
+
+    function escapeDealHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    /**
+     * Load published manual deals via the existing public GET /api/deals
+     * endpoint (the same feed the homepage renders). Failures render inline
+     * and never block the publish form. Defined only for the admin section.
+     */
+    async function loadPublishedDeals() {
+      const list = document.getElementById('published-deals-list');
+      if (!list) return;
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/deals`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const deals = Array.isArray(data.deals) ? data.deals : [];
+        if (!deals.length) {
+          list.innerHTML = '<p style="color: var(--muted); margin:0;">No published deals yet.</p>';
+          return;
+        }
+        list.innerHTML = deals.map(function (deal) {
+          const raw = deal.title || deal.name || '';
+          let label = raw;
+          if (/^https?:\/\//i.test(raw)) {
+            try { label = new URL(raw).hostname.replace(/^www\./, ''); } catch (e) { label = 'Deal'; }
+          }
+          const link = deal.affiliateLink || deal.url || '';
+          const parts = ['<strong>' + escapeDealHtml(label) + '</strong>'];
+          if (deal.category) parts.push('<span>' + escapeDealHtml(deal.category) + '</span>');
+          if (deal.promoCode) parts.push('<span>Code: ' + escapeDealHtml(deal.promoCode) + '</span>');
+          if (deal.postedAt) parts.push('<span>' + new Date(deal.postedAt).toLocaleDateString() + '</span>');
+          if (link) {
+            parts.push('<a href="' + escapeDealHtml(link) + '" target="_blank" rel="noopener sponsored">View deal</a>');
+          }
+          return '<div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; padding:0.6rem 0; border-top:1px solid rgba(148,163,184,0.35);">' +
+            parts.join('') + '</div>';
+        }).join('');
+      } catch (err) {
+        list.innerHTML = '<p style="color: var(--muted); margin:0;">Could not load published deals.</p>';
+      }
     }
 
     /**
@@ -957,6 +1010,8 @@
             ' older deal(s) in this category to stay within the active cap.';
         }
         showPublishMessage(successText, 'success');
+        // Refresh the Published Deals list so the new deal appears immediately.
+        loadPublishedDeals();
       } catch (err) {
         showPublishMessage(
           err instanceof TypeError

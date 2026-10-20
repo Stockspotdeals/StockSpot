@@ -366,21 +366,41 @@
 
     // --- Manual Deals (curated via admin, served by GET /api/deals) ---
     // Renders only data the deal actually has; never fabricates product info.
+    function manualDealTitle(item) {
+      const raw = item.title || item.name || '';
+      // Publish flows without a title default `name` to the deal URL —
+      // show the hostname instead of the raw URL (real data, not invented).
+      if (/^https?:\/\//i.test(raw)) {
+        try { return new URL(raw).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+      }
+      return raw;
+    }
+
     function renderManualCard(item) {
       const img = item.image || './assets/images/stockspot-logo.png';
       const link = item.affiliateLink || item.url || '';
       const savingsPct = (item.discount > 0) ? item.discount : 0;
       const hasPrice = item.price != null;
       const hasOriginal = item.originalPrice != null && hasPrice && item.originalPrice > item.price;
+      const title = manualDealTitle(item);
+      const categoryTag = item.category
+        ? '<span class="badge" style="background:#111827;color:#fff;">' + item.category + '</span>'
+        : '';
+      const savingsBadge = savingsPct > 0
+        ? '<span class="badge badge-price-drop">-' + savingsPct + '%</span>'
+        : '';
+      const badges = (categoryTag || savingsBadge)
+        ? '<div class="deal-badges">' + categoryTag + savingsBadge + '</div>'
+        : '';
       return [
         '<article class="deal-card">',
           '<div class="deal-image-wrap">',
-            '<img src="' + img + '" alt="' + (item.title || item.name || 'Deal') + '" loading="lazy" onerror="this.src=\'./assets/images/stockspot-logo.png\'">',
-            (savingsPct > 0 ? '<div class="deal-badges"><span class="badge badge-price-drop">-' + savingsPct + '%</span></div>' : ''),
+            '<img src="' + img + '" alt="' + (title || 'Deal') + '" loading="lazy" onerror="this.src=\'./assets/images/stockspot-logo.png\'">',
+            badges,
           '</div>',
           '<div class="deal-body">',
             (item.retailer ? '<div class="deal-retailer">' + item.retailer + '</div>' : ''),
-            '<h3 class="deal-title">' + (item.title || item.name || '') + '</h3>',
+            (title ? '<h3 class="deal-title">' + title + '</h3>' : ''),
             (hasPrice || hasOriginal ? [
               '<div class="deal-pricing">',
                 (hasPrice ? '<span class="deal-price">' + formatPrice(item.price) + '</span>' : ''),
