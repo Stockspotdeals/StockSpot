@@ -366,23 +366,29 @@
 
     // --- Manual Deals (curated via admin, served by GET /api/deals) ---
     // Renders only data the deal actually has; never fabricates product info.
-    function manualDealTitle(item) {
+    // Neutral placeholder for deals without an image — deliberately NOT the
+    // StockSpot logo; a plain gray card icon (inline SVG data URI).
+    const DEAL_PLACEHOLDER_IMG = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22400%22%20height=%22300%22%20viewBox=%220%200%20400%20300%22%3E%3Crect%20width=%22400%22%20height=%22300%22%20fill=%22%23e5e7eb%22/%3E%3Ccircle%20cx=%22140%22%20cy=%22115%22%20r=%2218%22%20fill=%22%239ca3af%22/%3E%3Cpath%20d=%22M100%20215L160%20145L205%20190L240%20150L300%20215Z%22%20fill=%22%239ca3af%22/%3E%3C/svg%3E';
+    const DEAL_NAME_FALLBACK = 'Untitled Deal';
+
+    // Product name for a deal card. Legacy deals stored the deal URL as
+    // `name` — those (and bare hostnames such as amzn.to/…) get a neutral
+    // fallback so no URL-derived text is ever shown.
+    function manualDealName(item) {
       const raw = item.title || item.name || '';
-      // Publish flows without a title default `name` to the deal URL —
-      // show the hostname instead of the raw URL (real data, not invented).
-      if (/^https?:\/\//i.test(raw)) {
-        try { return new URL(raw).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
-      }
+      if (!raw || /^https?:\/\//i.test(raw)) return DEAL_NAME_FALLBACK;
+      if (!/\s/.test(raw) && /^[a-z0-9-]+(\.[a-z0-9-]+)+([\/?#].*)?$/i.test(raw)) return DEAL_NAME_FALLBACK;
       return raw;
     }
 
     function renderManualCard(item) {
-      const img = item.image || './assets/images/stockspot-logo.png';
+      const suppliedImage = (typeof item.image === 'string' && item.image.trim().length > 0) ? item.image.trim() : '';
+      const img = suppliedImage || DEAL_PLACEHOLDER_IMG;
       const link = item.affiliateLink || item.url || '';
       const savingsPct = (item.discount > 0) ? item.discount : 0;
       const hasPrice = item.price != null;
       const hasOriginal = item.originalPrice != null && hasPrice && item.originalPrice > item.price;
-      const title = manualDealTitle(item);
+      const name = manualDealName(item);
       const categoryTag = item.category
         ? '<span class="badge" style="background:#111827;color:#fff;">' + item.category + '</span>'
         : '';
@@ -395,12 +401,12 @@
       return [
         '<article class="deal-card">',
           '<div class="deal-image-wrap">',
-            '<img src="' + img + '" alt="' + (title || 'Deal') + '" loading="lazy" onerror="this.src=\'./assets/images/stockspot-logo.png\'">',
+            '<img src="' + img + '" alt="' + (name !== DEAL_NAME_FALLBACK ? name : 'Product image') + '" loading="lazy" onerror="this.onerror=null;this.src=\'' + DEAL_PLACEHOLDER_IMG + '\">',
             badges,
           '</div>',
           '<div class="deal-body">',
             (item.retailer ? '<div class="deal-retailer">' + item.retailer + '</div>' : ''),
-            (title ? '<h3 class="deal-title">' + title + '</h3>' : ''),
+            '<h3 class="deal-title">' + name + '</h3>',
             (hasPrice || hasOriginal ? [
               '<div class="deal-pricing">',
                 (hasPrice ? '<span class="deal-price">' + formatPrice(item.price) + '</span>' : ''),

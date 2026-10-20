@@ -275,5 +275,43 @@ describe('POST /api/admin/deals', () => {
       expect(res.body.retired.archivedCount).toBe(1);
       expect(res.body.retired.archivedIds).toEqual(['deal-1']);
     });
+
+    it('passes trimmed product name/image through and rejects non-string name', async () => {
+      const mockResult = {
+        deal: { _id: 'deal-name-1' },
+        retired: { archivedCount: 0, archivedIds: [], maxActive: 20 }
+      };
+
+      publishManualDeal.mockResolvedValueOnce(mockResult);
+      const ok = await request(app)
+        .post('/api/admin/deals')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          dealUrl: 'https://example.com/deals/headphones',
+          category: 'electronics',
+          name: '  Sony WH-1000XM5  ',
+          image: '  https://example.com/img.jpg  '
+        });
+
+      expect(ok.status).toBe(201);
+      expect(publishManualDeal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Sony WH-1000XM5',
+          image: 'https://example.com/img.jpg'
+        })
+      );
+
+      const bad = await request(app)
+        .post('/api/admin/deals')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          dealUrl: 'https://example.com/deals/bad',
+          category: 'electronics',
+          name: 12345
+        });
+
+      expect(bad.status).toBe(400);
+      expect(bad.body.error).toBe('name must be a string');
+    });
   });
 });

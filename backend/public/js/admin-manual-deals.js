@@ -95,9 +95,12 @@ dealForm.addEventListener('submit', async function (e) {
   var dealUrl  = document.getElementById('deal-url').value.trim();
   var category = document.getElementById('deal-category').value;
   var promoCode = document.getElementById('deal-promo').value.trim();
+  var productName = document.getElementById('deal-name').value.trim();
+  var imageUrl = document.getElementById('deal-image').value.trim();
 
-  var body = { dealUrl: dealUrl, category: category };
+  var body = { dealUrl: dealUrl, category: category, name: productName };
   if (promoCode) body.promoCode = promoCode;
+  if (imageUrl) body.image = imageUrl;
 
   try {
     var res = await fetch(BACKEND_URL + '/api/admin/deals', {

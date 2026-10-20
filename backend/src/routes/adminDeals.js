@@ -63,6 +63,16 @@ router.post(['/', '/deals'], authenticateToken, requireAdmin, async (req, res) =
       }
     }
 
+    // Product name / image URL are optional at the API level (legacy callers
+    // omit them; ManualDealService falls back to the URL) but must be strings
+    // when present — same validation pattern as promoCode.
+    if (extra.name !== undefined && extra.name !== null && typeof extra.name !== 'string') {
+      return res.status(400).json({ error: 'name must be a string' });
+    }
+    if (extra.image !== undefined && extra.image !== null && typeof extra.image !== 'string') {
+      return res.status(400).json({ error: 'image must be a string' });
+    }
+
     const trimmedPromoCode = (typeof promoCode === 'string' && promoCode.trim().length > 0)
       ? promoCode.trim()
       : undefined;
@@ -73,11 +83,11 @@ router.post(['/', '/deals'], authenticateToken, requireAdmin, async (req, res) =
       category: normalizedCategory,
       promoCode: trimmedPromoCode,
       title: extra.title,
-      name: extra.name,
+      name: (typeof extra.name === 'string' && extra.name.trim().length > 0) ? extra.name.trim() : undefined,
       price: extra.price,
       originalPrice: extra.originalPrice,
       discountPercent: extra.discountPercent,
-      image: extra.image,
+      image: (typeof extra.image === 'string' && extra.image.trim().length > 0) ? extra.image.trim() : undefined,
       retailer: extra.retailer,
       affiliateLink: extra.affiliateLink
     });

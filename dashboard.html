@@ -675,6 +675,14 @@
                 <input id="deal-url" name="dealUrl" type="url" placeholder="https://…" required />
               </div>
               <div class="field">
+                <label for="deal-name">Product Name</label>
+                <input id="deal-name" name="productName" type="text" maxlength="160" placeholder="e.g. Sony WH-1000XM5 Wireless Headphones" required />
+              </div>
+              <div class="field">
+                <label for="deal-image">Product Image URL (optional)</label>
+                <input id="deal-image" name="imageUrl" type="url" placeholder="https://…/product-image.jpg" />
+              </div>
+              <div class="field">
                 <label for="deal-category">Category</label>
                 <select id="deal-category" name="category" required>
                   <option value="">— select category —</option>
@@ -814,6 +822,17 @@
      * endpoint (the same feed the homepage renders). Failures render inline
      * and never block the publish form. Defined only for the admin section.
      */
+    /**
+     * Display label for a published deal. Legacy deals stored the deal URL
+     * as `name` — those (and bare hostnames such as amzn.to/…) get a neutral
+     * fallback so no URL-derived text is ever shown in the admin list.
+     */
+    function manualDealListLabel(raw) {
+      if (!raw || /^https?:\/\//i.test(raw)) return 'Untitled Deal';
+      if (!/\s/.test(raw) && /^[a-z0-9-]+(\.[a-z0-9-]+)+([\/?#].*)?$/i.test(raw)) return 'Untitled Deal';
+      return raw;
+    }
+
     async function loadPublishedDeals() {
       const list = document.getElementById('published-deals-list');
       if (!list) return;
@@ -828,10 +847,7 @@
         }
         list.innerHTML = deals.map(function (deal) {
           const raw = deal.title || deal.name || '';
-          let label = raw;
-          if (/^https?:\/\//i.test(raw)) {
-            try { label = new URL(raw).hostname.replace(/^www\./, ''); } catch (e) { label = 'Deal'; }
-          }
+          const label = manualDealListLabel(raw);
           const link = deal.affiliateLink || deal.url || '';
           const parts = ['<strong>' + escapeDealHtml(label) + '</strong>'];
           if (deal.category) parts.push('<span>' + escapeDealHtml(deal.category) + '</span>');
@@ -967,15 +983,18 @@
       const dealUrl = document.getElementById('deal-url').value.trim();
       const category = document.getElementById('deal-category').value;
       const promoCode = document.getElementById('deal-promo').value.trim();
+      const productName = document.getElementById('deal-name').value.trim();
+      const imageUrl = document.getElementById('deal-image').value.trim();
 
-      if (!dealUrl || !category) {
-        showPublishMessage('Deal URL and category are required.', 'error');
+      if (!dealUrl || !category || !productName) {
+        showPublishMessage('Deal URL, product name, and category are required.', 'error');
         return;
       }
 
       const token = localStorage.getItem('token') || localStorage.getItem('stockspotAccessToken');
-      const body = { dealUrl: dealUrl, category: category };
+      const body = { dealUrl: dealUrl, category: category, name: productName };
       if (promoCode) body.promoCode = promoCode;
+      if (imageUrl) body.image = imageUrl;
 
       if (publishBtn) publishBtn.disabled = true;
 
