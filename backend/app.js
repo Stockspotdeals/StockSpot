@@ -504,6 +504,16 @@ try {
   console.warn('Admin deals route not mounted:', err.message);
 }
 
+// MVP: Public manual deal feed (read-only, no auth) for the homepage
+// Live Deals section. GET /api/deals — see backend/src/routes/manualDeals.js
+try {
+  const manualDealsRoutes = require('./src/routes/manualDeals');
+  app.use('/api/deals', manualDealsRoutes);
+  console.log('[ManualDeals] GET /api/deals mounted');
+} catch (err) {
+  console.warn('Manual deals route not mounted:', err.message);
+}
+
 // MVP pivot: automated signal ingestion scheduler disabled by default.
 // Re-enable with ENABLE_AUTO_DISCOVERY=true.
 if (ENABLE_AUTO_DISCOVERY) {

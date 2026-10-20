@@ -92,6 +92,7 @@
             <p>Real-time deals, restocks, and price drops powered by StockSpot monitoring. Updated every 30 minutes.</p>
             <p class="last-refreshed" id="lastRefreshed"></p>
           </div>
+          <div id="manualDealsContent"></div>
           <div id="featuredContent">
             <div class="loading-state" id="loadingState">
               <div class="spinner"></div>
@@ -363,6 +364,61 @@
       }
     }
 
+    // --- Manual Deals (curated via admin, served by GET /api/deals) ---
+    // Renders only data the deal actually has; never fabricates product info.
+    function renderManualCard(item) {
+      const img = item.image || './assets/images/stockspot-logo.png';
+      const link = item.affiliateLink || item.url || '';
+      const savingsPct = (item.discount > 0) ? item.discount : 0;
+      const hasPrice = item.price != null;
+      const hasOriginal = item.originalPrice != null && hasPrice && item.originalPrice > item.price;
+      return [
+        '<article class="deal-card">',
+          '<div class="deal-image-wrap">',
+            '<img src="' + img + '" alt="' + (item.title || item.name || 'Deal') + '" loading="lazy" onerror="this.src=\'./assets/images/stockspot-logo.png\'">',
+            (savingsPct > 0 ? '<div class="deal-badges"><span class="badge badge-price-drop">-' + savingsPct + '%</span></div>' : ''),
+          '</div>',
+          '<div class="deal-body">',
+            (item.retailer ? '<div class="deal-retailer">' + item.retailer + '</div>' : ''),
+            '<h3 class="deal-title">' + (item.title || item.name || '') + '</h3>',
+            (hasPrice || hasOriginal ? [
+              '<div class="deal-pricing">',
+                (hasPrice ? '<span class="deal-price">' + formatPrice(item.price) + '</span>' : ''),
+                (hasOriginal ? '<span class="deal-msrp">' + formatPrice(item.originalPrice) + '</span>' : ''),
+              '</div>'
+            ].join('') : ''),
+            (item.promoCode ? '<div class="deal-promo" style="font-size:13px;font-weight:600;">Promo code: <strong>' + item.promoCode + '</strong></div>' : ''),
+            (link ? '<div class="deal-actions"><a class="btn-affiliate" href="' + link + '" target="_blank" rel="noopener sponsored">View Deal</a></div>' : ''),
+          '</div>',
+          (item.postedAt ? '<div class="deal-footer">Posted ' + new Date(item.postedAt).toLocaleDateString() + '</div>' : ''),
+        '</article>'
+      ].join('');
+    }
+
+    async function loadManualDeals() {
+      const container = document.getElementById('manualDealsContent');
+      if (!container) return;
+      try {
+        const resp = await fetch(BACKEND_URL + '/api/deals');
+        if (!resp.ok) throw new Error('API returned ' + resp.status);
+        const data = await resp.json();
+        const deals = Array.isArray(data.deals) ? data.deals : [];
+        if (!deals.length) {
+          container.innerHTML = '';
+          return;
+        }
+        container.innerHTML = [
+          '<section class="deals-subsection" id="section-manual">',
+            '<div class="deals-subsection-heading"><h3>🆕 Curated Deals</h3></div>',
+            '<div class="deal-grid">', deals.map(renderManualCard).join(''), '</div>',
+          '</section>'
+        ].join('');
+      } catch (err) {
+        // Graceful degradation: hide the curated block; featured sections still load.
+        container.innerHTML = '';
+      }
+    }
+
     // --- Stats ---
     async function loadStats() {
       try {
@@ -389,8 +445,10 @@
     // --- Init ---
     document.getElementById('currentYear').textContent = new Date().getFullYear();
     loadFeatured();
+    loadManualDeals();
     loadStats();
     setInterval(loadFeatured, 5 * 60 * 1000);
+    setInterval(loadManualDeals, 5 * 60 * 1000);
   </script>
 </body>
 </html>
