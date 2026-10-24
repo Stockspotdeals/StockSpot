@@ -471,13 +471,35 @@ section p {
   background: white;
 }
 
+/* Compact responsive grid for deal cards:
+   Desktop: 5 cards per row, Tablet: 3-4, Mobile: 2 */
 .deals-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
 }
 
+/* Desktop: 5 cards per row (approx 220px each with gaps) */
+@media (min-width: 1200px) {
+  .deals-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* Tablet: 4 cards per row */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .deals-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Tablet small/Large mobile: 3 cards per row */
+@media (min-width: 600px) and (max-width: 899px) {
+  .deals-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Mobile: 2 cards per row */
+@media (max-width: 599px) {
+  .deals-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Deal card component */
 .deal-card {
   background: white;
   border: none;
@@ -485,6 +507,45 @@ section p {
   padding: 0.75rem;
   transition: var(--transition);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  /* Keep images from overflowing */
+  overflow: hidden;
+}
+
+/* Ensure images fill the card proportionally */
+.deal-image-wrap {
+  height: 140px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+/* Product name truncation */
+.deal-card h4 {
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0.3rem;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Deal price styling */
+.deal-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  margin: 0.3rem 0 0.2rem;
+}
+
+.deal-original {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-decoration: line-through;
+  margin-top: 0.2rem;
 }
 
 .deal-card:hover {

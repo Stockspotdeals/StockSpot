@@ -352,12 +352,30 @@ p { margin: 0; color: var(--muted); line-height: 1.7; }
   color: var(--muted);
 }
 
-/* Deal Grid (Live Deals section) */
 .deal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Desktop: 5 cards per row */
+@media (min-width: 1200px) {
+  .deal-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* Tablet: 4 cards per row */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .deal-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Tablet small/Large mobile: 3 cards per row */
+@media (min-width: 600px) and (max-width: 899px) {
+  .deal-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Mobile: 2 cards per row */
+@media (max-width: 599px) {
+  .deal-grid { grid-template-columns: repeat(2, 1fr); }
 }
 .deal-card {
   border-radius: calc(var(--radius) * 0.75);
@@ -365,18 +383,50 @@ p { margin: 0; color: var(--muted); line-height: 1.7; }
   transition: transform 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
+  min-height: 320px;
 }
+
+/* Hover effect - scaled down */
 .deal-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   background: var(--panel-strong);
 }
+
 .deal-image-wrap {
   position: relative;
   width: 100%;
+  /* Consistent image height ratio matching styles.css */
   aspect-ratio: 0.85/1;
   background: rgba(0,0,0,0.4);
   overflow: hidden;
+}
+
+/* Product name truncation - 2 lines max */
+.deal-card h4 {
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0.3rem;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Deal price styling */
+.deal-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0.3rem 0 0.2rem;
+}
+
+.deal-original {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-decoration: line-through;
+  margin-top: 0.2rem;
 }
 .deal-image-wrap img {
   width: 100%;
