@@ -80,7 +80,7 @@ app.use(helmet({
 
   app.use(cors({
     origin: originOption,
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'DELETE'],
     credentials: true,
     optionsSuccessStatus: 200
   }));
