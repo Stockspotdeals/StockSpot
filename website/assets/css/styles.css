@@ -481,29 +481,29 @@ section p {
 .deal-card {
   background: white;
   border: none;
-  border-radius: 16px;
-  padding: 1.5rem;
+  border-radius: 12px;
+  padding: 0.75rem;
   transition: var(--transition);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .deal-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   border-color: transparent;
 }
 
 .deal-card h4 {
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
   color: var(--text-primary);
 }
 
 .deal-price {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--accent-color);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .deal-original {
